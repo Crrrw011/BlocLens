@@ -15,6 +15,8 @@ nonisolated enum RepositoryError: Error, Equatable, Sendable {
     case rateLimited
     case decodingFailure
     case invalidConfiguration
+    case invalidInput
+    case conflict
     case unknown
 }
 

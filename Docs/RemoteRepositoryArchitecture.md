@@ -87,17 +87,41 @@ The official SDK is installed as an Xcode Swift Package at `https://github.com/s
 
 `RemoteConfiguration` carries an environment mode (`production`, `localDevelopment`, `integrationTest`). Production accepts HTTPS only; local/integration modes accept loopback HTTP (`127.0.0.1`, `localhost`, `::1`) and reject `.supabase.co` hosts. `LocalEnvironmentConfiguration.make()` reads `BLOCLENS_SUPABASE_URL` and `BLOCLENS_SUPABASE_ANON_KEY` from the environment and returns `nil` when absent, so a missing configuration never falls back to Cloud.
 
-`AppEnvironment.development()` (Mock) remains the default everywhere. `AppEnvironment.localSupabase(configuration:)` wires the remote Gym/Route repositories alongside the still-Mock Beta, Logbook and Authentication repositories, and is only reached through the Debug-only `--local-supabase` launch argument or integration-test configuration. Release never connects to Local or Cloud.
+`AppEnvironment.development()` (Mock) remains the default everywhere. `AppEnvironment.localSupabase(configuration:)` wires the remote Gym/Route repositories, the remote Authentication repository and the still-Mock Beta/Logbook repositories, and is only reached through the Debug-only `--local-supabase` launch argument or integration-test configuration. Release never connects to Local or Cloud.
 
-## Error mapping
+## Authentication state machine (6D-3A)
 
-`RemoteErrorMapping.map(_:)` translates SDK errors into `RepositoryError`: `URLError.timedOut` → `.timeout`, connectivity failures → `.network`, `PostgrestError` code `PGRST116` → `.notFound` and `42501` → `.forbidden`, `HTTPError` status codes → `.unauthenticated`/`.forbidden`/`.notFound`/`.rateLimited`/`.timeout`/`.unavailable`, and `DecodingError` → `.decodingFailure`. Cancellation is rethrown, never swallowed. No key, JWT or response body enters a user-visible error.
+`SupabaseAuthenticationRepository` is an actor-backed `AuthenticationRepository` that drives a local authentication state machine against the local Supabase Auth endpoint only:
+
+```text
+guest → authenticating → signedIn
+                       ↘ profileSetup → signedIn
+                       ↘ ageGated
+                       ↘ error(RepositoryError)
+```
+
+- `guest` represents signed-out / browsing as a guest.
+- `authenticating` is set while a sign-in or sign-up request is in flight.
+- `profileSetup(UserProfile)` means the user is authenticated but has not completed the required public username (or the 16+ self-declaration).
+- `ageGated` means the user declared they are under 16; they stay a guest and no account is used.
+- `signedIn(UserProfile)` is the completed state.
+- `error(RepositoryError)` carries a mapped, user-safe error.
+
+The username and the 16+ declaration are stored on the `profiles` table (`username` and `age_confirmed_16_plus_at`), updated through the PostgREST API with the user's own JWT under the owner RLS policy. A fresh user receives an auto-generated `climber_…` placeholder username from the profile-initialisation trigger, which the repository treats as "setup not complete". Profile updates use `returning: .minimal` so the restricted column-level grants do not require a full-row select.
+
+Session restore relies on the SDK's own Keychain-backed session storage: `restoreSession()` checks `client.auth.currentSession` and re-reads the profile. Pending-action recovery is unchanged: `AppSession` keeps the existing `ProtectedIntent` mechanism and resumes the intent when the state reaches `.signedIn`.
+
+## Auth error mapping
+
+`RemoteErrorMapping` additionally maps SDK `AuthError` cases: `sessionMissing` → `.unauthenticated`, `weakPassword` → `.invalidInput`, and `api` error codes `invalid_credentials`/`email_not_confirmed` → `.unauthenticated`, `user_not_found` → `.notFound`, `weak_password` → `.invalidInput`, `user_already_exists`/`email_exists` → `.conflict`. The PostgREST unique-violation code `23505` maps to `.conflict`. Real GoTrue sign-in never distinguishes an unknown user from a wrong password, so an unknown-account sign-in surfaces as `.unauthenticated` (anti-enumeration).
 
 ## Local integration tests
 
-`LocalSupabaseIntegrationTests` is an XCTest suite that skips (`XCTSkip`) unless `BLOCLENS_SUPABASE_URL` and `BLOCLENS_SUPABASE_ANON_KEY` are set. It asserts the local read path (gyms, wall zones, routes, facilities, hard/soft, archived mapping, community-grade thresholds and the guest-safe beta count) and verifies that the anonymous client cannot read `beta_links` or `beta_ranking_inputs`. It performs no writes and never connects to Cloud.
+`LocalSupabaseIntegrationTests` is an XCTest suite that skips (`XCTSkip`) unless `BLOCLENS_SUPABASE_URL` and `BLOCLENS_SUPABASE_ANON_KEY` are set. It asserts the local read path (gyms, wall zones, routes, facilities, hard/soft, archived mapping, community-grade thresholds and the guest-safe beta count), verifies that the anonymous client cannot read `beta_links` or `beta_ranking_inputs`, and exercises the authentication flow (sign-up → profile setup → age confirmation → username → sign-in → sign-out) using a fresh local test account created via `signUp`. It performs no writes beyond the test account's own profile and never connects to Cloud.
 
 ## Next stages
 
-- Stage 6D-3: implement the authentication session, age gate and username setup, then authenticated beta metadata reads and private Logbook read/write with the queued/synced/failed sync states.
-- Later: Apple/Google OAuth, Cloud deployment, Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.
+- Stage 6D-3B: authenticated beta metadata reads (the beta URL remains login-gated and unread by the current repositories).
+- Stage 6D-3C: private Logbook read/write with the queued/synced/failed sync states.
+- Stage 6D-3D: real Apple/Google OAuth (not implemented; the current auth path is local email/password and the Debug mock account only).
+- Later: Cloud deployment, Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.

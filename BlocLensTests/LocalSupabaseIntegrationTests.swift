@@ -16,6 +16,8 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         let key = environment["BLOCLENS_SUPABASE_ANON_KEY"] ?? ""
         configuration = try RemoteConfiguration(mode: .integrationTest, projectURL: url, publishableKey: key)
         client = SupabaseClientFactory.makeClient(configuration: configuration)
+        // The SDK restores sessions from the Keychain. Ensure each test starts anonymous.
+        try? await client.auth.signOut()
     }
 
     private func makeEnvironment() -> AppEnvironment {
@@ -105,5 +107,63 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
             let mapped = RemoteErrorMapping.map(error)
             XCTAssertTrue(mapped == .forbidden || mapped == .unauthenticated, "Unexpected mapping \(mapped)")
         }
+    }
+
+    // MARK: - Authentication
+
+    private func makeAuthRepository() -> SupabaseAuthenticationRepository {
+        SupabaseAuthenticationRepository(dataSource: SupabaseAuthDataSource(client: client))
+    }
+
+    func testLocalSignUpThenProfileSetupThenUsername() async throws {
+        let repository = makeAuthRepository()
+        let email = "auth-\(UUID().uuidString.prefix(8))@example.com"
+
+        let signedUp = await repository.signUp(email: email, password: "password123")
+        guard case .profileSetup = signedUp else {
+            return XCTFail("Expected profileSetup after signUp, got \(signedUp)")
+        }
+
+        let ageConfirmed = await repository.confirmAge(isOver16: true)
+        guard case .profileSetup = ageConfirmed else {
+            return XCTFail("Expected profileSetup after age confirmation, got \(ageConfirmed)")
+        }
+
+        let updated = await repository.updateUsername("climber-\(UUID().uuidString.prefix(8))")
+        guard case .signedIn = updated else {
+            return XCTFail("Expected signedIn after username update, got \(updated)")
+        }
+    }
+
+    func testLocalSignInWrongPassword() async throws {
+        let repository = makeAuthRepository()
+        let email = "auth-\(UUID().uuidString.prefix(8))@example.com"
+        _ = await repository.signUp(email: email, password: "password123")
+        _ = await repository.signOut()
+
+        let state = await repository.signIn(email: email, password: "wrong-password")
+        XCTAssertEqual(state, .error(.unauthenticated))
+    }
+
+    func testLocalSignInUnknownUser() async throws {
+        let repository = makeAuthRepository()
+        let email = "nobody-\(UUID().uuidString.prefix(8))@example.com"
+        // GoTrue returns "invalid_credentials" for unknown users to prevent
+        // enumeration, so the mapped error is unauthenticated rather than notFound.
+        let state = await repository.signIn(email: email, password: "password123")
+        XCTAssertEqual(state, .error(.unauthenticated))
+    }
+
+    func testLocalSignOutClearsSession() async throws {
+        let repository = makeAuthRepository()
+        let email = "auth-\(UUID().uuidString.prefix(8))@example.com"
+        _ = await repository.signUp(email: email, password: "password123")
+        _ = await repository.updateUsername("climber-\(UUID().uuidString.prefix(8))")
+
+        let signedOut = await repository.signOut()
+        XCTAssertEqual(signedOut, .guest)
+
+        let restored = await repository.restoreSession()
+        XCTAssertEqual(restored, .guest)
     }
 }

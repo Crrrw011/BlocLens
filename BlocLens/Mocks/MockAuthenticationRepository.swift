@@ -12,10 +12,37 @@ actor MockAuthenticationRepository: AuthenticationRepository {
 
     func state() -> AuthenticationState { authenticationState }
 
-    func signInWithMockAccount() -> UserProfile {
-        authenticationState = .signedIn(profile)
-        return profile
+    func restoreSession() -> AuthenticationState {
+        authenticationState
     }
 
-    func signOut() { authenticationState = .guest }
+    func signIn(email: String, password: String) -> AuthenticationState {
+        authenticationState = .signedIn(profile)
+        return authenticationState
+    }
+
+    func signUp(email: String, password: String) -> AuthenticationState {
+        authenticationState = .signedIn(profile)
+        return authenticationState
+    }
+
+    func updateUsername(_ username: String) -> AuthenticationState {
+        authenticationState = .signedIn(profile)
+        return authenticationState
+    }
+
+    func confirmAge(isOver16: Bool) -> AuthenticationState {
+        authenticationState = isOver16 ? .signedIn(profile) : .ageGated
+        return authenticationState
+    }
+
+    func signOut() -> AuthenticationState {
+        authenticationState = .guest
+        return authenticationState
+    }
+
+    func signInWithMockAccount() -> AuthenticationState {
+        authenticationState = .signedIn(profile)
+        return authenticationState
+    }
 }

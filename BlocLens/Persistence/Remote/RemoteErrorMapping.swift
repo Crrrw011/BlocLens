@@ -21,6 +21,8 @@ nonisolated enum RemoteErrorMapping {
                 return .notFound
             case "42501", "PGRST301":
                 return .forbidden
+            case "23505":
+                return .conflict
             default:
                 return .unknown
             }
@@ -49,6 +51,34 @@ nonisolated enum RemoteErrorMapping {
             return .decodingFailure
         }
 
+        if let authError = error as? AuthError {
+            return mapAuth(authError)
+        }
+
         return .unknown
+    }
+
+    private static func mapAuth(_ error: AuthError) -> RepositoryError {
+        switch error {
+        case .sessionMissing:
+            return .unauthenticated
+        case .weakPassword:
+            return .invalidInput
+        case .api(_, let errorCode, _, _):
+            switch errorCode.rawValue {
+            case "invalid_credentials", "email_not_confirmed":
+                return .unauthenticated
+            case "user_not_found":
+                return .notFound
+            case "weak_password":
+                return .invalidInput
+            case "user_already_exists", "email_exists":
+                return .conflict
+            default:
+                return .unknown
+            }
+        default:
+            return .unknown
+        }
     }
 }

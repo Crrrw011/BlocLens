@@ -2,8 +2,13 @@ import Foundation
 
 nonisolated protocol AuthenticationRepository: Sendable {
     func state() async -> AuthenticationState
-    func signInWithMockAccount() async -> UserProfile
-    func signOut() async
+    func restoreSession() async -> AuthenticationState
+    func signIn(email: String, password: String) async -> AuthenticationState
+    func signUp(email: String, password: String) async -> AuthenticationState
+    func updateUsername(_ username: String) async -> AuthenticationState
+    func confirmAge(isOver16: Bool) async -> AuthenticationState
+    func signOut() async -> AuthenticationState
+    func signInWithMockAccount() async -> AuthenticationState
 }
 
 nonisolated protocol OnboardingStore: Sendable {

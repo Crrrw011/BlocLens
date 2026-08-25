@@ -13,14 +13,27 @@ nonisolated struct UserProfile: Codable, Equatable, Sendable {
 
 nonisolated enum AuthenticationState: Equatable, Sendable {
     case guest
+    case authenticating
+    case profileSetup(UserProfile)
+    case ageGated
     case signedIn(UserProfile)
+    case error(RepositoryError)
 
     var profile: UserProfile? {
-        guard case .signedIn(let profile) = self else { return nil }
-        return profile
+        switch self {
+        case .signedIn(let profile), .profileSetup(let profile):
+            return profile
+        default:
+            return nil
+        }
     }
 
     var isSignedIn: Bool { profile != nil }
+
+    var isProfileSetup: Bool {
+        if case .profileSetup = self { return true }
+        return false
+    }
 }
 
 nonisolated enum ProtectedIntent: Equatable, Sendable {

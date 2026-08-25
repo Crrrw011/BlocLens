@@ -41,7 +41,7 @@ struct AppEnvironment: Sendable {
             routeRepository: RemoteRouteRepository(dataSource: dataSource),
             betaRepository: MockBetaRepository(),
             logbookRepository: MockLogbookRepository(isOnline: true),
-            authenticationRepository: MockAuthenticationRepository(initialState: .guest),
+            authenticationRepository: SupabaseAuthenticationRepository(dataSource: SupabaseAuthDataSource(client: client)),
             onboardingStore: InMemoryOnboardingStore(isComplete: true),
             languagePreferenceStore: InMemoryLanguagePreferenceStore(),
             currentUserID: DevelopmentFixtures.currentUserID,
@@ -77,7 +77,7 @@ final class AppSession: ObservableObject {
 
     func load() async {
         hasCompletedOnboarding = onboardingStore.isComplete()
-        authenticationState = await authenticationRepository.state()
+        authenticationState = await authenticationRepository.restoreSession()
         hasLoaded = true
     }
 
@@ -102,11 +102,40 @@ final class AppSession: ObservableObject {
     }
 
     func signInWithMockAccount() async {
-        let profile = await authenticationRepository.signInWithMockAccount()
-        authenticationState = .signedIn(profile)
-        resumedIntent = pendingIntent
-        pendingIntent = nil
-        isSignInGatePresented = false
+        authenticationState = await authenticationRepository.signInWithMockAccount()
+        completeSignInIfPossible()
+    }
+
+    func restoreSession() async {
+        authenticationState = await authenticationRepository.restoreSession()
+    }
+
+    func signIn(email: String, password: String) async {
+        authenticationState = .authenticating
+        authenticationState = await authenticationRepository.signIn(email: email, password: password)
+        completeSignInIfPossible()
+    }
+
+    func signUp(email: String, password: String) async {
+        authenticationState = .authenticating
+        authenticationState = await authenticationRepository.signUp(email: email, password: password)
+    }
+
+    func updateUsername(_ username: String) async {
+        authenticationState = await authenticationRepository.updateUsername(username)
+        completeSignInIfPossible()
+    }
+
+    func confirmAge(isOver16: Bool) async {
+        authenticationState = await authenticationRepository.confirmAge(isOver16: isOver16)
+    }
+
+    private func completeSignInIfPossible() {
+        if case .signedIn = authenticationState {
+            resumedIntent = pendingIntent
+            pendingIntent = nil
+            isSignInGatePresented = false
+        }
     }
 
     func cancelSignIn() {
@@ -120,8 +149,7 @@ final class AppSession: ObservableObject {
     }
 
     func signOut() async {
-        await authenticationRepository.signOut()
-        authenticationState = .guest
+        authenticationState = await authenticationRepository.signOut()
         pendingIntent = nil
         resumedIntent = nil
         isSignInGatePresented = false
