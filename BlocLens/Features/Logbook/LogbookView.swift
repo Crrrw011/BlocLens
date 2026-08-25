@@ -2,20 +2,49 @@ import SwiftUI
 
 struct LogbookView: View {
     let environment: AppEnvironment
+    @ObservedObject var session: AppSession
 
     @StateObject private var viewModel: LogbookViewModel
 
-    init(environment: AppEnvironment) {
+    init(environment: AppEnvironment, session: AppSession) {
         self.environment = environment
+        self.session = session
         _viewModel = StateObject(wrappedValue: LogbookViewModel(environment: environment))
     }
 
     var body: some View {
         NavigationStack {
-            content
+            Group {
+                if session.authenticationState.isSignedIn {
+                    content
+                } else {
+                    signedOutState
+                }
+            }
                 .navigationTitle(L10n.Logbook.title)
+                .navigationDestination(for: ClimbingRoute.self) { route in
+                    RouteDetailView(route: route, environment: environment, session: session)
+                }
         }
         .onAppear { Task { await viewModel.load() } }
+        .onChange(of: session.authenticationState) { _, state in
+            if state.isSignedIn { Task { await viewModel.load() } }
+        }
+    }
+
+    private var signedOutState: some View {
+        VStack(spacing: DesignSpacing.large) {
+            EmptyStateView(
+                title: L10n.Logbook.signInTitle,
+                message: L10n.Logbook.signInMessage,
+                systemImage: "lock.fill"
+            )
+            Button(L10n.Authentication.signIn) {
+                _ = session.requireAuthentication(for: .account)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .padding(.horizontal, DesignSpacing.large)
+        }
     }
 
     @ViewBuilder
@@ -65,14 +94,23 @@ struct LogbookView: View {
                 )
                 if !data.statistics.gradeDistribution.isEmpty {
                     ForEach(data.statistics.gradeDistribution.keys.sorted(), id: \.self) { grade in
-                        HStack {
-                            Text(verbatim: grade.displayName)
-                            Spacer()
-                            Text(data.statistics.gradeDistribution[grade, default: 0], format: .number)
-                                .foregroundStyle(DesignColour.secondaryText)
-                        }
+                        gradeDistributionRow(
+                            grade: grade,
+                            count: data.statistics.gradeDistribution[grade, default: 0],
+                            maximum: data.statistics.gradeDistribution.values.max() ?? 1
+                        )
                     }
                 }
+            }
+
+            Section(L10n.Logbook.filters) {
+                Picker(L10n.Logbook.statusFilter, selection: $viewModel.statusFilter) {
+                    Text(L10n.Common.all).tag(LogbookStatus?.none)
+                    ForEach(LogbookStatus.allCases, id: \.self) { status in
+                        Text(L10n.logbookStatus(status)).tag(Optional(status))
+                    }
+                }
+                Toggle(L10n.Logbook.lastThirtyDays, isOn: $viewModel.recentOnly)
             }
 
             Section(L10n.Logbook.projects) {
@@ -87,12 +125,39 @@ struct LogbookView: View {
             }
 
             Section(L10n.Logbook.recentRecords) {
-                ForEach(data.recentRecords) { item in
-                    recordRow(item)
+                let filtered = viewModel.filteredRecords(from: data)
+                if filtered.isEmpty {
+                    Text(L10n.Logbook.noMatchingRecords)
+                        .foregroundStyle(DesignColour.secondaryText)
+                } else {
+                    ForEach(filtered) { item in
+                        NavigationLink(value: item.route) { recordRow(item) }
+                    }
                 }
             }
         }
         .accessibilityIdentifier("logbook-dashboard")
+    }
+
+    private func gradeDistributionRow(grade: VGrade, count: Int, maximum: Int) -> some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+            HStack {
+                Text(verbatim: grade.displayName)
+                Spacer()
+                Text(count, format: .number)
+            }
+            GeometryReader { proxy in
+                Capsule()
+                    .fill(DesignColour.surface)
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(DesignColour.opticBlue)
+                            .frame(width: proxy.size.width * CGFloat(count) / CGFloat(max(maximum, 1)))
+                    }
+            }
+            .frame(height: 8)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func statisticRow(_ label: LocalizedStringResource, value: String) -> some View {
@@ -125,4 +190,18 @@ struct LogbookView: View {
             }
         }
     }
+}
+
+#Preview("Logbook — Signed In") {
+    let environment = AppEnvironment.development(authenticationState: .signedIn(DevelopmentFixtures.mockProfile))
+    let session = AppSession(environment: environment)
+    LogbookView(environment: environment, session: session)
+        .task { await session.load() }
+}
+
+#Preview("Logbook — Empty") {
+    let environment = AppEnvironment.development(scenario: .empty, authenticationState: .signedIn(DevelopmentFixtures.mockProfile))
+    let session = AppSession(environment: environment)
+    LogbookView(environment: environment, session: session)
+        .task { await session.load() }
 }

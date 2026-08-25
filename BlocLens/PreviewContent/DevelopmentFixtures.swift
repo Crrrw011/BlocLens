@@ -3,6 +3,17 @@ import Foundation
 nonisolated enum DevelopmentFixtures {
     static let currentUserID: UserID = "fixture-user"
 
+    static let mockProfile = UserProfile(
+        userID: currentUserID,
+        username: "Alex",
+        heightCentimetres: 170,
+        armSpanCentimetres: 171,
+        regularGrade: .v4,
+        favouriteGymID: "urban-climb-west-end",
+        isTrustedContributor: false,
+        helpfulVotes: 23
+    )
+
     static let wallZones: [WallZone] = [
         zone("west-end-slab", gym: "urban-climb-west-end", name: "River Slab", location: "Near the river-side entry", type: .slab, order: 0, reset: date(2026, 8, 18), betaCount: 4),
         zone("west-end-cave", gym: "urban-climb-west-end", name: "Main Cave", location: "Central steep section", type: .cave, order: 1, reset: date(2026, 8, 11), betaCount: 1),

@@ -54,7 +54,7 @@ final class HomeViewModel: ObservableObject {
                 gym.latestResetDate.map { HomeResetItem(gym: gym, date: $0) }
             }.sorted { $0.date > $1.date }
             let data = HomeDashboardData(
-                frequentGym: gyms.first,
+                frequentGym: gyms.first { $0.id == DevelopmentFixtures.mockProfile.favouriteGymID } ?? gyms.first,
                 projects: projects,
                 resets: Array(resets.prefix(3)),
                 recentRecords: Array(recent)

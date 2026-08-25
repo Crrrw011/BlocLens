@@ -1,4 +1,5 @@
 import Combine
+import Foundation
 
 nonisolated struct LogbookRecordItem: Identifiable, Equatable, Sendable {
     var id: LogbookEntryID { entry.id }
@@ -15,11 +16,21 @@ nonisolated struct LogbookDashboardData: Equatable, Sendable {
 @MainActor
 final class LogbookViewModel: ObservableObject {
     @Published private(set) var state: LoadableState<LogbookDashboardData> = .initial
+    @Published var statusFilter: LogbookStatus?
+    @Published var recentOnly = false
 
     private let environment: AppEnvironment
 
     init(environment: AppEnvironment) {
         self.environment = environment
+    }
+
+    func filteredRecords(from data: LogbookDashboardData, referenceDate: Date = Date()) -> [LogbookRecordItem] {
+        data.recentRecords.filter { item in
+            let matchesStatus = statusFilter == nil || item.entry.status == statusFilter
+            let matchesDate = !recentOnly || item.entry.date >= referenceDate.addingTimeInterval(-30 * 24 * 60 * 60)
+            return matchesStatus && matchesDate
+        }
     }
 
     func load() async {

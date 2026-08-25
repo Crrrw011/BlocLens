@@ -190,3 +190,23 @@ The current Swift implementation uses the following concrete navigation types wh
 In this development slice, `GymDetailView` combines **Gym Detail** and the named **Wall Zone Directory** section. `WallZoneRouteListView` combines the selected wall-zone header and its route list. These implementation compositions do not introduce a two-dimensional wall surface, floor plan, hotspot or indoor geometry.
 
 Archived `ClimbingRoute` values push to the same `RouteDetailView` and render a read-only historical banner. `MockRepositoryScenario` maps Loading, Empty, Error and offline states without replacing or resetting a tab path. External beta metadata requires a loaded or cached repository state; no video player or media transfer is part of navigation.
+
+## 15. Stage 4 low-fidelity implementation mapping
+
+`AppRootView` resolves the injected local onboarding state before presenting `AppShellView`. `OnboardingView` is a three-page full-screen root experience; completion selects `AppTab.map`. The `--reset-onboarding` and `--skip-onboarding` Debug launch arguments provide deterministic test entry without changing release navigation.
+
+`AppSession` owns selected-tab state, appearance preference, first-reveal safety acknowledgement and a single optional `ProtectedIntent`. It is an injected observable session, not a global singleton router. `AuthenticationRepository` supplies Guest or mock signed-in state. `SignInGateView` is presented as a sheet from the root shell. After local mock sign-in, the owning Route or Add flow consumes the restored intent and continues the exact requested action.
+
+Concrete protected mappings are:
+
+```text
+ProtectedIntent.revealBeta(routeID)
+ProtectedIntent.saveLogbook(routeID, status)
+ProtectedIntent.add(action)
+ProtectedIntent.helpful(betaID)
+ProtectedIntent.account
+```
+
+`MapFilterView`, local Search and the Add Action Menu are sheets. Optional Logbook details remain a Route-owned sheet. Beta safety is a focused first-use alert after authentication. Unsupported external beta presents a local handoff explanation in this prototype and does not open a URL.
+
+`WallZoneRouteListView` shows current routes as the primary list and archived routes in a separate disclosure. Archived Route Detail continues to use the same typed push destination with historical messaging. The iPhone navigation still has no administrator destination, 2D wall surface or general social feed.

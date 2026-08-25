@@ -2,20 +2,18 @@ import SwiftUI
 
 struct AppShellView: View {
     let environment: AppEnvironment
-
-    @StateObject private var session = AppSession()
-    @State private var selectedTab = AppTab.defaultSelected
+    @ObservedObject var session: AppSession
     @State private var isAddMenuPresented = false
     @State private var selectedAddAction: AddAction?
 
     private var tabSelection: Binding<AppTab> {
         Binding(
-            get: { selectedTab },
+            get: { session.selectedTab },
             set: { newTab in
                 if newTab == .add {
                     isAddMenuPresented = true
                 } else {
-                    selectedTab = newTab
+                    session.selectedTab = newTab
                 }
             }
         )
@@ -23,7 +21,7 @@ struct AppShellView: View {
 
     var body: some View {
         TabView(selection: tabSelection) {
-            HomeView(environment: environment)
+            HomeView(environment: environment, session: session)
                 .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.systemImage) }
                 .tag(AppTab.home)
 
@@ -35,11 +33,11 @@ struct AppShellView: View {
                 .tabItem { Label(AppTab.add.title, systemImage: AppTab.add.systemImage) }
                 .tag(AppTab.add)
 
-            LogbookView(environment: environment)
+            LogbookView(environment: environment, session: session)
                 .tabItem { Label(AppTab.logbook.title, systemImage: AppTab.logbook.systemImage) }
                 .tag(AppTab.logbook)
 
-            ProfileView()
+            ProfileView(environment: environment, session: session)
                 .tabItem { Label(AppTab.profile.title, systemImage: AppTab.profile.systemImage) }
                 .tag(AppTab.profile)
         }
@@ -51,7 +49,9 @@ struct AppShellView: View {
         ) {
             ForEach(AddAction.allCases) { action in
                 Button(action.title) {
-                    selectedAddAction = action
+                    if session.requireAuthentication(for: .add(action)) {
+                        selectedAddAction = action
+                    }
                 }
             }
             Button(L10n.Common.cancel, role: .cancel) {}
@@ -61,15 +61,29 @@ struct AppShellView: View {
         .sheet(item: $selectedAddAction) { action in
             AddActionPlaceholderView(action: action)
         }
+        .sheet(isPresented: $session.isSignInGatePresented) {
+            SignInGateView(session: session)
+        }
+        .onChange(of: session.resumedIntent) { _, intent in
+            guard case .add(let action) = intent else { return }
+            selectedAddAction = action
+            session.consumeResumedIntent(.add(action))
+        }
     }
 }
 
 #Preview("Root — Light") {
-    AppShellView(environment: .development())
+    let environment = AppEnvironment.development(authenticationState: .signedIn(DevelopmentFixtures.mockProfile))
+    let session = AppSession(environment: environment)
+    AppShellView(environment: environment, session: session)
+        .task { await session.load() }
         .preferredColorScheme(.light)
 }
 
 #Preview("Root — Dark") {
-    AppShellView(environment: .development())
+    let environment = AppEnvironment.development(authenticationState: .signedIn(DevelopmentFixtures.mockProfile))
+    let session = AppSession(environment: environment)
+    AppShellView(environment: environment, session: session)
+        .task { await session.load() }
         .preferredColorScheme(.dark)
 }

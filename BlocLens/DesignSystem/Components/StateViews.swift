@@ -36,7 +36,7 @@ struct ErrorStateView: View {
             Text(message)
         } actions: {
             Button(L10n.Common.tryAgain, action: retry)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(PrimaryButtonStyle())
         }
     }
 }

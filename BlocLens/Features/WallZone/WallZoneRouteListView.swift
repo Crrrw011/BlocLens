@@ -3,12 +3,15 @@ import SwiftUI
 struct WallZoneRouteListView: View {
     let wallZone: WallZone
     let environment: AppEnvironment
+    @ObservedObject var session: AppSession
 
     @StateObject private var viewModel: WallZoneRouteListViewModel
+    @State private var showsArchived = false
 
-    init(wallZone: WallZone, environment: AppEnvironment) {
+    init(wallZone: WallZone, environment: AppEnvironment, session: AppSession) {
         self.wallZone = wallZone
         self.environment = environment
+        self.session = session
         _viewModel = StateObject(
             wrappedValue: WallZoneRouteListViewModel(
                 wallZone: wallZone,
@@ -27,10 +30,11 @@ struct WallZoneRouteListView: View {
         }
         .navigationTitle(wallZone.name)
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $viewModel.filter.query, prompt: Text(L10n.Search.routePrompt))
+        .searchable(text: $viewModel.options.query, prompt: Text(L10n.Search.routePrompt))
         .onSubmit(of: .search) { Task { await viewModel.load() } }
-        .onChange(of: viewModel.filter.gradeBand) { _, _ in Task { await viewModel.load() } }
-        .onChange(of: viewModel.filter.includesArchived) { _, _ in Task { await viewModel.load() } }
+        .onChange(of: viewModel.options.gradeBand) { _, _ in Task { await viewModel.load() } }
+        .onChange(of: viewModel.options.hasBeta) { _, _ in Task { await viewModel.load() } }
+        .onChange(of: viewModel.options.sort) { _, _ in Task { await viewModel.load() } }
         .task { await viewModel.load() }
     }
 
@@ -53,13 +57,19 @@ struct WallZoneRouteListView: View {
 
     private var filterBar: some View {
         HStack {
-            Picker(L10n.Filter.grade, selection: $viewModel.filter.gradeBand) {
+            Picker(L10n.Filter.grade, selection: $viewModel.options.gradeBand) {
                 ForEach(GradeBand.allCases, id: \.self) { band in
                     Text(L10n.gradeBand(band)).tag(band)
                 }
             }
             .pickerStyle(.menu)
-            Toggle(L10n.Filter.showHistory, isOn: $viewModel.filter.includesArchived)
+            Toggle(L10n.Filter.hasBeta, isOn: $viewModel.options.hasBeta)
+            Picker(L10n.Filter.sort, selection: $viewModel.options.sort) {
+                ForEach(RouteSort.allCases, id: \.self) { sort in
+                    Text(L10n.routeSort(sort)).tag(sort)
+                }
+            }
+            .pickerStyle(.menu)
         }
         .padding(.horizontal)
     }
@@ -70,11 +80,28 @@ struct WallZoneRouteListView: View {
         case .initial, .loading:
             LoadingStateView().frame(maxHeight: .infinity)
         case .loaded(let routes), .offlineWithCache(let routes):
-            List(routes) { route in
-                NavigationLink(value: route) {
-                    RouteRow(route: route, status: viewModel.statusByRouteID[route.id])
+            List {
+                Section(L10n.RouteList.currentRoutes) {
+                    ForEach(routes) { route in
+                        NavigationLink(value: route) {
+                            RouteRow(route: route, status: visibleStatus(for: route))
+                        }
+                        .accessibilityIdentifier("route-row-\(route.id.rawValue)")
+                    }
                 }
-                .accessibilityIdentifier("route-row-\(route.id.rawValue)")
+
+                if !viewModel.archivedRoutes.isEmpty {
+                    Section {
+                        DisclosureGroup(L10n.RouteList.archivedRoutes, isExpanded: $showsArchived) {
+                            ForEach(viewModel.archivedRoutes) { route in
+                                NavigationLink(value: route) {
+                                    RouteRow(route: route, status: visibleStatus(for: route))
+                                }
+                                .accessibilityIdentifier("route-row-\(route.id.rawValue)")
+                            }
+                        }
+                    }
+                }
             }
             .listStyle(.plain)
         case .empty:
@@ -94,6 +121,10 @@ struct WallZoneRouteListView: View {
                 systemImage: "wifi.slash"
             )
         }
+    }
+
+    private func visibleStatus(for route: ClimbingRoute) -> LogbookStatus? {
+        session.authenticationState.isSignedIn ? viewModel.statusByRouteID[route.id] : nil
     }
 }
 
@@ -125,6 +156,11 @@ private struct RouteRow: View {
                 }
                 .font(.caption)
                 .foregroundStyle(DesignColour.secondaryText)
+                if let reset = route.resetDate {
+                    Text(reset.formatted(date: .abbreviated, time: .omitted))
+                        .font(.caption2)
+                        .foregroundStyle(DesignColour.tertiaryText)
+                }
                 if let status {
                     Text(L10n.logbookStatus(status))
                         .font(.caption.bold())
@@ -133,5 +169,29 @@ private struct RouteRow: View {
             }
         }
         .padding(.vertical, DesignSpacing.xSmall)
+    }
+}
+
+#Preview("Wall Zone Route List") {
+    let environment = AppEnvironment.development(authenticationState: .signedIn(DevelopmentFixtures.mockProfile))
+    let session = AppSession(environment: environment)
+    NavigationStack {
+        WallZoneRouteListView(
+            wallZone: DevelopmentFixtures.wallZones[0],
+            environment: environment,
+            session: session
+        )
+    }
+    .task { await session.load() }
+}
+
+#Preview("Wall Zone Route List — Offline") {
+    let environment = AppEnvironment.development(scenario: .offlineWithoutCache)
+    NavigationStack {
+        WallZoneRouteListView(
+            wallZone: DevelopmentFixtures.wallZones[0],
+            environment: environment,
+            session: AppSession(environment: environment)
+        )
     }
 }

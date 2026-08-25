@@ -6,18 +6,25 @@ struct AppEnvironment: Sendable {
     let routeRepository: any RouteRepository
     let betaRepository: any BetaRepository
     let logbookRepository: any LogbookRepository
+    let authenticationRepository: any AuthenticationRepository
+    let onboardingStore: any OnboardingStore
     let currentUserID: UserID
     let scenario: MockRepositoryScenario
 
     static func development(
         scenario: MockRepositoryScenario = .loaded,
-        isOnline: Bool = true
+        isOnline: Bool = true,
+        isOnboardingComplete: Bool = true,
+        authenticationState: AuthenticationState = .guest,
+        onboardingStore: (any OnboardingStore)? = nil
     ) -> AppEnvironment {
         AppEnvironment(
             gymRepository: MockGymRepository(scenario: scenario),
             routeRepository: MockRouteRepository(scenario: scenario),
             betaRepository: MockBetaRepository(scenario: scenario),
             logbookRepository: MockLogbookRepository(isOnline: isOnline),
+            authenticationRepository: MockAuthenticationRepository(initialState: authenticationState),
+            onboardingStore: onboardingStore ?? InMemoryOnboardingStore(isComplete: isOnboardingComplete),
             currentUserID: DevelopmentFixtures.currentUserID,
             scenario: scenario
         )
@@ -26,5 +33,94 @@ struct AppEnvironment: Sendable {
 
 @MainActor
 final class AppSession: ObservableObject {
+    @Published private(set) var hasLoaded = false
+    @Published private(set) var hasCompletedOnboarding = false
+    @Published private(set) var authenticationState: AuthenticationState = .guest
+    @Published var selectedTab = AppTab.defaultSelected
+    @Published var isSignInGatePresented = false
+    @Published private(set) var pendingIntent: ProtectedIntent?
+    @Published private(set) var resumedIntent: ProtectedIntent?
     @Published var hasAcknowledgedRevealSafety = false
+    @Published var appearancePreference: AppearancePreference = .system
+    @Published private(set) var dismissedContributionPrompts: Set<String> = []
+
+    private let authenticationRepository: any AuthenticationRepository
+    private let onboardingStore: any OnboardingStore
+
+    init(environment: AppEnvironment) {
+        authenticationRepository = environment.authenticationRepository
+        onboardingStore = environment.onboardingStore
+    }
+
+    func load() async {
+        hasCompletedOnboarding = onboardingStore.isComplete()
+        authenticationState = await authenticationRepository.state()
+        hasLoaded = true
+    }
+
+    func completeOnboarding() {
+        onboardingStore.setComplete(true)
+        hasCompletedOnboarding = true
+        selectedTab = .map
+    }
+
+    func resetOnboarding() {
+        onboardingStore.setComplete(false)
+        hasCompletedOnboarding = false
+        selectedTab = .map
+    }
+
+    @discardableResult
+    func requireAuthentication(for intent: ProtectedIntent) -> Bool {
+        guard !authenticationState.isSignedIn else { return true }
+        pendingIntent = intent
+        isSignInGatePresented = true
+        return false
+    }
+
+    func signInWithMockAccount() async {
+        let profile = await authenticationRepository.signInWithMockAccount()
+        authenticationState = .signedIn(profile)
+        resumedIntent = pendingIntent
+        pendingIntent = nil
+        isSignInGatePresented = false
+    }
+
+    func cancelSignIn() {
+        pendingIntent = nil
+        isSignInGatePresented = false
+    }
+
+    func consumeResumedIntent(_ intent: ProtectedIntent) {
+        guard resumedIntent == intent else { return }
+        resumedIntent = nil
+    }
+
+    func signOut() async {
+        await authenticationRepository.signOut()
+        authenticationState = .guest
+        pendingIntent = nil
+        resumedIntent = nil
+        isSignInGatePresented = false
+    }
+
+    func dismissContributionPrompt(_ identifier: String) {
+        dismissedContributionPrompts.insert(identifier)
+    }
+
+    func isContributionPromptVisible(_ identifier: String) -> Bool {
+        !dismissedContributionPrompts.contains(identifier)
+    }
+
+    func resetBetaSafetyConfirmation() {
+        hasAcknowledgedRevealSafety = false
+    }
+
+    var preferredColorScheme: ColorScheme? {
+        switch appearancePreference {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
 }

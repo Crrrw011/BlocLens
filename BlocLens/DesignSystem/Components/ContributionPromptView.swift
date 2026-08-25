@@ -23,13 +23,14 @@ struct ContributionPromptView: View {
 
             HStack(spacing: DesignSpacing.small) {
                 Button(primaryActionTitle, action: primaryAction)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(PrimaryButtonStyle())
 
                 Button(L10n.Common.notNow, action: dismissAction)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(CompactActionButtonStyle())
             }
         }
         .cardStyle()
+        .accessibilityElement(children: .contain)
     }
 }
 

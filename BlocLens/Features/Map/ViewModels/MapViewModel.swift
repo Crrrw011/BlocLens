@@ -4,9 +4,14 @@ import Foundation
 @MainActor
 final class MapViewModel: ObservableObject {
     @Published private(set) var state: LoadableState<[Gym]> = .initial
+    @Published var filterOptions = GymFilterOptions()
 
     private let repository: any GymRepository
     private let scenario: MockRepositoryScenario
+    private var allLoadedGyms: [Gym] = []
+
+    private static let referenceDate = Date(timeIntervalSince1970: 1_787_623_200)
+    private static let mockOpenGymIDs: Set<GymID> = ["urban-climb-west-end", "nine-degrees-enoggera"]
 
     init(repository: any GymRepository, scenario: MockRepositoryScenario = .loaded) {
         self.repository = repository
@@ -17,11 +22,12 @@ final class MapViewModel: ObservableObject {
         state = .loading
         do {
             let gyms = try await repository.allGyms()
+            allLoadedGyms = gyms
             guard !gyms.isEmpty else {
                 state = .empty
                 return
             }
-            state = scenario == .offlineWithCache ? .offlineWithCache(gyms) : .loaded(gyms)
+            applyFilters()
         } catch RepositoryError.offlineNoCache {
             state = .offlineWithoutCache
         } catch let error as RepositoryError {
@@ -29,6 +35,20 @@ final class MapViewModel: ObservableObject {
         } catch {
             state = .error(.fixtureFailure)
         }
+    }
+
+    func applyFilters() {
+        let gyms = GymFilterService.filter(
+            allLoadedGyms,
+            options: filterOptions,
+            referenceDate: Self.referenceDate,
+            mockOpenGymIDs: Self.mockOpenGymIDs
+        )
+        guard !gyms.isEmpty else {
+            state = .empty
+            return
+        }
+        state = scenario == .offlineWithCache ? .offlineWithCache(gyms) : .loaded(gyms)
     }
 }
 

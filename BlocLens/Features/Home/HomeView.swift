@@ -2,12 +2,13 @@ import SwiftUI
 
 struct HomeView: View {
     let environment: AppEnvironment
+    @ObservedObject var session: AppSession
 
     @StateObject private var viewModel: HomeViewModel
-    @State private var showsContributionPrompt = true
 
-    init(environment: AppEnvironment) {
+    init(environment: AppEnvironment, session: AppSession) {
         self.environment = environment
+        self.session = session
         _viewModel = StateObject(wrappedValue: HomeViewModel(environment: environment))
     }
 
@@ -15,6 +16,15 @@ struct HomeView: View {
         NavigationStack {
             content
                 .navigationTitle(L10n.Home.title)
+                .navigationDestination(for: Gym.self) { gym in
+                    GymDetailView(gym: gym, environment: environment, session: session)
+                }
+                .navigationDestination(for: WallZone.self) { zone in
+                    WallZoneRouteListView(wallZone: zone, environment: environment, session: session)
+                }
+                .navigationDestination(for: ClimbingRoute.self) { route in
+                    RouteDetailView(route: route, environment: environment, session: session)
+                }
         }
         .onAppear { Task { await viewModel.load() } }
     }
@@ -58,9 +68,11 @@ struct HomeView: View {
 
                 dashboardSection(L10n.Home.currentGym) {
                     if let gym = data.frequentGym {
-                        VStack(alignment: .leading) {
-                            Text(gym.name).font(.headline)
-                            Text(gym.suburb).foregroundStyle(DesignColour.secondaryText)
+                        NavigationLink(value: gym) {
+                            VStack(alignment: .leading) {
+                                Text(gym.name).font(.headline)
+                                Text(gym.suburb).foregroundStyle(DesignColour.secondaryText)
+                            }
                         }
                     } else {
                         Text(L10n.Home.noFrequentGym)
@@ -68,11 +80,15 @@ struct HomeView: View {
                 }
 
                 dashboardSection(L10n.Home.activeProjects) {
-                    if data.projects.isEmpty {
+                    if !session.authenticationState.isSignedIn {
+                        privateLogbookMessage
+                    } else if data.projects.isEmpty {
                         Text(L10n.Home.noProjects).foregroundStyle(DesignColour.secondaryText)
                     } else {
                         ForEach(data.projects) { item in
-                            recordRow(item.entry, route: item.route)
+                            NavigationLink(value: item.route) {
+                                recordRow(item.entry, route: item.route)
+                            }
                         }
                     }
                 }
@@ -80,34 +96,53 @@ struct HomeView: View {
 
                 dashboardSection(L10n.Home.latestResets) {
                     ForEach(data.resets) { item in
-                        HStack {
-                            Text(item.gym.name)
-                            Spacer()
-                            Text(item.date.formatted(date: .abbreviated, time: .omitted))
-                                .foregroundStyle(DesignColour.secondaryText)
+                        NavigationLink(value: item.gym) {
+                            HStack {
+                                Text(item.gym.name)
+                                Spacer()
+                                Text(item.date.formatted(date: .abbreviated, time: .omitted))
+                                    .foregroundStyle(DesignColour.secondaryText)
+                            }
                         }
                     }
                 }
 
                 dashboardSection(L10n.Home.recentRecords) {
-                    ForEach(data.recentRecords) { item in
-                        recordRow(item.entry, route: item.route)
+                    if !session.authenticationState.isSignedIn {
+                        privateLogbookMessage
+                    } else {
+                        ForEach(data.recentRecords) { item in
+                            NavigationLink(value: item.route) {
+                                recordRow(item.entry, route: item.route)
+                            }
+                        }
                     }
                 }
 
-                if showsContributionPrompt {
+                if session.isContributionPromptVisible("home-route-accuracy") {
                     ContributionPromptView(
                         title: L10n.Home.contributionTitle,
                         message: L10n.Home.contributionMessage,
                         primaryActionTitle: L10n.Home.contributionAction,
-                        primaryAction: {},
-                        dismissAction: { showsContributionPrompt = false }
+                        primaryAction: { _ = session.requireAuthentication(for: .account) },
+                        dismissAction: { session.dismissContributionPrompt("home-route-accuracy") }
                     )
                 }
             }
             .padding()
         }
         .background(DesignColour.background)
+    }
+
+    private var privateLogbookMessage: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            Label(L10n.Home.privateLogbookMessage, systemImage: "lock.fill")
+                .foregroundStyle(DesignColour.secondaryText)
+            Button(L10n.Home.privateLogbookAction) {
+                _ = session.requireAuthentication(for: .account)
+            }
+            .buttonStyle(CompactActionButtonStyle())
+        }
     }
 
     private func dashboardSection<Content: View>(
@@ -138,11 +173,27 @@ struct HomeView: View {
 }
 
 #Preview("Home — Light") {
-    HomeView(environment: .development())
+    let environment = AppEnvironment.development(authenticationState: .signedIn(DevelopmentFixtures.mockProfile))
+    let session = AppSession(environment: environment)
+    HomeView(environment: environment, session: session)
+        .task { await session.load() }
         .preferredColorScheme(.light)
 }
 
 #Preview("Home — Dark") {
-    HomeView(environment: .development())
+    let environment = AppEnvironment.development(authenticationState: .signedIn(DevelopmentFixtures.mockProfile))
+    let session = AppSession(environment: environment)
+    HomeView(environment: environment, session: session)
+        .task { await session.load() }
         .preferredColorScheme(.dark)
+}
+
+#Preview("Home — Error") {
+    let environment = AppEnvironment.development(scenario: .error)
+    HomeView(environment: environment, session: AppSession(environment: environment))
+}
+
+#Preview("Home — Offline") {
+    let environment = AppEnvironment.development(scenario: .offlineWithCache)
+    HomeView(environment: environment, session: AppSession(environment: environment))
 }

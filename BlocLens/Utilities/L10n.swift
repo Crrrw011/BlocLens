@@ -7,6 +7,10 @@ enum L10n {
         static let notNow: LocalizedStringResource = "common.notNow"
         static let ok: LocalizedStringResource = "common.ok"
         static let tryAgain: LocalizedStringResource = "common.tryAgain"
+        static let continueButton: LocalizedStringResource = "common.continue"
+        static let selected: LocalizedStringResource = "common.selected"
+        static let notSelected: LocalizedStringResource = "common.notSelected"
+        static let all: LocalizedStringResource = "common.all"
     }
 
     enum Tab {
@@ -25,6 +29,7 @@ enum L10n {
         static let recordCompletedRoute: LocalizedStringResource = "add.recordCompletedRoute"
         static let identifyOrMarkRoute: LocalizedStringResource = "add.identifyOrMarkRoute"
         static let placeholderMessage: LocalizedStringResource = "add.placeholder.message"
+        static let markRouteComingLater: LocalizedStringResource = "add.markRoute.comingLater"
         static let done: LocalizedStringResource = "add.done"
     }
 
@@ -41,6 +46,8 @@ enum L10n {
         static let contributionTitle: LocalizedStringResource = "home.contribution.title"
         static let contributionMessage: LocalizedStringResource = "home.contribution.message"
         static let contributionAction: LocalizedStringResource = "home.contribution.action"
+        static let privateLogbookMessage: LocalizedStringResource = "home.privateLogbook.message"
+        static let privateLogbookAction: LocalizedStringResource = "home.privateLogbook.action"
     }
 
     enum Map {
@@ -50,6 +57,16 @@ enum L10n {
         static let locationUnavailableMessage: LocalizedStringResource = "map.locationUnavailable.message"
         static let emptyFixtureTitle: LocalizedStringResource = "map.emptyFixture.title"
         static let emptyFixtureMessage: LocalizedStringResource = "map.emptyFixture.message"
+    }
+
+    enum MapFilter {
+        static let title: LocalizedStringResource = "mapFilter.title"
+        static let openNow: LocalizedStringResource = "mapFilter.openNow"
+        static let openNowNotice: LocalizedStringResource = "mapFilter.openNow.notice"
+        static let hasBeta: LocalizedStringResource = "mapFilter.hasBeta"
+        static let recentlyReset: LocalizedStringResource = "mapFilter.recentlyReset"
+        static let clear: LocalizedStringResource = "mapFilter.clear"
+        static let showResults: LocalizedStringResource = "mapFilter.showResults"
     }
 
     enum Search {
@@ -64,11 +81,14 @@ enum L10n {
     enum Filter {
         static let grade: LocalizedStringResource = "filter.grade"
         static let showHistory: LocalizedStringResource = "filter.showHistory"
+        static let hasBeta: LocalizedStringResource = "filter.hasBeta"
+        static let sort: LocalizedStringResource = "filter.sort"
     }
 
     enum Gym {
         static let detailTitle: LocalizedStringResource = "gym.detail.title"
         static let openGym: LocalizedStringResource = "gym.openGym"
+        static let viewGym: LocalizedStringResource = "gym.viewGym"
         static let verified: LocalizedStringResource = "gym.verified"
         static let developmentFixture: LocalizedStringResource = "gym.developmentFixture"
         static let currentRoutesAndZones: LocalizedStringResource = "gym.currentRoutesAndZones"
@@ -83,6 +103,10 @@ enum L10n {
         static let operatingInformation: LocalizedStringResource = "gym.operatingInformation"
         static let operatingFixtureMessage: LocalizedStringResource = "gym.operatingFixtureMessage"
         static let facilities: LocalizedStringResource = "gym.facilities"
+        static let contactDetails: LocalizedStringResource = "gym.contactDetails"
+        static let contactFixtureMessage: LocalizedStringResource = "gym.contactFixtureMessage"
+        static let contributionTitle: LocalizedStringResource = "gym.contribution.title"
+        static let contributionMessage: LocalizedStringResource = "gym.contribution.message"
     }
 
     enum WallZone {
@@ -93,6 +117,8 @@ enum L10n {
     enum RouteList {
         static let emptyTitle: LocalizedStringResource = "routeList.empty.title"
         static let emptyMessage: LocalizedStringResource = "routeList.empty.message"
+        static let currentRoutes: LocalizedStringResource = "routeList.currentRoutes"
+        static let archivedRoutes: LocalizedStringResource = "routeList.archivedRoutes"
     }
 
     enum Route {
@@ -108,6 +134,13 @@ enum L10n {
         static let validVotesSuffix: LocalizedStringResource = "route.communityGrade.validVotesSuffix"
         static let commentsTitle: LocalizedStringResource = "route.comments.title"
         static let commentsPlaceholder: LocalizedStringResource = "route.comments.placeholder"
+        static let gymGrade: LocalizedStringResource = "route.gymGrade"
+        static let photoContributionTitle: LocalizedStringResource = "route.photoContribution.title"
+        static let photoContributionMessage: LocalizedStringResource = "route.photoContribution.message"
+        static let addPhoto: LocalizedStringResource = "route.addPhoto"
+        static let accuracyTitle: LocalizedStringResource = "route.accuracy.title"
+        static let suggestCorrection: LocalizedStringResource = "route.suggestCorrection"
+        static let reportRoute: LocalizedStringResource = "route.reportRoute"
     }
 
     enum Beta {
@@ -126,6 +159,16 @@ enum L10n {
         static let brokenLink: LocalizedStringResource = "beta.brokenLink"
         static let emptyMessage: LocalizedStringResource = "beta.empty.message"
         static let offlineMessage: LocalizedStringResource = "beta.offline.message"
+        static let embedPlaceholder: LocalizedStringResource = "beta.embedPlaceholder"
+        static let openOriginalPost: LocalizedStringResource = "beta.openOriginalPost"
+        static let helpful: LocalizedStringResource = "beta.helpful"
+        static let reportIssue: LocalizedStringResource = "beta.reportIssue"
+        static let wrongRoute: LocalizedStringResource = "beta.wrongRoute"
+        static let unsafeContent: LocalizedStringResource = "beta.unsafeContent"
+        static let externalHandoffTitle: LocalizedStringResource = "beta.externalHandoff.title"
+        static let externalHandoffMessage: LocalizedStringResource = "beta.externalHandoff.message"
+        static let feedbackPlaceholderTitle: LocalizedStringResource = "beta.feedbackPlaceholder.title"
+        static let feedbackPlaceholderMessage: LocalizedStringResource = "beta.feedbackPlaceholder.message"
     }
 
     enum Logbook {
@@ -150,6 +193,12 @@ enum L10n {
         static let highestGrade: LocalizedStringResource = "logbook.highestGrade"
         static let projects: LocalizedStringResource = "logbook.projects"
         static let recentRecords: LocalizedStringResource = "logbook.recentRecords"
+        static let signInTitle: LocalizedStringResource = "logbook.signIn.title"
+        static let signInMessage: LocalizedStringResource = "logbook.signIn.message"
+        static let filters: LocalizedStringResource = "logbook.filters"
+        static let statusFilter: LocalizedStringResource = "logbook.statusFilter"
+        static let lastThirtyDays: LocalizedStringResource = "logbook.lastThirtyDays"
+        static let noMatchingRecords: LocalizedStringResource = "logbook.noMatchingRecords"
     }
 
     enum Grade {
@@ -160,6 +209,73 @@ enum L10n {
         static let title: LocalizedStringResource = "profile.title"
         static let emptyTitle: LocalizedStringResource = "profile.empty.title"
         static let emptyMessage: LocalizedStringResource = "profile.empty.message"
+        static let signedOutTitle: LocalizedStringResource = "profile.signedOut.title"
+        static let signedOutMessage: LocalizedStringResource = "profile.signedOut.message"
+        static let avatarPlaceholder: LocalizedStringResource = "profile.avatarPlaceholder"
+        static let mockAccountLabel: LocalizedStringResource = "profile.mockAccountLabel"
+        static let climbingProfile: LocalizedStringResource = "profile.climbingProfile"
+        static let height: LocalizedStringResource = "profile.height"
+        static let armSpan: LocalizedStringResource = "profile.armSpan"
+        static let regularGrade: LocalizedStringResource = "profile.regularGrade"
+        static let favouriteGym: LocalizedStringResource = "profile.favouriteGym"
+        static let contributorStatus: LocalizedStringResource = "profile.contributorStatus"
+        static let trustedContributor: LocalizedStringResource = "profile.trustedContributor"
+        static let contributorInProgress: LocalizedStringResource = "profile.contributorInProgress"
+        static let helpfulProgressSuffix: LocalizedStringResource = "profile.helpfulProgressSuffix"
+        static let support: LocalizedStringResource = "profile.support"
+        static let notProvided: LocalizedStringResource = "profile.notProvided"
+    }
+
+    enum Onboarding {
+        static let findGymsTitle: LocalizedStringResource = "onboarding.findGyms.title"
+        static let findGymsMessage: LocalizedStringResource = "onboarding.findGyms.message"
+        static let findBetaTitle: LocalizedStringResource = "onboarding.findBeta.title"
+        static let findBetaMessage: LocalizedStringResource = "onboarding.findBeta.message"
+        static let trackTitle: LocalizedStringResource = "onboarding.track.title"
+        static let trackMessage: LocalizedStringResource = "onboarding.track.message"
+        static let skip: LocalizedStringResource = "onboarding.skip"
+        static let continueButton: LocalizedStringResource = "onboarding.continue"
+        static let exploreMap: LocalizedStringResource = "onboarding.exploreMap"
+    }
+
+    enum Authentication {
+        static let navigationTitle: LocalizedStringResource = "authentication.navigationTitle"
+        static let gateTitle: LocalizedStringResource = "authentication.gate.title"
+        static let apple: LocalizedStringResource = "authentication.apple"
+        static let google: LocalizedStringResource = "authentication.google"
+        static let mockAccount: LocalizedStringResource = "authentication.mockAccount"
+        static let mockNotice: LocalizedStringResource = "authentication.mockNotice"
+        static let providerUnavailableHint: LocalizedStringResource = "authentication.providerUnavailableHint"
+        static let revealReason: LocalizedStringResource = "authentication.reason.reveal"
+        static let logbookReason: LocalizedStringResource = "authentication.reason.logbook"
+        static let contributionReason: LocalizedStringResource = "authentication.reason.contribution"
+        static let helpfulReason: LocalizedStringResource = "authentication.reason.helpful"
+        static let accountReason: LocalizedStringResource = "authentication.reason.account"
+        static let signIn: LocalizedStringResource = "authentication.signIn"
+    }
+
+    enum Settings {
+        static let title: LocalizedStringResource = "settings.title"
+        static let appearance: LocalizedStringResource = "settings.appearance"
+        static let language: LocalizedStringResource = "settings.language"
+        static let englishAustralian: LocalizedStringResource = "settings.language.englishAustralian"
+        static let korean: LocalizedStringResource = "settings.language.korean"
+        static let simplifiedChinese: LocalizedStringResource = "settings.language.simplifiedChinese"
+        static let notifications: LocalizedStringResource = "settings.notifications"
+        static let projectRemoval: LocalizedStringResource = "settings.notifications.projectRemoval"
+        static let gymResets: LocalizedStringResource = "settings.notifications.gymResets"
+        static let newBetaProjects: LocalizedStringResource = "settings.notifications.newBetaProjects"
+        static let followedContributors: LocalizedStringResource = "settings.notifications.followedContributors"
+        static let notificationMockNotice: LocalizedStringResource = "settings.notifications.mockNotice"
+        static let privacy: LocalizedStringResource = "settings.privacy"
+        static let safety: LocalizedStringResource = "settings.safety"
+        static let helpCentre: LocalizedStringResource = "settings.helpCentre"
+        static let sendFeedback: LocalizedStringResource = "settings.sendFeedback"
+        static let development: LocalizedStringResource = "settings.development"
+        static let resetOnboarding: LocalizedStringResource = "settings.resetOnboarding"
+        static let resetBetaSafety: LocalizedStringResource = "settings.resetBetaSafety"
+        static let mockSignOut: LocalizedStringResource = "settings.mockSignOut"
+        static let placeholderMessage: LocalizedStringResource = "settings.placeholderMessage"
     }
 
     enum State {
@@ -260,6 +376,22 @@ enum L10n {
         case .dynamicMovement: "betaTag.dynamic"
         case .shortPersonBeta: "betaTag.shortPerson"
         case .tallLongReachBeta: "betaTag.tallLongReach"
+        }
+    }
+
+    static func routeSort(_ sort: RouteSort) -> LocalizedStringResource {
+        switch sort {
+        case .newest: "routeSort.newest"
+        case .grade: "routeSort.grade"
+        case .mostBeta: "routeSort.mostBeta"
+        }
+    }
+
+    static func appearance(_ preference: AppearancePreference) -> LocalizedStringResource {
+        switch preference {
+        case .system: "appearance.system"
+        case .light: "appearance.light"
+        case .dark: "appearance.dark"
         }
     }
 }

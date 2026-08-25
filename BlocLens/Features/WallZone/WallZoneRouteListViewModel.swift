@@ -4,7 +4,8 @@ import Combine
 final class WallZoneRouteListViewModel: ObservableObject {
     @Published private(set) var state: LoadableState<[ClimbingRoute]> = .initial
     @Published private(set) var statusByRouteID: [ClimbingRouteID: LogbookStatus] = [:]
-    @Published var filter = RouteFilter()
+    @Published private(set) var archivedRoutes: [ClimbingRoute] = []
+    @Published var options = RouteListOptions()
 
     private let wallZone: WallZone
     private let repository: any RouteRepository
@@ -26,11 +27,16 @@ final class WallZoneRouteListViewModel: ObservableObject {
     func load() async {
         state = .loading
         do {
-            async let routeRequest = repository.routes(wallZoneID: wallZone.id, filter: filter)
+            async let routeRequest = repository.routes(
+                wallZoneID: wallZone.id,
+                filter: RouteFilter(query: "", gradeBand: .all, includesArchived: true)
+            )
             async let entryRequest = logbookRepository.entries(userID: userID)
             let (routes, entries) = try await (routeRequest, entryRequest)
             statusByRouteID = Dictionary(uniqueKeysWithValues: entries.map { ($0.routeID, $0.status) })
-            state = routes.isEmpty ? .empty : .loaded(routes)
+            let current = RouteListPresentation.currentRoutes(routes, options: options)
+            archivedRoutes = RouteListPresentation.archivedRoutes(routes, options: options)
+            state = current.isEmpty ? .empty : .loaded(current)
         } catch RepositoryError.offlineNoCache {
             state = .offlineWithoutCache
         } catch let error as RepositoryError {

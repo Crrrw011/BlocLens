@@ -13,7 +13,7 @@ struct AddActionPlaceholderView: View {
                 Text(action.title)
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
-                Text(L10n.Add.placeholderMessage)
+                Text(action == .identifyOrMarkRoute ? L10n.Add.markRouteComingLater : L10n.Add.placeholderMessage)
                     .foregroundStyle(DesignColour.secondaryText)
                     .multilineTextAlignment(.center)
             }
@@ -26,5 +26,6 @@ struct AddActionPlaceholderView: View {
                 }
             }
         }
+        .accessibilityIdentifier("add-action-placeholder-\(action.rawValue)")
     }
 }

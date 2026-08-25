@@ -3,12 +3,14 @@ import SwiftUI
 struct GymDetailView: View {
     let gym: Gym
     let environment: AppEnvironment
+    @ObservedObject var session: AppSession
 
     @StateObject private var viewModel: GymDetailViewModel
 
-    init(gym: Gym, environment: AppEnvironment) {
+    init(gym: Gym, environment: AppEnvironment, session: AppSession) {
         self.gym = gym
         self.environment = environment
+        self.session = session
         _viewModel = StateObject(
             wrappedValue: GymDetailViewModel(gym: gym, repository: environment.gymRepository)
         )
@@ -75,8 +77,33 @@ struct GymDetailView: View {
             }
 
             Section(L10n.Gym.facilities) {
-                ForEach(gym.facilities, id: \.self) { facility in
-                    Label(L10n.facility(facility), systemImage: L10n.facilityIcon(facility))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        ForEach(gym.facilities, id: \.self) { facility in
+                            FacilityChip(facility: facility)
+                        }
+                    }
+                }
+            }
+
+            Section(L10n.Gym.contactDetails) {
+                Text(L10n.Gym.contactFixtureMessage)
+                    .foregroundStyle(DesignColour.secondaryText)
+            }
+
+            if session.isContributionPromptVisible("gym-\(gym.id.rawValue)") {
+                Section {
+                    ContributionPromptView(
+                        title: L10n.Gym.contributionTitle,
+                        message: L10n.Gym.contributionMessage,
+                        primaryActionTitle: L10n.Home.contributionAction,
+                        primaryAction: {
+                            _ = session.requireAuthentication(for: .account)
+                        },
+                        dismissAction: {
+                            session.dismissContributionPrompt("gym-\(gym.id.rawValue)")
+                        }
+                    )
                 }
             }
         }
@@ -156,5 +183,27 @@ private struct WallZoneRow: View {
             }
         }
         .padding(.vertical, DesignSpacing.xSmall)
+    }
+}
+
+#Preview("Gym Detail — Loaded") {
+    let environment = AppEnvironment.development()
+    NavigationStack {
+        GymDetailView(
+            gym: DevelopmentFixtures.gyms[0],
+            environment: environment,
+            session: AppSession(environment: environment)
+        )
+    }
+}
+
+#Preview("Gym Detail — Empty") {
+    let environment = AppEnvironment.development(scenario: .empty)
+    NavigationStack {
+        GymDetailView(
+            gym: DevelopmentFixtures.gyms[0],
+            environment: environment,
+            session: AppSession(environment: environment)
+        )
     }
 }

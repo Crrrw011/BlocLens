@@ -10,6 +10,7 @@ struct MapView: View {
     @State private var path = NavigationPath()
     @State private var selectedGym: Gym?
     @State private var showsSearch = false
+    @State private var showsFilters = false
     @State private var showsNearbyMessage = false
 
     init(environment: AppEnvironment, session: AppSession) {
@@ -42,6 +43,13 @@ struct MapView: View {
                         .accessibilityIdentifier("map-search-button")
 
                         Button {
+                            showsFilters = true
+                        } label: {
+                            Label(L10n.MapFilter.title, systemImage: viewModel.filterOptions.isActive ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                        }
+                        .accessibilityIdentifier("map-filter-button")
+
+                        Button {
                             showsNearbyMessage = true
                         } label: {
                             Label(L10n.Map.nearbyGyms, systemImage: "location")
@@ -49,10 +57,10 @@ struct MapView: View {
                     }
                 }
                 .navigationDestination(for: Gym.self) { gym in
-                    GymDetailView(gym: gym, environment: environment)
+                    GymDetailView(gym: gym, environment: environment, session: session)
                 }
                 .navigationDestination(for: WallZone.self) { zone in
-                    WallZoneRouteListView(wallZone: zone, environment: environment)
+                    WallZoneRouteListView(wallZone: zone, environment: environment, session: session)
                 }
                 .navigationDestination(for: ClimbingRoute.self) { route in
                     RouteDetailView(route: route, environment: environment, session: session)
@@ -73,6 +81,11 @@ struct MapView: View {
                     path.append(zone)
                     path.append(route)
                 }
+            }
+        }
+        .sheet(isPresented: $showsFilters) {
+            MapFilterView(options: $viewModel.filterOptions) {
+                viewModel.applyFilters()
             }
         }
         .alert(L10n.Map.locationUnavailableTitle, isPresented: $showsNearbyMessage) {
@@ -192,8 +205,16 @@ private struct GymPreviewCard: View {
             }
             .font(.caption)
 
-            Button(L10n.Gym.openGym, action: openGym)
-                .buttonStyle(.borderedProminent)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DesignSpacing.xSmall) {
+                    ForEach(gym.facilities.prefix(3), id: \.self) { facility in
+                        FacilityChip(facility: facility)
+                    }
+                }
+            }
+
+            Button(L10n.Gym.viewGym, action: openGym)
+                .buttonStyle(PrimaryButtonStyle())
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .accessibilityIdentifier("open-gym-button")
         }
@@ -203,13 +224,16 @@ private struct GymPreviewCard: View {
 }
 
 #Preview("Map — Loaded") {
-    MapView(environment: .development(), session: AppSession())
+    let environment = AppEnvironment.development()
+    MapView(environment: environment, session: AppSession(environment: environment))
 }
 
 #Preview("Map — Empty") {
-    MapView(environment: .development(scenario: .empty), session: AppSession())
+    let environment = AppEnvironment.development(scenario: .empty)
+    MapView(environment: environment, session: AppSession(environment: environment))
 }
 
 #Preview("Map — Offline") {
-    MapView(environment: .development(scenario: .offlineWithCache), session: AppSession())
+    let environment = AppEnvironment.development(scenario: .offlineWithCache)
+    MapView(environment: environment, session: AppSession(environment: environment))
 }

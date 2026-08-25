@@ -6,33 +6,43 @@ final class RouteDetailViewModel: ObservableObject {
     @Published private(set) var betaState: LoadableState<[BetaLink]> = .initial
     @Published private(set) var brokenLinks: [BetaLink] = []
     @Published private(set) var logbookEntry: LogbookEntry?
+    @Published private(set) var wallZone: WallZone?
     @Published private(set) var saveError: RepositoryError?
 
     private let route: ClimbingRoute
     private let betaRepository: any BetaRepository
     private let logbookRepository: any LogbookRepository
     private let userID: UserID
+    private let gymRepository: any GymRepository
 
     init(route: ClimbingRoute, environment: AppEnvironment) {
         self.route = route
         betaRepository = environment.betaRepository
         logbookRepository = environment.logbookRepository
+        gymRepository = environment.gymRepository
         userID = environment.currentUserID
     }
 
-    func load() async {
+    func load(viewerProfile: UserProfile? = nil) async {
         betaState = .loading
         do {
             async let betaRequest = betaRepository.betaLinks(
                 routeID: route.id,
-                viewer: BetaViewerProfile(heightCentimetres: 170, armSpanCentimetres: 171)
+                viewer: viewerProfile.map {
+                    BetaViewerProfile(
+                        heightCentimetres: $0.heightCentimetres,
+                        armSpanCentimetres: $0.armSpanCentimetres
+                    )
+                }
             )
             async let brokenRequest = betaRepository.brokenBetaLinks(routeID: route.id)
             async let entryRequest = logbookRepository.entry(userID: userID, routeID: route.id)
-            let (links, broken, entry) = try await (betaRequest, brokenRequest, entryRequest)
+            async let zonesRequest = gymRepository.allWallZones()
+            let (links, broken, entry, zones) = try await (betaRequest, brokenRequest, entryRequest, zonesRequest)
             betaState = links.isEmpty ? .empty : .loaded(links)
             brokenLinks = broken
             logbookEntry = entry
+            wallZone = zones.first { $0.id == route.wallZoneID }
         } catch RepositoryError.offlineNoCache {
             betaState = .offlineWithoutCache
         } catch let error as RepositoryError {
