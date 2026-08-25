@@ -18,19 +18,20 @@ struct BlocLensApp: App {
         let authenticationState: AuthenticationState = arguments.contains("--mock-authenticated")
             ? .signedIn(DevelopmentFixtures.mockProfile)
             : .guest
+        let languagePreferenceStore = UserDefaultsLanguagePreferenceStore()
         if arguments.contains("--mock-empty") {
-            environment = .development(scenario: .empty, authenticationState: authenticationState, onboardingStore: onboardingStore)
+            environment = .development(scenario: .empty, authenticationState: authenticationState, onboardingStore: onboardingStore, languagePreferenceStore: languagePreferenceStore)
         } else if arguments.contains("--mock-error") {
-            environment = .development(scenario: .error, authenticationState: authenticationState, onboardingStore: onboardingStore)
+            environment = .development(scenario: .error, authenticationState: authenticationState, onboardingStore: onboardingStore, languagePreferenceStore: languagePreferenceStore)
         } else if arguments.contains("--mock-offline-no-cache") {
-            environment = .development(scenario: .offlineWithoutCache, isOnline: false, authenticationState: authenticationState, onboardingStore: onboardingStore)
+            environment = .development(scenario: .offlineWithoutCache, isOnline: false, authenticationState: authenticationState, onboardingStore: onboardingStore, languagePreferenceStore: languagePreferenceStore)
         } else if arguments.contains("--mock-offline-cached") {
-            environment = .development(scenario: .offlineWithCache, isOnline: false, authenticationState: authenticationState, onboardingStore: onboardingStore)
+            environment = .development(scenario: .offlineWithCache, isOnline: false, authenticationState: authenticationState, onboardingStore: onboardingStore, languagePreferenceStore: languagePreferenceStore)
         } else {
-            environment = .development(authenticationState: authenticationState, onboardingStore: onboardingStore)
+            environment = .development(authenticationState: authenticationState, onboardingStore: onboardingStore, languagePreferenceStore: languagePreferenceStore)
         }
         #else
-        environment = .development()
+        environment = .development(languagePreferenceStore: UserDefaultsLanguagePreferenceStore())
         #endif
     }
 

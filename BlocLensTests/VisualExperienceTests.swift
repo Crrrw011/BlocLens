@@ -17,6 +17,21 @@ struct VisualExperienceTests {
         #expect(session.preferredColorScheme == .dark)
     }
 
+    @Test func languageSelectionUpdatesLocaleAndPersistsInInjectedStore() async {
+        let store = InMemoryLanguagePreferenceStore()
+        let environment = AppEnvironment.development(languagePreferenceStore: store)
+        let session = AppSession(environment: environment)
+        await session.load()
+
+        #expect(session.languagePreference == .system)
+        session.selectLanguage(.korean)
+        #expect(session.locale.identifier == "ko")
+        #expect(store.preference() == .korean)
+
+        let restoredSession = AppSession(environment: environment)
+        #expect(restoredSession.languagePreference == .korean)
+    }
+
     @Test func contributionPromptDismissalPreventsRepeatForThatOpportunity() async {
         let session = AppSession(environment: .development())
         await session.load()

@@ -270,6 +270,7 @@ enum L10n {
         static let title: LocalizedStringResource = "settings.title"
         static let appearance: LocalizedStringResource = "settings.appearance"
         static let language: LocalizedStringResource = "settings.language"
+        static let systemLanguage: LocalizedStringResource = "settings.language.system"
         static let englishAustralian: LocalizedStringResource = "settings.language.englishAustralian"
         static let korean: LocalizedStringResource = "settings.language.korean"
         static let simplifiedChinese: LocalizedStringResource = "settings.language.simplifiedChinese"

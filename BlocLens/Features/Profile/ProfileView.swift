@@ -84,6 +84,7 @@ struct ProfileView: View {
                 NavigationLink(L10n.Settings.title) {
                     SettingsView(session: session)
                 }
+                .accessibilityIdentifier("profile-settings-link")
             }
 
             publicSupportLinks
@@ -145,12 +146,14 @@ private struct SettingsView: View {
             Section(L10n.Settings.language) {
                 NavigationLink(L10n.Settings.language) {
                     List {
-                        Text(L10n.Settings.englishAustralian)
-                        Text(L10n.Settings.korean)
-                        Text(L10n.Settings.simplifiedChinese)
+                        languageRow(.system, title: L10n.Settings.systemLanguage)
+                        languageRow(.englishAustralian, title: L10n.Settings.englishAustralian)
+                        languageRow(.korean, title: L10n.Settings.korean)
+                        languageRow(.simplifiedChinese, title: L10n.Settings.simplifiedChinese)
                     }
                     .navigationTitle(L10n.Settings.language)
                 }
+                .accessibilityIdentifier("settings-language-link")
             }
 
             Section(L10n.Settings.notifications) {
@@ -182,6 +185,27 @@ private struct SettingsView: View {
         }
         .navigationTitle(L10n.Settings.title)
     }
+
+    private func languageRow(_ preference: LanguagePreference, title: LocalizedStringResource) -> some View {
+        Button {
+            session.selectLanguage(preference)
+        } label: {
+            HStack {
+                Text(title)
+                    .foregroundStyle(DesignColour.primaryText)
+                Spacer()
+                if session.languagePreference == preference {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(DesignColour.opticBlue)
+                        .accessibilityHidden(true)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .accessibilityAddTraits(session.languagePreference == preference ? .isSelected : [])
+        .accessibilityIdentifier("language-option-\(preference.rawValue)")
+    }
+
 }
 
 private struct PlaceholderInformationView: View {

@@ -36,3 +36,19 @@ nonisolated enum AppearancePreference: String, CaseIterable, Sendable {
     case light
     case dark
 }
+
+nonisolated enum LanguagePreference: String, CaseIterable, Sendable {
+    case system
+    case englishAustralian
+    case korean
+    case simplifiedChinese
+
+    var localeIdentifier: String? {
+        switch self {
+        case .system: nil
+        case .englishAustralian: "en-AU"
+        case .korean: "ko"
+        case .simplifiedChinese: "zh-Hans"
+        }
+    }
+}

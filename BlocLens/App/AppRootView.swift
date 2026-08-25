@@ -19,7 +19,9 @@ struct AppRootView: View {
                 AppShellView(environment: environment, session: session)
             }
         }
+        .id(session.languagePreference)
         .task { await session.load() }
+        .environment(\.locale, session.locale)
         .preferredColorScheme(session.preferredColorScheme)
     }
 }

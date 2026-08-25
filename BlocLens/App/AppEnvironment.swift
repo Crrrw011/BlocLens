@@ -8,6 +8,7 @@ struct AppEnvironment: Sendable {
     let logbookRepository: any LogbookRepository
     let authenticationRepository: any AuthenticationRepository
     let onboardingStore: any OnboardingStore
+    let languagePreferenceStore: any LanguagePreferenceStore
     let currentUserID: UserID
     let scenario: MockRepositoryScenario
 
@@ -16,7 +17,8 @@ struct AppEnvironment: Sendable {
         isOnline: Bool = true,
         isOnboardingComplete: Bool = true,
         authenticationState: AuthenticationState = .guest,
-        onboardingStore: (any OnboardingStore)? = nil
+        onboardingStore: (any OnboardingStore)? = nil,
+        languagePreferenceStore: any LanguagePreferenceStore = InMemoryLanguagePreferenceStore()
     ) -> AppEnvironment {
         AppEnvironment(
             gymRepository: MockGymRepository(scenario: scenario),
@@ -25,6 +27,7 @@ struct AppEnvironment: Sendable {
             logbookRepository: MockLogbookRepository(isOnline: isOnline),
             authenticationRepository: MockAuthenticationRepository(initialState: authenticationState),
             onboardingStore: onboardingStore ?? InMemoryOnboardingStore(isComplete: isOnboardingComplete),
+            languagePreferenceStore: languagePreferenceStore,
             currentUserID: DevelopmentFixtures.currentUserID,
             scenario: scenario
         )
@@ -42,14 +45,18 @@ final class AppSession: ObservableObject {
     @Published private(set) var resumedIntent: ProtectedIntent?
     @Published var hasAcknowledgedRevealSafety = false
     @Published var appearancePreference: AppearancePreference = .system
+    @Published private(set) var languagePreference: LanguagePreference = .system
     @Published private(set) var dismissedContributionPrompts: Set<String> = []
 
     private let authenticationRepository: any AuthenticationRepository
     private let onboardingStore: any OnboardingStore
+    private let languagePreferenceStore: any LanguagePreferenceStore
 
     init(environment: AppEnvironment) {
         authenticationRepository = environment.authenticationRepository
         onboardingStore = environment.onboardingStore
+        languagePreferenceStore = environment.languagePreferenceStore
+        languagePreference = environment.languagePreferenceStore.preference()
     }
 
     func load() async {
@@ -114,6 +121,18 @@ final class AppSession: ObservableObject {
 
     func resetBetaSafetyConfirmation() {
         hasAcknowledgedRevealSafety = false
+    }
+
+    func selectLanguage(_ preference: LanguagePreference) {
+        languagePreferenceStore.setPreference(preference)
+        languagePreference = preference
+    }
+
+    var locale: Locale {
+        let identifier = languagePreference.localeIdentifier
+            ?? Locale.preferredLanguages.first
+            ?? "en-AU"
+        return Locale(identifier: identifier)
     }
 
     var preferredColorScheme: ColorScheme? {

@@ -5551,6 +5551,28 @@
         }
       }
     },
+    "settings.language.system" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시스템"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟随系统"
+          }
+        }
+      }
+    },
     "settings.language.englishAustralian" : {
       "localizations" : {
         "en-AU" : {

@@ -11,6 +11,11 @@ nonisolated protocol OnboardingStore: Sendable {
     func setComplete(_ isComplete: Bool)
 }
 
+nonisolated protocol LanguagePreferenceStore: Sendable {
+    func preference() -> LanguagePreference
+    func setPreference(_ preference: LanguagePreference)
+}
+
 final class UserDefaultsOnboardingStore: OnboardingStore, @unchecked Sendable {
     private let defaults: UserDefaults
     private let key: String
@@ -32,4 +37,36 @@ final class InMemoryOnboardingStore: OnboardingStore, @unchecked Sendable {
 
     func isComplete() -> Bool { lock.withLock { value } }
     func setComplete(_ isComplete: Bool) { lock.withLock { value = isComplete } }
+}
+
+final class UserDefaultsLanguagePreferenceStore: LanguagePreferenceStore, @unchecked Sendable {
+    private let defaults: UserDefaults
+    private let key: String
+
+    init(defaults: UserDefaults = .standard, key: String = "bloclens.language.preference.v1") {
+        self.defaults = defaults
+        self.key = key
+    }
+
+    func preference() -> LanguagePreference {
+        guard let rawValue = defaults.string(forKey: key),
+              let preference = LanguagePreference(rawValue: rawValue) else {
+            return .system
+        }
+        return preference
+    }
+
+    func setPreference(_ preference: LanguagePreference) {
+        defaults.set(preference.rawValue, forKey: key)
+    }
+}
+
+final class InMemoryLanguagePreferenceStore: LanguagePreferenceStore, @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: LanguagePreference
+
+    init(preference: LanguagePreference = .system) { value = preference }
+
+    func preference() -> LanguagePreference { lock.withLock { value } }
+    func setPreference(_ preference: LanguagePreference) { lock.withLock { value = preference } }
 }

@@ -119,6 +119,35 @@ final class BlocLensUITests: XCTestCase {
     }
 
     @MainActor
+    func testInAppLanguageSelectionUpdatesAndCanReturnToSystem() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--skip-onboarding", "--mock-authenticated"]
+        app.launch()
+
+        app.tabBars.buttons["Profile"].tap()
+        XCTAssertTrue(app.buttons["profile-settings-link"].waitForExistence(timeout: 8))
+        app.buttons["profile-settings-link"].tap()
+        XCTAssertTrue(app.buttons["settings-language-link"].waitForExistence(timeout: 5))
+        app.buttons["settings-language-link"].tap()
+
+        let korean = app.buttons["language-option-korean"]
+        XCTAssertTrue(korean.waitForExistence(timeout: 5))
+        korean.tap()
+        XCTAssertTrue(app.navigationBars["프로필"].waitForExistence(timeout: 5))
+
+        app.buttons["profile-settings-link"].tap()
+        app.buttons["settings-language-link"].tap()
+        let english = app.buttons["language-option-englishAustralian"]
+        XCTAssertTrue(english.waitForExistence(timeout: 5))
+        english.tap()
+        XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 5))
+
+        app.buttons["profile-settings-link"].tap()
+        app.buttons["settings-language-link"].tap()
+        app.buttons["language-option-system"].tap()
+    }
+
+    @MainActor
     func testRouteDetailRemainsScrollableAtAccessibilityTextSize() throws {
         let app = XCUIApplication()
         app.launchArguments = [
