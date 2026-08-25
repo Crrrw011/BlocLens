@@ -16,6 +16,7 @@ nonisolated enum RepositoryError: Error, Equatable, Sendable {
     case decodingFailure
     case invalidConfiguration
     case invalidInput
+    case invalidState
     case conflict
     case unknown
 }
@@ -66,6 +67,15 @@ nonisolated protocol BetaRepository: Sendable {
     func betaLinks(routeID: ClimbingRouteID, viewer: BetaViewerProfile?) async throws -> [BetaLink]
     func brokenBetaLinks(routeID: ClimbingRouteID) async throws -> [BetaLink]
     func validateExternalURL(_ url: URL) async -> Bool
+
+    func betaMetadata(for routeID: ClimbingRouteID) async throws -> [BetaLink]
+    func revealBeta(_ betaID: BetaLinkID) async throws -> BetaLink
+    func markHelpful(_ betaID: BetaLinkID) async throws
+    func reportBeta(_ betaID: BetaLinkID, reason: ReportReason) async throws
+    func communityGradeVote(routeID: ClimbingRouteID, grade: VGrade) async throws
+    func myGradeVote(for routeID: ClimbingRouteID) async throws -> VGrade?
+    func hasConfirmedSafety() async -> Bool
+    func confirmSafety() async throws
 }
 
 nonisolated protocol LogbookRepository: Sendable {

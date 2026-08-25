@@ -115,6 +115,144 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         SupabaseAuthenticationRepository(dataSource: SupabaseAuthDataSource(client: client))
     }
 
+    private func makeBetaRepository() -> RemoteBetaRepository {
+        RemoteBetaRepository(dataSource: SupabaseBetaDataSource(client: client))
+    }
+
+    private func signUpAndCompleteSetup() async throws -> UUID {
+        let repository = makeAuthRepository()
+        let email = "beta-\(UUID().uuidString.prefix(8))@example.com"
+        _ = await repository.signUp(email: email, password: "password123")
+        _ = await repository.confirmAge(isOver16: true)
+        _ = await repository.updateUsername("beta-\(UUID().uuidString.prefix(8))")
+        return try XCTUnwrap(client.auth.currentUser?.id)
+    }
+
+    private func insertBeta(routeID: String, submittedBy: UUID) async throws -> UUID {
+        let betaID = UUID()
+        let values: [String: AnyJSON] = [
+            "id": AnyJSON.string(betaID.uuidString),
+            "route_id": AnyJSON.string(routeID),
+            "public_url": AnyJSON.string("https://example.com/beta/\(betaID.uuidString)"),
+            "platform": AnyJSON.string("youtube"),
+            "original_author_display_name": AnyJSON.string("Test Author"),
+            "original_post_url": AnyJSON.string("https://example.com/post/\(betaID.uuidString)"),
+            "submitted_by": AnyJSON.string(submittedBy.uuidString)
+        ]
+        _ = try await client.from("beta_links").insert(values, returning: .minimal).execute()
+        return betaID
+    }
+
+    private func insertLogbookEntry(routeID: String, userID: UUID) async throws {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestamp = formatter.string(from: Date())
+        let values: [String: AnyJSON] = [
+            "user_id": AnyJSON.string(userID.uuidString),
+            "route_id": AnyJSON.string(routeID),
+            "status": AnyJSON.string("projecting"),
+            "climbed_at": AnyJSON.string(timestamp),
+            "client_created_at": AnyJSON.string(timestamp),
+            "client_idempotency_key": AnyJSON.string(UUID().uuidString)
+        ]
+        _ = try await client.from("logbook_entries").insert(values, returning: .minimal).execute()
+    }
+
+    func testBetaMetadataAfterSignIn() async throws {
+        let userID = try await signUpAndCompleteSetup()
+        let routeID = "30000000-0000-4000-8000-000000000003"
+        let betaID = try await insertBeta(routeID: routeID, submittedBy: userID)
+
+        let metadata = try await makeBetaRepository().betaMetadata(
+            for: ClimbingRouteID(rawValue: routeID)
+        )
+
+        XCTAssertTrue(metadata.contains { $0.id.rawValue == betaID.uuidString.lowercased() })
+    }
+
+    func testRevealBetaAfterSignIn() async throws {
+        let userID = try await signUpAndCompleteSetup()
+        let betaID = try await insertBeta(routeID: "30000000-0000-4000-8000-000000000003", submittedBy: userID)
+
+        let beta = try await makeBetaRepository().revealBeta(BetaLinkID(rawValue: betaID.uuidString.lowercased()))
+
+        XCTAssertEqual(beta.sourceURL.scheme, "https")
+    }
+
+    func testBetaMethodsRequireAuthentication() async throws {
+        let repository = makeBetaRepository()
+        do {
+            _ = try await repository.betaMetadata(for: ClimbingRouteID(rawValue: "30000000-0000-4000-8000-000000000003"))
+            XCTFail("Expected unauthenticated")
+        } catch let error as RepositoryError {
+            XCTAssertEqual(error, .unauthenticated)
+        }
+    }
+
+    func testMarkHelpfulSucceedsOnSeedBeta() async throws {
+        _ = try await signUpAndCompleteSetup()
+        // Seed beta submitted by a seed user, so this is not a self-vote.
+        let seedBetaID = "40000000-0000-4000-8000-000000000001"
+
+        try await makeBetaRepository().markHelpful(BetaLinkID(rawValue: seedBetaID))
+    }
+
+    func testMarkHelpfulDuplicateReturnsConflict() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let seedBetaID = "40000000-0000-4000-8000-000000000002"
+
+        try await makeBetaRepository().markHelpful(BetaLinkID(rawValue: seedBetaID))
+        do {
+            try await makeBetaRepository().markHelpful(BetaLinkID(rawValue: seedBetaID))
+            XCTFail("Expected conflict on duplicate Helpful")
+        } catch let error as RepositoryError {
+            XCTAssertEqual(error, .conflict)
+        }
+    }
+
+    func testCommunityGradeVoteRequiresAttempt() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let routeID = "30000000-0000-4000-8000-000000000003"
+        let repository = makeBetaRepository()
+
+        do {
+            try await repository.communityGradeVote(
+                routeID: ClimbingRouteID(rawValue: routeID),
+                grade: .v4
+            )
+            XCTFail("Expected invalidState without a logbook attempt")
+        } catch let error as RepositoryError {
+            XCTAssertEqual(error, .invalidState)
+        }
+    }
+
+    func testCommunityGradeVoteWithAttempt() async throws {
+        let userID = try await signUpAndCompleteSetup()
+        let routeID = "30000000-0000-4000-8000-000000000003"
+        try await insertLogbookEntry(routeID: routeID, userID: userID)
+        let repository = makeBetaRepository()
+
+        try await repository.communityGradeVote(
+            routeID: ClimbingRouteID(rawValue: routeID),
+            grade: .v4
+        )
+        let vote = try await repository.myGradeVote(for: ClimbingRouteID(rawValue: routeID))
+        XCTAssertEqual(vote, .v4)
+    }
+
+    func testSafetyConfirmationPersists() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let repository = makeBetaRepository()
+
+        let before = await repository.hasConfirmedSafety()
+        XCTAssertFalse(before)
+        try await repository.confirmSafety()
+        let after = await repository.hasConfirmedSafety()
+        XCTAssertTrue(after)
+    }
+
+    // MARK: - Authentication
+
     func testLocalSignUpThenProfileSetupThenUsername() async throws {
         let repository = makeAuthRepository()
         let email = "auth-\(UUID().uuidString.prefix(8))@example.com"
@@ -148,8 +286,6 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
     func testLocalSignInUnknownUser() async throws {
         let repository = makeAuthRepository()
         let email = "nobody-\(UUID().uuidString.prefix(8))@example.com"
-        // GoTrue returns "invalid_credentials" for unknown users to prevent
-        // enumeration, so the mapped error is unauthenticated rather than notFound.
         let state = await repository.signIn(email: email, password: "password123")
         XCTAssertEqual(state, .error(.unauthenticated))
     }

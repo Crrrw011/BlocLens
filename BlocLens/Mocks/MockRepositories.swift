@@ -147,6 +147,9 @@ actor MockRouteRepository: RouteRepository {
 actor MockBetaRepository: BetaRepository {
     private let links: [BetaLink]
     private let scenario: MockRepositoryScenario
+    private var helpfulVotes: Set<BetaLinkID> = []
+    private var gradeVotes: [ClimbingRouteID: VGrade] = [:]
+    private var safetyConfirmed = false
 
     init(
         links: [BetaLink] = DevelopmentFixtures.betaLinks,
@@ -176,10 +179,62 @@ actor MockBetaRepository: BetaRepository {
         BetaLink.isValidExternalURL(url)
     }
 
+    func betaMetadata(for routeID: ClimbingRouteID) throws -> [BetaLink] {
+        let routeLinks = try resolved(links.filter { $0.routeID == routeID })
+        return BetaRanker.visibleLinks(routeLinks, viewer: nil)
+    }
+
+    func revealBeta(_ betaID: BetaLinkID) throws -> BetaLink {
+        try throwForUnavailableScenario()
+        guard let link = links.first(where: { $0.id == betaID }) else {
+            throw RepositoryError.notFound
+        }
+        return link
+    }
+
+    func markHelpful(_ betaID: BetaLinkID) throws {
+        try throwForUnavailableScenario()
+        guard !helpfulVotes.contains(betaID) else {
+            throw RepositoryError.conflict
+        }
+        helpfulVotes.insert(betaID)
+    }
+
+    func reportBeta(_ betaID: BetaLinkID, reason: ReportReason) throws {
+        try throwForUnavailableScenario()
+    }
+
+    func communityGradeVote(routeID: ClimbingRouteID, grade: VGrade) throws {
+        try throwForUnavailableScenario()
+        guard grade != .unknown else { throw RepositoryError.invalidInput }
+        gradeVotes[routeID] = grade
+    }
+
+    func myGradeVote(for routeID: ClimbingRouteID) -> VGrade? {
+        gradeVotes[routeID]
+    }
+
+    func hasConfirmedSafety() -> Bool {
+        safetyConfirmed
+    }
+
+    func confirmSafety() {
+        safetyConfirmed = true
+    }
+
     private func resolved<Value>(_ values: [Value]) throws -> [Value] {
         switch scenario {
         case .loaded, .offlineWithCache: values
         case .empty: []
+        case .error: throw RepositoryError.fixtureFailure
+        case .offlineWithoutCache: throw RepositoryError.offlineNoCache
+        }
+    }
+
+    private func throwForUnavailableScenario() throws {
+        switch scenario {
+        case .loaded, .offlineWithCache: return
+        case .empty: throw RepositoryError.notFound
         case .error: throw RepositoryError.fixtureFailure
         case .offlineWithoutCache: throw RepositoryError.offlineNoCache
         }

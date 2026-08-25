@@ -117,11 +117,25 @@ Session restore relies on the SDK's own Keychain-backed session storage: `restor
 
 ## Local integration tests
 
-`LocalSupabaseIntegrationTests` is an XCTest suite that skips (`XCTSkip`) unless `BLOCLENS_SUPABASE_URL` and `BLOCLENS_SUPABASE_ANON_KEY` are set. It asserts the local read path (gyms, wall zones, routes, facilities, hard/soft, archived mapping, community-grade thresholds and the guest-safe beta count), verifies that the anonymous client cannot read `beta_links` or `beta_ranking_inputs`, and exercises the authentication flow (sign-up → profile setup → age confirmation → username → sign-in → sign-out) using a fresh local test account created via `signUp`. It performs no writes beyond the test account's own profile and never connects to Cloud.
+`LocalSupabaseIntegrationTests` is an XCTest suite that skips (`XCTSkip`) unless `BLOCLENS_SUPABASE_URL` and `BLOCLENS_SUPABASE_ANON_KEY` are set. It asserts the local read path (gyms, wall zones, routes, facilities, hard/soft, archived mapping, community-grade thresholds and the guest-safe beta count), verifies that the anonymous client cannot read `beta_links` or `beta_ranking_inputs`, and exercises the authentication and beta flows (sign-up → profile setup → username → beta metadata → reveal → Helpful → community-grade vote) using fresh local test accounts created via `signUp`. It performs no writes beyond the test account's own profile, Helpful vote, report, grade vote and test beta, and never connects to Cloud. Because the integration tests insert development rows, they must run after `supabase db reset --local` and before any seed-count pgTAP assertion.
+
+## Authenticated beta reading and interactions (6D-3B)
+
+`BetaRepository` was extended with authenticated methods: `betaMetadata(for:)`, `revealBeta(_:)`, `markHelpful(_:)`, `reportBeta(_:reason:)`, `communityGradeVote(routeID:grade:)`, `myGradeVote(for:)`, plus the safety-confirmation pair `hasConfirmedSafety()`/`confirmSafety()`.
+
+`RemoteBetaRepository` is an actor backed by `RemoteBetaDataSource`/`SupabaseBetaDataSource`:
+
+- Beta metadata reads `beta_links` with the user's JWT (migration 0011 leaves `beta_links` unreadable by `anon`), and filters out beta submitted by users the current user has blocked (fetched from `user_blocks`). The beta record decodes `submitted_by` so the block filter runs in the repository layer; `beta_links` never carries a video or image payload, only external-link metadata.
+- Reveal returns the full beta record (including the external URL) only after authentication; the caller opens the URL with `UIApplication.shared.open` and never embeds a WebView or player.
+- Helpful writes `beta_helpful_votes` (`(beta_link_id, user_id)` primary key enforces one vote per user; RLS plus the `validate_beta_helpful_vote` trigger prevent self-votes). A duplicate vote surfaces as `.conflict`; a self-vote is rejected by the database.
+- Reports write `content_reports` with `target_type = 'beta_link'` and a category of `broken_link`, `wrong_route` or `unsafe_content`; automatic hiding remains the administrator/RLS concern, not this stage.
+- Community grade votes are attempt-gated: the repository checks `has_attempted_route(route_id)` first and throws `.invalidState` when the user has no projecting/sent/flash Logbook entry. The write is an insert on first vote and an update of `v_grade` thereafter (the table grants only `UPDATE (v_grade)`, so a PostgREST upsert would fail with `42501`; insert/update is used instead). `myGradeVote` reads the user's current vote. The `< 3 votes hide the median` rule stays on the `community_grade_summary` RPC.
+- Safety confirmation is stored in the Supabase user metadata (`beta_safety_confirmed_at`) because no schema change is permitted in this stage; it is read and written through `client.auth.update(user:)`.
+
+Mock `MockBetaRepository` implements the same protocol in memory for parity.
 
 ## Next stages
 
-- Stage 6D-3B: authenticated beta metadata reads (the beta URL remains login-gated and unread by the current repositories).
-- Stage 6D-3C: private Logbook read/write with the queued/synced/failed sync states.
+- Stage 6D-3C: private Logbook read/write with the queued/synced/failed sync states (Logbook is currently read-only for the attempt check; no Logbook write is implemented yet).
 - Stage 6D-3D: real Apple/Google OAuth (not implemented; the current auth path is local email/password and the Debug mock account only).
 - Later: Cloud deployment, Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.

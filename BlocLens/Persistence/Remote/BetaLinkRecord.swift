@@ -15,6 +15,7 @@ nonisolated struct BetaLinkRecord: Codable, Equatable, Sendable {
     let moderationStatus: String
     let embedCapability: String
     let createdAt: Date
+    let submittedBy: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id, platform, tags
@@ -29,6 +30,7 @@ nonisolated struct BetaLinkRecord: Codable, Equatable, Sendable {
         case moderationStatus = "moderation_status"
         case embedCapability = "embed_capability"
         case createdAt = "created_at"
+        case submittedBy = "submitted_by"
     }
 
     func domain() throws -> BetaLink {

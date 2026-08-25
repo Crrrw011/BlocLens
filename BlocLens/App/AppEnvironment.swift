@@ -39,7 +39,7 @@ struct AppEnvironment: Sendable {
         return AppEnvironment(
             gymRepository: RemoteGymRepository(dataSource: dataSource),
             routeRepository: RemoteRouteRepository(dataSource: dataSource),
-            betaRepository: MockBetaRepository(),
+            betaRepository: RemoteBetaRepository(dataSource: SupabaseBetaDataSource(client: client)),
             logbookRepository: MockLogbookRepository(isOnline: true),
             authenticationRepository: SupabaseAuthenticationRepository(dataSource: SupabaseAuthDataSource(client: client)),
             onboardingStore: InMemoryOnboardingStore(isComplete: true),

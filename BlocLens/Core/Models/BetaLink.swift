@@ -62,3 +62,17 @@ nonisolated struct BetaViewerProfile: Equatable, Sendable {
     let heightCentimetres: Double?
     let armSpanCentimetres: Double?
 }
+
+nonisolated enum ReportReason: String, CaseIterable, Sendable {
+    case brokenLink
+    case wrongRoute
+    case unsafeContent
+
+    var databaseValue: String {
+        switch self {
+        case .brokenLink: "broken_link"
+        case .wrongRoute: "wrong_route"
+        case .unsafeContent: "unsafe_content"
+        }
+    }
+}

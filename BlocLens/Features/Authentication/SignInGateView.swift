@@ -9,6 +9,22 @@ struct SignInGateView: View {
     @State private var isOver16 = false
     @State private var isCreatingAccount = false
 
+    private static let emailPlaceholder = "Email"
+    private static let passwordPlaceholder = "Password"
+    private static let usernamePlaceholder = "Username"
+    private static let chooseUsernameTitle = "Choose a public username"
+    private static let usernameUnavailable = "That username is unavailable. Please try another."
+    private static let signInFailed = "Sign in failed. Please check your details and try again."
+    private static let signInTitle = "Sign In"
+    private static let createAccountTitle = "Create Account"
+    private static let createAccountLink = "Create an account"
+    private static let signInInstead = "Sign in instead"
+    private static let continueTitle = "Continue"
+    private static let continueAsGuestTitle = "Continue as Guest"
+    private static let ageConfirmation = "I am 16 or older"
+    private static let ageGateTitle = "You must be 16 or older to create an account"
+    private static let ageGateBody = "You can continue browsing gyms and routes as a guest."
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -58,7 +74,7 @@ struct SignInGateView: View {
                 ageConfirmationRow
             }
 
-            TextField("Email", text: $email)
+            TextField(Self.emailPlaceholder, text: $email)
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
@@ -66,37 +82,45 @@ struct SignInGateView: View {
                 .padding(DesignSpacing.small)
                 .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
 
-            SecureField("Password", text: $password)
+            SecureField(Self.passwordPlaceholder, text: $password)
                 .textContentType(.password)
                 .padding(DesignSpacing.small)
                 .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
 
             if case .error = session.authenticationState {
-                Text("Sign in failed. Please check your details and try again.")
+                Text(verbatim: Self.signInFailed)
                     .font(.caption)
                     .foregroundStyle(DesignColour.error)
             }
 
             if isCreatingAccount {
-                Button("Create Account") {
+                Button {
                     Task { await createAccount() }
+                } label: {
+                    Text(verbatim: Self.createAccountTitle)
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(email.isEmpty || password.isEmpty || !isOver16)
 
-                Button("Sign in instead") {
+                Button {
                     isCreatingAccount = false
+                } label: {
+                    Text(verbatim: Self.signInInstead)
                 }
                 .buttonStyle(CompactActionButtonStyle())
             } else {
-                Button("Sign In") {
+                Button {
                     Task { await session.signIn(email: email, password: password) }
+                } label: {
+                    Text(verbatim: Self.signInTitle)
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(email.isEmpty || password.isEmpty)
 
-                Button("Create an account") {
+                Button {
                     isCreatingAccount = true
+                } label: {
+                    Text(verbatim: Self.createAccountLink)
                 }
                 .buttonStyle(CompactActionButtonStyle())
             }
@@ -112,29 +136,33 @@ struct SignInGateView: View {
     }
 
     private var ageConfirmationRow: some View {
-        Toggle("I am 16 or older", isOn: $isOver16)
-            .font(DesignTypography.body)
+        Toggle(isOn: $isOver16) {
+            Text(verbatim: Self.ageConfirmation)
+                .font(DesignTypography.body)
+        }
     }
 
     private var profileSetupForm: some View {
         VStack(spacing: DesignSpacing.small) {
-            Text("Choose a public username")
+            Text(verbatim: Self.chooseUsernameTitle)
                 .font(DesignTypography.cardTitle)
 
-            TextField("Username", text: $username)
+            TextField(Self.usernamePlaceholder, text: $username)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .padding(DesignSpacing.small)
                 .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
 
             if case .error = session.authenticationState {
-                Text("That username is unavailable. Please try another.")
+                Text(verbatim: Self.usernameUnavailable)
                     .font(.caption)
                     .foregroundStyle(DesignColour.error)
             }
 
-            Button("Continue") {
+            Button {
                 Task { await session.updateUsername(username.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            } label: {
+                Text(verbatim: Self.continueTitle)
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -146,14 +174,18 @@ struct SignInGateView: View {
 
     private var ageGateMessage: some View {
         VStack(spacing: DesignSpacing.medium) {
-            Text("You must be 16 or older to create an account")
+            Text(verbatim: Self.ageGateTitle)
                 .font(DesignTypography.cardTitle)
-            Text("You can continue browsing gyms and routes as a guest.")
+            Text(verbatim: Self.ageGateBody)
                 .font(DesignTypography.body)
                 .foregroundStyle(DesignColour.textSecondary)
 
-            Button("Continue as Guest") { session.cancelSignIn() }
-                .buttonStyle(PrimaryButtonStyle())
+            Button {
+                session.cancelSignIn()
+            } label: {
+                Text(verbatim: Self.continueAsGuestTitle)
+            }
+            .buttonStyle(PrimaryButtonStyle())
         }
     }
 
