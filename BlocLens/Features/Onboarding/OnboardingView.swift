@@ -4,6 +4,7 @@ struct OnboardingView: View {
     let completion: () -> Void
 
     @State private var page = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let pages: [OnboardingPage] = [
         OnboardingPage(
@@ -24,11 +25,14 @@ struct OnboardingView: View {
     ]
 
     var body: some View {
-        VStack(spacing: DesignSpacing.large) {
+        VStack(spacing: DesignSpacing.medium) {
             HStack {
+                Label(L10n.Brand.name, systemImage: "camera.aperture")
+                    .font(.headline)
+                    .foregroundStyle(DesignColour.textPrimary)
                 Spacer()
                 Button(L10n.Onboarding.skip, action: completion)
-                    .buttonStyle(CompactActionButtonStyle())
+                    .buttonStyle(QuietButtonStyle())
                     .accessibilityIdentifier("onboarding-skip-button")
             }
 
@@ -38,20 +42,31 @@ struct OnboardingView: View {
                         .tag(index)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            HStack(spacing: DesignSpacing.small) {
+                ForEach(pages.indices, id: \.self) { index in
+                    Capsule()
+                        .fill(index == page ? DesignColour.brandPrimary : DesignColour.separator)
+                        .frame(width: index == page ? 24 : 8, height: 8)
+                }
+            }
+            .animation(DesignMotion.animation(DesignMotion.stateChange, reduceMotion: reduceMotion), value: page)
+            .accessibilityHidden(true)
 
             Button(page == pages.count - 1 ? L10n.Onboarding.exploreMap : L10n.Onboarding.continueButton) {
                 if page == pages.count - 1 {
                     completion()
                 } else {
-                    withAnimation { page += 1 }
+                    withAnimation(DesignMotion.animation(DesignMotion.stateChange, reduceMotion: reduceMotion)) { page += 1 }
                 }
             }
             .buttonStyle(PrimaryButtonStyle())
             .accessibilityIdentifier(page == pages.count - 1 ? "onboarding-explore-map-button" : "onboarding-continue-button")
         }
-        .padding(DesignSpacing.large)
-        .background(DesignColour.background)
+        .padding(.horizontal, DesignSpacing.large)
+        .padding(.vertical, DesignSpacing.medium)
+        .background(DesignColour.backgroundPrimary)
     }
 }
 
@@ -66,26 +81,38 @@ private struct OnboardingPageView: View {
     let page: OnboardingPage
 
     var body: some View {
-        VStack(spacing: DesignSpacing.large) {
-            Spacer()
+        ScrollView {
+            VStack(spacing: DesignSpacing.large) {
+                Spacer(minLength: DesignSpacing.large)
             ZStack {
                 Circle()
-                    .fill(DesignColour.opticBlue.opacity(0.12))
-                    .frame(width: 180, height: 180)
+                        .fill(DesignColour.brandTint)
+                        .frame(width: 184, height: 184)
+                    Circle()
+                        .stroke(DesignColour.brandPrimary.opacity(0.18), lineWidth: 1)
+                        .frame(width: 152, height: 152)
                 Image(systemName: page.systemImage)
-                    .font(.system(size: 72))
-                    .foregroundStyle(DesignColour.opticBlue)
+                        .font(.system(size: 64, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(DesignColour.brandPrimary)
             }
             Text(page.title)
-                .font(.largeTitle.bold())
+                    .font(DesignTypography.largeScreenTitle)
                 .multilineTextAlignment(.center)
             Text(page.message)
-                .font(.title3)
-                .foregroundStyle(DesignColour.secondaryText)
+                    .font(DesignTypography.body)
+                    .foregroundStyle(DesignColour.textSecondary)
                 .multilineTextAlignment(.center)
-            Spacer()
+                    .lineSpacing(3)
+                    .frame(maxWidth: 430)
+                Text(L10n.Brand.tagline)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DesignColour.textTertiary)
+                    .padding(.top, DesignSpacing.small)
+                Spacer(minLength: DesignSpacing.large)
+            }
+            .frame(maxWidth: .infinity, minHeight: 480)
         }
-        .accessibilityElement(children: .combine)
     }
 }
 

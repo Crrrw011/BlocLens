@@ -11,6 +11,14 @@ nonisolated struct RouteListOptions: Equatable, Sendable {
     var gradeBand: GradeBand = .all
     var hasBeta = false
     var sort: RouteSort = .newest
+
+    var activeFilterCount: Int {
+        (query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1)
+            + (gradeBand == .all ? 0 : 1)
+            + (hasBeta ? 1 : 0)
+    }
+
+    var hasActiveFilters: Bool { activeFilterCount > 0 }
 }
 
 nonisolated enum RouteListPresentation {

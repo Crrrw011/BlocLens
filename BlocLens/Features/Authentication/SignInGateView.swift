@@ -5,15 +5,21 @@ struct SignInGateView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollView {
             VStack(alignment: .leading, spacing: DesignSpacing.large) {
                 Image(systemName: "person.crop.circle.badge.checkmark")
                     .font(.system(size: 54))
-                    .foregroundStyle(DesignColour.opticBlue)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(DesignColour.brandPrimary)
+                    .frame(width: 88, height: 88)
+                    .background(DesignColour.brandTint, in: Circle())
 
                 Text(L10n.Authentication.gateTitle)
-                    .font(.largeTitle.bold())
+                    .font(DesignTypography.largeScreenTitle)
                 Text(reason)
-                    .foregroundStyle(DesignColour.secondaryText)
+                    .font(DesignTypography.body)
+                    .foregroundStyle(DesignColour.textSecondary)
+                    .lineSpacing(3)
 
                 VStack(spacing: DesignSpacing.small) {
                     Button(L10n.Authentication.apple) {}
@@ -45,11 +51,13 @@ struct SignInGateView: View {
             }
             .padding(DesignSpacing.large)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(DesignColour.background)
+            }
+            .background(DesignColour.backgroundPrimary)
             .navigationTitle(L10n.Authentication.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
         }
         .interactiveDismissDisabled()
+        .presentationDetents([.medium, .large])
     }
 
     private var reason: LocalizedStringResource {

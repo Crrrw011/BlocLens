@@ -57,11 +57,12 @@ struct LogbookView: View {
         case .offlineWithCache(let data):
             dashboard(data: data, isOffline: true)
         case .empty:
-            EmptyStateView(
-                title: L10n.Logbook.emptyTitle,
-                message: L10n.Logbook.emptyMessage,
-                systemImage: "book.closed"
-            )
+            VStack(spacing: DesignSpacing.medium) {
+                EmptyStateView(title: L10n.Logbook.emptyTitle, message: L10n.Logbook.emptyMessage, systemImage: "book.closed")
+                Button(L10n.Logbook.findRoute) { session.selectedTab = .map }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.horizontal, DesignSpacing.large)
+            }
         case .error:
             ErrorStateView(message: L10n.State.fixtureErrorMessage) {
                 Task { await viewModel.load() }
@@ -79,18 +80,23 @@ struct LogbookView: View {
         List {
             if isOffline {
                 Section {
-                    Label(L10n.State.offlineCachedMessage, systemImage: "wifi.slash")
-                        .foregroundStyle(DesignColour.warning)
+                    OfflineBanner(message: L10n.State.offlineCachedMessage)
                 }
             }
 
             Section(L10n.Logbook.statistics) {
-                statisticRow(L10n.Logbook.climbingCount, value: "\(data.statistics.climbingCount)")
-                statisticRow(L10n.Logbook.sentCount, value: "\(data.statistics.sentCount)")
-                statisticRow(L10n.Logbook.flashCount, value: "\(data.statistics.flashCount)")
-                statisticRow(
-                    L10n.Logbook.highestGrade,
-                    value: data.statistics.highestGrade?.displayName ?? String(localized: L10n.Grade.unknown)
+                Label(L10n.Logbook.privateByDefaultMessage, systemImage: "lock.fill")
+                    .font(DesignTypography.caption)
+                    .foregroundStyle(DesignColour.textSecondary)
+                MetricCard(title: L10n.Logbook.climbingCount, value: "\(data.statistics.climbingCount)", systemImage: "figure.climbing", emphasized: true)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignSpacing.small) {
+                    MetricCard(title: L10n.Logbook.sentCount, value: "\(data.statistics.sentCount)", systemImage: "checkmark.circle.fill")
+                    MetricCard(title: L10n.Logbook.flashCount, value: "\(data.statistics.flashCount)", systemImage: "bolt.fill")
+                }
+                MetricCard(
+                    title: L10n.Logbook.highestGrade,
+                    value: data.statistics.highestGrade?.displayName ?? String(localized: L10n.Grade.unknown),
+                    systemImage: "arrow.up.right"
                 )
                 if !data.statistics.gradeDistribution.isEmpty {
                     ForEach(data.statistics.gradeDistribution.keys.sorted(), id: \.self) { grade in
@@ -111,6 +117,7 @@ struct LogbookView: View {
                     }
                 }
                 Toggle(L10n.Logbook.lastThirtyDays, isOn: $viewModel.recentOnly)
+                    .tint(DesignColour.brandPrimary)
             }
 
             Section(L10n.Logbook.projects) {
@@ -170,24 +177,42 @@ struct LogbookView: View {
     }
 
     private func recordRow(_ item: LogbookRecordItem) -> some View {
-        HStack {
+        HStack(alignment: .top, spacing: DesignSpacing.compact) {
+            RouteColourSwatch(colourOrTag: item.route.colourOrTag, size: 40)
             VStack(alignment: .leading) {
                 Text(item.route.colourOrTag).font(.headline)
-                Text(item.route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown))
-                    .font(.caption)
-                    .foregroundStyle(DesignColour.secondaryText)
+                HStack {
+                    Text(item.route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+                    Text(item.entry.date.formatted(date: .abbreviated, time: .omitted))
+                }
+                .font(.caption)
+                .foregroundStyle(DesignColour.secondaryText)
             }
             Spacer()
             VStack(alignment: .trailing) {
-                Text(L10n.logbookStatus(item.entry.status))
-                    .font(.caption.bold())
-                    .foregroundStyle(DesignColour.opticBlue)
-                if item.entry.syncState == .queued {
-                    Text(L10n.Logbook.queued)
-                        .font(.caption2)
-                        .foregroundStyle(DesignColour.warning)
-                }
+                StatusChip(
+                    title: L10n.logbookStatus(item.entry.status),
+                    systemImage: statusIcon(item.entry.status),
+                    colour: DesignColour.brandPrimary
+                )
+                Label(
+                    item.entry.syncState == .queued ? L10n.Logbook.queued : L10n.Logbook.synced,
+                    systemImage: item.entry.syncState == .queued ? "clock.arrow.circlepath" : "checkmark.icloud"
+                )
+                .font(.caption2)
+                .foregroundStyle(item.entry.syncState == .queued ? DesignColour.warning : DesignColour.textSecondary)
             }
+        }
+        .padding(.vertical, DesignSpacing.xSmall)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func statusIcon(_ status: LogbookStatus) -> String {
+        switch status {
+        case .wantToTry: "bookmark.fill"
+        case .projecting: "hammer.fill"
+        case .sent: "checkmark.circle.fill"
+        case .flash: "bolt.fill"
         }
     }
 }

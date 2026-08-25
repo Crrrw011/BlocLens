@@ -16,11 +16,16 @@ struct EmptyStateView: View {
 
 struct LoadingStateView: View {
     var body: some View {
-        VStack(spacing: DesignSpacing.medium) {
-            ProgressView()
-            Text(L10n.State.loading)
-                .foregroundStyle(DesignColour.secondaryText)
+        VStack(spacing: DesignSpacing.comfortable) {
+            SkeletonPlaceholder(rows: 3)
+            HStack(spacing: DesignSpacing.small) {
+                ProgressView()
+                Text(L10n.State.loading)
+                    .font(DesignTypography.supporting)
+                    .foregroundStyle(DesignColour.textSecondary)
+            }
         }
+        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
     }
 }
@@ -37,6 +42,7 @@ struct ErrorStateView: View {
         } actions: {
             Button(L10n.Common.tryAgain, action: retry)
                 .buttonStyle(PrimaryButtonStyle())
+                .frame(maxWidth: 280)
         }
     }
 }

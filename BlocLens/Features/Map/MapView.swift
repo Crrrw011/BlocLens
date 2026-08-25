@@ -33,29 +33,6 @@ struct MapView: View {
         NavigationStack(path: $path) {
             content
                 .navigationTitle(L10n.Map.title)
-                .toolbar {
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Button {
-                            showsSearch = true
-                        } label: {
-                            Label(L10n.Search.title, systemImage: "magnifyingglass")
-                        }
-                        .accessibilityIdentifier("map-search-button")
-
-                        Button {
-                            showsFilters = true
-                        } label: {
-                            Label(L10n.MapFilter.title, systemImage: viewModel.filterOptions.isActive ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                        }
-                        .accessibilityIdentifier("map-filter-button")
-
-                        Button {
-                            showsNearbyMessage = true
-                        } label: {
-                            Label(L10n.Map.nearbyGyms, systemImage: "location")
-                        }
-                    }
-                }
                 .navigationDestination(for: Gym.self) { gym in
                     GymDetailView(gym: gym, environment: environment, session: session)
                 }
@@ -105,11 +82,14 @@ struct MapView: View {
         case .offlineWithCache(let gyms):
             mapContent(gyms: gyms, isOffline: true)
         case .empty:
-            EmptyStateView(
-                title: L10n.Map.emptyFixtureTitle,
-                message: L10n.Map.emptyFixtureMessage,
-                systemImage: "map"
-            )
+            VStack(spacing: DesignSpacing.medium) {
+                EmptyStateView(title: L10n.Map.emptyFixtureTitle, message: L10n.Map.emptyFixtureMessage, systemImage: "map")
+                if viewModel.filterOptions.isActive {
+                    Button(L10n.MapFilter.clear) { viewModel.clearFilters() }
+                        .buttonStyle(SecondaryButtonStyle())
+                        .padding(.horizontal, DesignSpacing.large)
+                }
+            }
         case .error:
             ErrorStateView(message: L10n.State.fixtureErrorMessage) {
                 Task { await viewModel.load() }
@@ -133,10 +113,13 @@ struct MapView: View {
                     Button {
                         selectedGym = gym
                     } label: {
-                        Image(systemName: "mountain.2.circle.fill")
-                            .font(.title)
-                            .foregroundStyle(DesignColour.opticBlue)
-                            .background(.regularMaterial, in: Circle())
+                        Image(systemName: selectedGym?.id == gym.id ? "mountain.2.circle.fill" : "mountain.2.circle")
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(selectedGym?.id == gym.id ? .white : DesignColour.brandPrimary)
+                            .frame(width: 44, height: 44)
+                            .background(selectedGym?.id == gym.id ? DesignColour.brandPrimary : DesignColour.surfaceElevated, in: Circle())
+                            .overlay { Circle().stroke(DesignColour.brandPrimary.opacity(0.55), lineWidth: selectedGym?.id == gym.id ? 2 : 1) }
+                            .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
                     }
                     .accessibilityLabel(gym.name)
                     .accessibilityIdentifier("gym-annotation-\(gym.id.rawValue)")
@@ -144,14 +127,28 @@ struct MapView: View {
             }
         }
         .mapStyle(.standard)
-        .overlay(alignment: .top) {
-            if isOffline {
-                Label(L10n.State.offlineCachedMessage, systemImage: "wifi.slash")
-                    .font(.caption)
-                    .padding(DesignSpacing.small)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(DesignSpacing.small)
+        .safeAreaInset(edge: .top) {
+            VStack(spacing: DesignSpacing.small) {
+                if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
+                HStack(spacing: DesignSpacing.small) {
+                    Button { showsSearch = true } label: { Image(systemName: "magnifyingglass") }
+                        .buttonStyle(IconButtonStyle())
+                        .accessibilityLabel(L10n.Search.title)
+                        .accessibilityIdentifier("map-search-button")
+                    FilterPill(title: L10n.MapFilter.title, activeCount: viewModel.filterOptions.activeCount) {
+                        showsFilters = true
+                    }
+                    .accessibilityIdentifier("map-filter-button")
+                    Spacer(minLength: 0)
+                    Button { showsNearbyMessage = true } label: { Image(systemName: "location") }
+                        .buttonStyle(IconButtonStyle())
+                        .accessibilityLabel(L10n.Map.nearbyGyms)
+                }
+                .padding(DesignSpacing.small)
+                .adaptiveGlass(interactive: true)
             }
+            .padding(.horizontal, DesignSpacing.medium)
+            .padding(.top, DesignSpacing.small)
         }
         .safeAreaInset(edge: .bottom) {
             if let selectedGym {
@@ -173,7 +170,7 @@ private struct GymPreviewCard: View {
     let close: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+        VStack(alignment: .leading, spacing: DesignSpacing.compact) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
                     HStack {
@@ -196,14 +193,10 @@ private struct GymPreviewCard: View {
                 .accessibilityIdentifier("gym-preview-close")
             }
 
-            HStack(spacing: DesignSpacing.medium) {
-                Label("\(gym.betaCount)", systemImage: "link")
-                if let reset = gym.latestResetDate {
-                    Label(reset.formatted(date: .abbreviated, time: .omitted), systemImage: "arrow.clockwise")
-                }
-                Text(L10n.hardSoft(gym.overallHardSoftSummary))
+            ViewThatFits(in: .horizontal) {
+                previewMetadata
+                VStack(alignment: .leading, spacing: DesignSpacing.small) { previewMetadata }
             }
-            .font(.caption)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DesignSpacing.xSmall) {
@@ -213,13 +206,27 @@ private struct GymPreviewCard: View {
                 }
             }
 
-            Button(L10n.Gym.viewGym, action: openGym)
+            Button(action: openGym) {
+                Label(L10n.Gym.viewGym, systemImage: "arrow.right")
+            }
                 .buttonStyle(PrimaryButtonStyle())
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .accessibilityIdentifier("open-gym-button")
         }
-        .cardStyle()
-        .background(DesignColour.background.opacity(0.01))
+        .padding(DesignSpacing.medium)
+        .adaptiveGlass(interactive: true)
+    }
+
+    private var previewMetadata: some View {
+        HStack(spacing: DesignSpacing.compact) {
+            Label("\(gym.betaCount)", systemImage: "link")
+            if let reset = gym.latestResetDate {
+                Label(reset.formatted(.relative(presentation: .named)), systemImage: "arrow.clockwise")
+            }
+            Label(L10n.hardSoft(gym.overallHardSoftSummary), systemImage: "dial.medium")
+        }
+        .font(DesignTypography.caption)
+        .foregroundStyle(DesignColour.textSecondary)
     }
 }
 

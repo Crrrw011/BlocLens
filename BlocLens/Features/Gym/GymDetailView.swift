@@ -6,6 +6,7 @@ struct GymDetailView: View {
     @ObservedObject var session: AppSession
 
     @StateObject private var viewModel: GymDetailViewModel
+    @State private var isFavourite = false
 
     init(gym: Gym, environment: AppEnvironment, session: AppSession) {
         self.gym = gym
@@ -19,21 +20,32 @@ struct GymDetailView: View {
     var body: some View {
         List {
             Section {
-                VStack(alignment: .leading, spacing: DesignSpacing.small) {
-                    HStack {
-                        Text(gym.name).font(.title2.bold())
+                VStack(alignment: .leading, spacing: DesignSpacing.compact) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+                            Text(gym.name).font(DesignTypography.navigationTitle)
+                            Text("\(gym.suburb), \(gym.state)")
+                                .font(DesignTypography.supporting)
+                                .foregroundStyle(DesignColour.textSecondary)
+                        }
                         if gym.isVerified {
                             Image(systemName: "checkmark.seal.fill")
-                                .foregroundStyle(DesignColour.opticBlue)
+                                .foregroundStyle(DesignColour.brandPrimary)
                                 .accessibilityLabel(L10n.Gym.verified)
                         }
+                        Spacer()
+                        Button { isFavourite.toggle() } label: {
+                            Image(systemName: isFavourite ? "star.fill" : "star")
+                        }
+                        .buttonStyle(IconButtonStyle())
+                        .accessibilityLabel(L10n.Profile.favouriteGym)
+                        .accessibilityValue(isFavourite ? L10n.Common.selected : L10n.Common.notSelected)
                     }
-                    Text("\(gym.suburb), \(gym.state)")
-                        .foregroundStyle(DesignColour.secondaryText)
                     Label(L10n.Gym.developmentFixture, systemImage: "hammer")
                         .font(.caption)
                         .foregroundStyle(DesignColour.warning)
                 }
+                .padding(.vertical, DesignSpacing.small)
             }
 
             Section(L10n.Gym.currentRoutesAndZones) {
@@ -42,10 +54,17 @@ struct GymDetailView: View {
 
             Section(L10n.Gym.latestReset) {
                 if let date = gym.latestResetDate {
-                    LabelValueRow(
-                        label: L10n.Gym.resetDate,
-                        value: date.formatted(date: .long, time: .omitted)
-                    )
+                    HStack(spacing: DesignSpacing.compact) {
+                        Image(systemName: "arrow.clockwise.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(DesignColour.brandPrimary)
+                        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+                            Text(date.formatted(.relative(presentation: .named))).font(DesignTypography.cardTitle)
+                            Text(date.formatted(date: .long, time: .omitted))
+                                .font(DesignTypography.caption)
+                                .foregroundStyle(DesignColour.textSecondary)
+                        }
+                    }
                     Text(L10n.Gym.fixtureResetNotice)
                         .font(.caption)
                         .foregroundStyle(DesignColour.secondaryText)
@@ -56,15 +75,9 @@ struct GymDetailView: View {
             }
 
             Section(L10n.Gym.hardSoftIndex) {
-                LabelValueRow(
-                    label: L10n.Gym.overall,
-                    value: String(localized: L10n.hardSoft(gym.overallHardSoftSummary))
-                )
+                hardSoftRow(label: L10n.Gym.overall, value: L10n.hardSoft(gym.overallHardSoftSummary), emphasized: true)
                 ForEach([GradeBand.v0ToV2, .v3ToV5, .v6Plus], id: \.self) { band in
-                    LabelValueRow(
-                        label: L10n.gradeBand(band),
-                        value: String(localized: L10n.Gym.fixtureBandSummary)
-                    )
+                    hardSoftRow(label: L10n.gradeBand(band), value: L10n.Gym.fixtureBandSummary)
                 }
                 Text(L10n.Gym.communityEstimateNotice)
                     .font(.caption)
@@ -77,11 +90,9 @@ struct GymDetailView: View {
             }
 
             Section(L10n.Gym.facilities) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        ForEach(gym.facilities, id: \.self) { facility in
-                            FacilityChip(facility: facility)
-                        }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), alignment: .leading)], alignment: .leading, spacing: DesignSpacing.small) {
+                    ForEach(gym.facilities, id: \.self) { facility in
+                        FacilityChip(facility: facility)
                     }
                 }
             }
@@ -110,6 +121,9 @@ struct GymDetailView: View {
         .navigationTitle(L10n.Gym.detailTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
+        .onAppear {
+            isFavourite = session.authenticationState.profile?.favouriteGymID == gym.id
+        }
     }
 
     @ViewBuilder
@@ -120,7 +134,7 @@ struct GymDetailView: View {
         case .loaded(let zones), .offlineWithCache(let zones):
             ForEach(zones) { zone in
                 NavigationLink(value: zone) {
-                    WallZoneRow(wallZone: zone)
+                    WallZoneSummaryRow(wallZone: zone)
                 }
                 .accessibilityIdentifier("wall-zone-row-\(zone.id.rawValue)")
             }
@@ -139,6 +153,23 @@ struct GymDetailView: View {
                 .foregroundStyle(DesignColour.secondaryText)
         }
     }
+
+    private func hardSoftRow(
+        label: LocalizedStringResource,
+        value: LocalizedStringResource,
+        emphasized: Bool = false
+    ) -> some View {
+        HStack(spacing: DesignSpacing.compact) {
+            Text(label).font(emphasized ? .headline : .subheadline.weight(.semibold))
+            Spacer()
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(emphasized ? DesignColour.brandPrimary : DesignColour.textSecondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, DesignSpacing.xSmall)
+        .accessibilityElement(children: .combine)
+    }
 }
 
 private struct LabelValueRow: View {
@@ -152,37 +183,6 @@ private struct LabelValueRow: View {
             Text(value)
                 .foregroundStyle(DesignColour.secondaryText)
         }
-    }
-}
-
-private struct WallZoneRow: View {
-    let wallZone: WallZone
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-            HStack {
-                Text(wallZone.name).font(.headline)
-                Spacer()
-                Text(L10n.wallAvailability(wallZone.availability))
-                    .font(.caption)
-                    .foregroundStyle(wallZone.availability == .active ? DesignColour.success : DesignColour.warning)
-            }
-            Text(wallZone.locationDescription)
-                .font(.subheadline)
-                .foregroundStyle(DesignColour.secondaryText)
-            HStack {
-                Label(L10n.wallType(wallZone.wallType), systemImage: "angle")
-                Label("\(wallZone.routeCount)", systemImage: "circle.hexagongrid")
-                Label("\(wallZone.betaCount)", systemImage: "link")
-            }
-            .font(.caption)
-            if let date = wallZone.latestResetDate {
-                Text(date.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption2)
-                    .foregroundStyle(DesignColour.secondaryText)
-            }
-        }
-        .padding(.vertical, DesignSpacing.xSmall)
     }
 }
 

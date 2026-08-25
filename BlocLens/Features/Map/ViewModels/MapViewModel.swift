@@ -50,6 +50,11 @@ final class MapViewModel: ObservableObject {
         }
         state = scenario == .offlineWithCache ? .offlineWithCache(gyms) : .loaded(gyms)
     }
+
+    func clearFilters() {
+        filterOptions = GymFilterOptions()
+        applyFilters()
+    }
 }
 
 nonisolated enum LocalSearchResult: Identifiable, Equatable, Sendable {

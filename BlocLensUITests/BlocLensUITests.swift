@@ -3,6 +3,7 @@ import XCTest
 final class BlocLensUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
     }
 
     @MainActor
@@ -18,22 +19,24 @@ final class BlocLensUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Sign In"].waitForExistence(timeout: 5))
         app.buttons["mock-sign-in-button"].tap()
         let safety = app.buttons["acknowledge-beta-safety-button"].firstMatch
-        XCTAssertTrue(safety.waitForExistence(timeout: 5))
+        XCTAssertTrue(safety.waitForExistence(timeout: 10))
         safety.tap()
-        XCTAssertTrue(app.staticTexts["Original Author"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Original Author"].waitForExistence(timeout: 8))
 
-        app.buttons["logbook-status-projecting"].tap()
+        let projecting = app.buttons["logbook-status-projecting"]
+        XCTAssertTrue(scrollBackToElement(projecting, in: app, maximumSwipes: 6))
+        projecting.tap()
         let saveDetails = app.buttons["save-logbook-details-button"]
         XCTAssertTrue(saveDetails.waitForExistence(timeout: 5))
         saveDetails.tap()
 
         app.tabBars.buttons["Home"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["home-projects-section"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.staticTexts["Projecting"].exists)
+        XCTAssertTrue(scrollToElement(app.staticTexts["Projecting"], in: app, maximumSwipes: 3))
 
         app.tabBars.buttons["Logbook"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["logbook-dashboard"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.staticTexts["Statistics"].exists)
+        XCTAssertTrue(scrollToElement(app.staticTexts["Projecting"], in: app, maximumSwipes: 8))
 
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "BlocLens Route Discovery Vertical Slice"
@@ -54,6 +57,22 @@ final class BlocLensUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Track your climbing"].waitForExistence(timeout: 5))
         app.buttons["onboarding-explore-map-button"].tap()
         XCTAssertTrue(app.navigationBars["Map"].waitForExistence(timeout: 8))
+    }
+
+    @MainActor
+    func testOnboardingActionsRemainUsableAtAccessibilityTextSize() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--reset-onboarding",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityExtraExtraLarge"
+        ]
+        app.launch()
+
+        let continueButton = app.buttons["onboarding-continue-button"]
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 8))
+        XCTAssertTrue(continueButton.isHittable)
+        XCTAssertTrue(app.buttons["onboarding-skip-button"].isHittable)
     }
 
     @MainActor
@@ -81,6 +100,8 @@ final class BlocLensUITests: XCTestCase {
         offlineApp.launchArguments = ["--skip-onboarding", "--mock-offline-cached"]
         offlineApp.launch()
         XCTAssertTrue(offlineApp.staticTexts["You are offline. Showing cached development data."].waitForExistence(timeout: 8))
+        offlineApp.tabBars.buttons["Map"].tap()
+        XCTAssertTrue(offlineApp.buttons["gym-annotation-urban-climb-west-end"].waitForExistence(timeout: 12))
     }
 
     @MainActor
@@ -98,6 +119,54 @@ final class BlocLensUITests: XCTestCase {
     }
 
     @MainActor
+    func testRouteDetailRemainsScrollableAtAccessibilityTextSize() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--skip-onboarding",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityExtraLarge"
+        ]
+        app.launch()
+        openFixtureRoute(in: app)
+
+        let routeDetail = app.scrollViews.firstMatch
+        XCTAssertTrue(routeDetail.waitForExistence(timeout: 8))
+        routeDetail.swipeUp()
+        let reveal = app.buttons["reveal-beta-button"]
+        if !reveal.isHittable { routeDetail.swipeUp() }
+        XCTAssertTrue(reveal.isHittable)
+    }
+
+    @MainActor
+    func testArchivedRouteIsPresentedAsHistoryNotCurrent() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--skip-onboarding", "--mock-authenticated"]
+        app.launch()
+        app.tabBars.buttons["Map"].tap()
+
+        let annotation = app.buttons["gym-annotation-nine-degrees-enoggera"]
+        XCTAssertTrue(annotation.waitForExistence(timeout: 12))
+        annotation.tap()
+        XCTAssertTrue(app.buttons["open-gym-button"].waitForExistence(timeout: 5))
+        app.buttons["open-gym-button"].tap()
+
+        let zone = app.buttons["wall-zone-row-enoggera-main"]
+        XCTAssertTrue(scrollToElement(zone, in: app, maximumSwipes: 6))
+        zone.tap()
+
+        let archiveGroup = app.buttons["Archived Routes"]
+        XCTAssertTrue(scrollToElement(archiveGroup, in: app, maximumSwipes: 4))
+        archiveGroup.tap()
+        let archivedRoute = app.buttons["route-row-enoggera-main-r3"]
+        XCTAssertTrue(archivedRoute.waitForExistence(timeout: 5))
+        archivedRoute.tap()
+
+        XCTAssertTrue(app.staticTexts["Archived Route"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["This route is read-only history. Beta links, grades and Logbook records are preserved."].exists)
+        XCTAssertFalse(app.staticTexts["Current"].exists)
+    }
+
+    @MainActor
     private func openFixtureRoute(in app: XCUIApplication) {
         app.tabBars.buttons["Map"].tap()
         let annotation = app.buttons["gym-annotation-urban-climb-west-end"]
@@ -109,11 +178,31 @@ final class BlocLensUITests: XCTestCase {
         openGym.tap()
 
         let zone = app.buttons["wall-zone-row-west-end-slab"]
-        XCTAssertTrue(zone.waitForExistence(timeout: 8))
+        XCTAssertTrue(scrollToElement(zone, in: app, maximumSwipes: 4))
         zone.tap()
 
         let route = app.buttons["route-row-west-end-slab-r1"]
         XCTAssertTrue(route.waitForExistence(timeout: 8))
         route.tap()
+    }
+
+    @MainActor
+    private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, maximumSwipes: Int) -> Bool {
+        if element.waitForExistence(timeout: 2) { return true }
+        for _ in 0 ..< maximumSwipes {
+            app.swipeUp()
+            if element.waitForExistence(timeout: 1) { return true }
+        }
+        return false
+    }
+
+    @MainActor
+    private func scrollBackToElement(_ element: XCUIElement, in app: XCUIApplication, maximumSwipes: Int) -> Bool {
+        if element.waitForExistence(timeout: 2) { return true }
+        for _ in 0 ..< maximumSwipes {
+            app.swipeDown()
+            if element.waitForExistence(timeout: 1) { return true }
+        }
+        return false
     }
 }

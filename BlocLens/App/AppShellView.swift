@@ -48,10 +48,12 @@ struct AppShellView: View {
             titleVisibility: .visible
         ) {
             ForEach(AddAction.allCases) { action in
-                Button(action.title) {
+                Button {
                     if session.requireAuthentication(for: .add(action)) {
                         selectedAddAction = action
                     }
+                } label: {
+                    Label(action.title, systemImage: action.systemImage)
                 }
             }
             Button(L10n.Common.cancel, role: .cancel) {}
@@ -69,6 +71,7 @@ struct AppShellView: View {
             selectedAddAction = action
             session.consumeResumedIntent(.add(action))
         }
+        .sensoryFeedback(.selection, trigger: isAddMenuPresented)
     }
 }
 

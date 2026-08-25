@@ -36,7 +36,7 @@ final class WallZoneRouteListViewModel: ObservableObject {
             statusByRouteID = Dictionary(uniqueKeysWithValues: entries.map { ($0.routeID, $0.status) })
             let current = RouteListPresentation.currentRoutes(routes, options: options)
             archivedRoutes = RouteListPresentation.archivedRoutes(routes, options: options)
-            state = current.isEmpty ? .empty : .loaded(current)
+            state = current.isEmpty && archivedRoutes.isEmpty ? .empty : .loaded(current)
         } catch RepositoryError.offlineNoCache {
             state = .offlineWithoutCache
         } catch let error as RepositoryError {
@@ -44,5 +44,10 @@ final class WallZoneRouteListViewModel: ObservableObject {
         } catch {
             state = .error(.fixtureFailure)
         }
+    }
+
+    func clearFilters() async {
+        options = RouteListOptions()
+        await load()
     }
 }

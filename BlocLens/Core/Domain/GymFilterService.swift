@@ -9,6 +9,10 @@ nonisolated struct GymFilterOptions: Equatable, Sendable {
     var isActive: Bool {
         openNow || !facilities.isEmpty || hasBeta || recentlyReset
     }
+
+    var activeCount: Int {
+        (openNow ? 1 : 0) + facilities.count + (hasBeta ? 1 : 0) + (recentlyReset ? 1 : 0)
+    }
 }
 
 nonisolated enum GymFilterService {

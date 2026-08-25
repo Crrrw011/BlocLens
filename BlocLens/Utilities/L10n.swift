@@ -1,6 +1,11 @@
 import SwiftUI
 
 enum L10n {
+    enum Brand {
+        static let name: LocalizedStringResource = "brand.name"
+        static let tagline: LocalizedStringResource = "brand.tagline"
+    }
+
     enum Common {
         static let cancel: LocalizedStringResource = "common.cancel"
         static let close: LocalizedStringResource = "common.close"
@@ -46,6 +51,7 @@ enum L10n {
         static let contributionTitle: LocalizedStringResource = "home.contribution.title"
         static let contributionMessage: LocalizedStringResource = "home.contribution.message"
         static let contributionAction: LocalizedStringResource = "home.contribution.action"
+        static let projectsSupporting: LocalizedStringResource = "home.projects.supporting"
         static let privateLogbookMessage: LocalizedStringResource = "home.privateLogbook.message"
         static let privateLogbookAction: LocalizedStringResource = "home.privateLogbook.action"
     }
@@ -83,6 +89,8 @@ enum L10n {
         static let showHistory: LocalizedStringResource = "filter.showHistory"
         static let hasBeta: LocalizedStringResource = "filter.hasBeta"
         static let sort: LocalizedStringResource = "filter.sort"
+        static let active: LocalizedStringResource = "filter.active"
+        static let inactive: LocalizedStringResource = "filter.inactive"
     }
 
     enum Gym {
@@ -128,6 +136,7 @@ enum L10n {
         static let hiddenReviewMessage: LocalizedStringResource = "route.hiddenReviewMessage"
         static let photoPlaceholder: LocalizedStringResource = "route.photoPlaceholder"
         static let estimatedArchive: LocalizedStringResource = "route.estimatedArchive"
+        static let estimateOnly: LocalizedStringResource = "route.estimateOnly"
         static let communityGradeTitle: LocalizedStringResource = "route.communityGrade.title"
         static let communityShortLabel: LocalizedStringResource = "route.communityGrade.shortLabel"
         static let communityGradeHidden: LocalizedStringResource = "route.communityGrade.hidden"
@@ -141,6 +150,7 @@ enum L10n {
         static let accuracyTitle: LocalizedStringResource = "route.accuracy.title"
         static let suggestCorrection: LocalizedStringResource = "route.suggestCorrection"
         static let reportRoute: LocalizedStringResource = "route.reportRoute"
+        static let colourAccessibilityPrefix: LocalizedStringResource = "route.colour.accessibilityPrefix"
     }
 
     enum Beta {
@@ -178,6 +188,8 @@ enum L10n {
         static let quickStateTitle: LocalizedStringResource = "logbook.quickState.title"
         static let savedPrivate: LocalizedStringResource = "logbook.savedPrivate"
         static let queued: LocalizedStringResource = "logbook.queued"
+        static let synced: LocalizedStringResource = "logbook.synced"
+        static let findRoute: LocalizedStringResource = "logbook.findRoute"
         static let optionalDetails: LocalizedStringResource = "logbook.optionalDetails"
         static let date: LocalizedStringResource = "logbook.date"
         static let attempts: LocalizedStringResource = "logbook.attempts"

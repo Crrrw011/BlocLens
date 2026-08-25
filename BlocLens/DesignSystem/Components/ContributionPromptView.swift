@@ -9,28 +9,41 @@ struct ContributionPromptView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-            Label(title, systemImage: "sparkles")
-                .font(.headline)
-                .foregroundStyle(DesignColour.primaryText)
+            Label(title, systemImage: "plus.circle")
+                .font(DesignTypography.cardTitle)
+                .foregroundStyle(DesignColour.textPrimary)
 
             Text(message)
-                .font(.subheadline)
-                .foregroundStyle(DesignColour.secondaryText)
+                .font(DesignTypography.supporting)
+                .foregroundStyle(DesignColour.textSecondary)
 
             Label(L10n.Contribution.privacyNote, systemImage: "lock")
                 .font(.caption)
-                .foregroundStyle(DesignColour.secondaryText)
+                .foregroundStyle(DesignColour.textSecondary)
 
-            HStack(spacing: DesignSpacing.small) {
-                Button(primaryActionTitle, action: primaryAction)
-                    .buttonStyle(PrimaryButtonStyle())
-
-                Button(L10n.Common.notNow, action: dismissAction)
-                    .buttonStyle(CompactActionButtonStyle())
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DesignSpacing.small) { actions }
+                VStack(spacing: DesignSpacing.small) { actions }
             }
         }
-        .cardStyle()
+        .padding(DesignSpacing.medium)
+        .background(DesignColour.brandTint, in: RoundedRectangle(cornerRadius: DesignRadius.card, style: .continuous))
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(DesignColour.brandPrimary)
+                .frame(width: 3)
+                .padding(.vertical, DesignSpacing.medium)
+        }
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var actions: some View {
+                Button(primaryActionTitle, action: primaryAction)
+            .buttonStyle(SecondaryButtonStyle())
+
+                Button(L10n.Common.notNow, action: dismissAction)
+            .buttonStyle(QuietButtonStyle())
     }
 }
 

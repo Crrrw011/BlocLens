@@ -6,12 +6,16 @@ struct RouteDetailView: View {
     @ObservedObject var session: AppSession
 
     @StateObject private var viewModel: RouteDetailViewModel
-    @State private var isBetaRevealed = false
+    @State private var betaRevealState: BetaRevealState = .hidden
     @State private var showsSafetyConfirmation = false
     @State private var showsLogbookDetails = false
     @State private var showsExternalHandoffNotice = false
     @State private var showsIssueMenu = false
     @State private var selectedIssue: LocalizedStringResource?
+    @State private var helpfulLinkIDs: Set<BetaLinkID> = []
+    @State private var saveFeedbackTrigger = 0
+    @State private var helpfulFeedbackTrigger = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         route: ClimbingRoute,
@@ -22,7 +26,7 @@ struct RouteDetailView: View {
         self.route = route
         self.environment = environment
         self.session = session
-        _isBetaRevealed = State(initialValue: initialBetaRevealed)
+        _betaRevealState = State(initialValue: initialBetaRevealed ? .revealed : .hidden)
         _viewModel = StateObject(wrappedValue: RouteDetailViewModel(route: route, environment: environment))
     }
 
@@ -55,6 +59,9 @@ struct RouteDetailView: View {
             case .saveLogbook(let routeID, let status) where routeID == route.id:
                 session.consumeResumedIntent(intent)
                 Task { await saveLogbook(status) }
+            case .helpful(let betaID):
+                session.consumeResumedIntent(intent)
+                markHelpful(betaID)
             default:
                 break
             }
@@ -62,7 +69,7 @@ struct RouteDetailView: View {
         .alert(L10n.Beta.safetyTitle, isPresented: $showsSafetyConfirmation) {
             Button(L10n.Common.continueButton) {
                 session.hasAcknowledgedRevealSafety = true
-                isBetaRevealed = true
+                revealBeta()
             }
             .accessibilityIdentifier("acknowledge-beta-safety-button")
             Button(L10n.Common.cancel, role: .cancel) {}
@@ -112,13 +119,18 @@ struct RouteDetailView: View {
                 }
             }
         }
+        .sensoryFeedback(.success, trigger: saveFeedbackTrigger)
+        .sensoryFeedback(.success, trigger: helpfulFeedbackTrigger)
     }
 
     private var archivedBanner: some View {
-        Label(L10n.Route.archivedHistoryMessage, systemImage: "archivebox")
-            .font(.subheadline)
-            .foregroundStyle(DesignColour.warning)
-            .cardStyle()
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            StatusChip(title: L10n.Route.archived, systemImage: "archivebox.fill", colour: DesignColour.archived)
+            Text(L10n.Route.archivedHistoryMessage)
+                .font(DesignTypography.supporting)
+                .foregroundStyle(DesignColour.textSecondary)
+        }
+        .cardStyle(elevated: true)
     }
 
     private var moderationBanner: some View {
@@ -131,18 +143,19 @@ struct RouteDetailView: View {
     private var identitySection: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.medium) {
             RoundedRectangle(cornerRadius: DesignRadius.large)
-                .fill(.regularMaterial)
-                .frame(height: 180)
+                .fill(DesignColour.surfacePrimary)
+                .aspectRatio(16 / 10, contentMode: .fit)
                 .overlay {
-                    VStack {
-                        Image(systemName: "circle.hexagongrid.fill")
-                            .font(.system(size: 48))
-                            .foregroundStyle(DesignColour.opticBlue)
+                    VStack(spacing: DesignSpacing.small) {
+                        RouteColourSwatch(colourOrTag: route.colourOrTag, size: 64)
                         Text(L10n.Route.photoPlaceholder)
-                            .font(.caption)
-                            .foregroundStyle(DesignColour.secondaryText)
+                            .font(DesignTypography.cardTitle)
+                        Text(route.colourOrTag)
+                            .font(DesignTypography.supporting)
+                            .foregroundStyle(DesignColour.textSecondary)
                     }
                 }
+                .overlay { RoundedRectangle(cornerRadius: DesignRadius.large).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
 
             if session.isContributionPromptVisible("route-photo-\(route.id.rawValue)") {
                 ContributionPromptView(
@@ -154,11 +167,10 @@ struct RouteDetailView: View {
                 )
             }
 
-            HStack(alignment: .firstTextBaseline) {
-                Text(route.colourOrTag).font(.title.bold())
+            HStack(alignment: .center, spacing: DesignSpacing.compact) {
+                RouteColourSwatch(colourOrTag: route.colourOrTag, size: 52)
+                Text(route.colourOrTag).font(DesignTypography.largeScreenTitle)
                 Spacer()
-                Text(route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown))
-                    .font(.title2.bold())
             }
             HStack(spacing: DesignSpacing.small) {
                 GradeChip(grade: route.officialGrade, label: L10n.Route.gymGrade)
@@ -177,10 +189,14 @@ struct RouteDetailView: View {
                     .foregroundStyle(DesignColour.secondaryText)
             }
             if let archiveDate = route.expectedArchiveDate, route.isArchiveDateEstimated {
-                Label {
-                    Text(L10n.Route.estimatedArchive) + Text(verbatim: " \(archiveDate.formatted(date: .abbreviated, time: .omitted))")
-                } icon: {
-                    Image(systemName: "calendar.badge.exclamationmark")
+                VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+                    Label {
+                        Text(L10n.Route.estimatedArchive) + Text(verbatim: " \(archiveDate.formatted(date: .abbreviated, time: .omitted))")
+                    } icon: {
+                        Image(systemName: "calendar.badge.exclamationmark")
+                    }
+                    Text(L10n.Route.estimateOnly)
+                        .font(.caption2)
                 }
                 .font(.caption)
                 .foregroundStyle(DesignColour.warning)
@@ -190,7 +206,7 @@ struct RouteDetailView: View {
 
     private var quickLogbookSection: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-            Text(L10n.Logbook.quickStateTitle).font(.title3.bold())
+            SectionHeader(title: L10n.Logbook.quickStateTitle, supportingText: L10n.Logbook.privateByDefaultMessage)
             LogbookStatusControl(
                 selection: session.authenticationState.isSignedIn ? viewModel.logbookEntry?.status : nil,
                 isEnabled: true
@@ -204,7 +220,7 @@ struct RouteDetailView: View {
                     entry.syncState == .queued ? L10n.Logbook.queued : L10n.Logbook.savedPrivate,
                     systemImage: entry.syncState == .queued ? "clock.arrow.circlepath" : "lock.fill"
                 )
-                .font(.caption)
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(entry.syncState == .queued ? DesignColour.warning : DesignColour.success)
             }
         }
@@ -213,21 +229,24 @@ struct RouteDetailView: View {
 
     private var betaSection: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-            Text(L10n.Beta.title).font(.title3.bold())
-            if !isBetaRevealed {
+            SectionHeader(title: L10n.Beta.title, supportingText: L10n.Beta.hiddenUntilReveal)
+            if !betaRevealState.isRevealed {
                 ZStack {
-                    LinearGradient(
-                        colors: [DesignColour.opticBlue, DesignColour.surface, DesignColour.warning],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .blur(radius: 14)
-                    Text(L10n.Beta.hiddenUntilReveal)
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                    RouteColourSwatch(colourOrTag: route.colourOrTag, size: 112)
+                        .blur(radius: 20)
+                        .scaleEffect(1.8)
+                        .opacity(0.62)
+                    Rectangle().fill(.ultraThinMaterial)
+                    VStack(spacing: DesignSpacing.small) {
+                        Image(systemName: "eye.slash.fill").font(.title2)
+                        Text(L10n.Beta.hiddenUntilReveal).font(.headline)
+                    }
+                    .foregroundStyle(DesignColour.textPrimary)
                 }
                 .frame(height: 150)
                 .clipShape(RoundedRectangle(cornerRadius: DesignRadius.medium))
+
+                hiddenBetaMetadata
 
                 Button(L10n.Beta.reveal) {
                     if session.requireAuthentication(for: .revealBeta(routeID: route.id)) {
@@ -238,6 +257,7 @@ struct RouteDetailView: View {
                 .accessibilityIdentifier("reveal-beta-button")
             } else {
                 revealedBetaContent
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
         .cardStyle()
@@ -252,10 +272,9 @@ struct RouteDetailView: View {
             ForEach(links) { link in
                 BetaLinkCard(
                     link: link,
+                    isHelpful: helpfulLinkIDs.contains(link.id),
                     openOriginal: { showsExternalHandoffNotice = true },
-                    markHelpful: {
-                        _ = session.requireAuthentication(for: .helpful(betaID: link.id))
-                    },
+                    markHelpful: { markHelpful(link.id) },
                     reportIssue: { showsIssueMenu = true }
                 )
             }
@@ -323,7 +342,7 @@ struct RouteDetailView: View {
 
     private func requestBetaRevealAfterAuthentication() {
         if session.hasAcknowledgedRevealSafety {
-            isBetaRevealed = true
+            revealBeta()
         } else {
             showsSafetyConfirmation = true
         }
@@ -331,13 +350,43 @@ struct RouteDetailView: View {
 
     private func saveLogbook(_ status: LogbookStatus) async {
         if await viewModel.save(status: status) != nil {
+            saveFeedbackTrigger += 1
             showsLogbookDetails = true
         }
+    }
+
+    private var hiddenBetaMetadata: some View {
+        Group {
+            if case .loaded(let links) = viewModel.betaState, let link = links.first {
+                HStack(spacing: DesignSpacing.compact) {
+                    Label(L10n.betaPlatform(link.platform), systemImage: "play.rectangle")
+                    Text(link.originalAuthor)
+                    Spacer()
+                    HelpfulCountView(count: link.helpfulCount)
+                }
+                .font(DesignTypography.caption)
+                .foregroundStyle(DesignColour.textSecondary)
+                FlowLayout(tags: link.tags)
+            }
+        }
+    }
+
+    private func revealBeta() {
+        withAnimation(DesignMotion.animation(DesignMotion.reveal, reduceMotion: reduceMotion)) {
+            betaRevealState.reveal()
+        }
+    }
+
+    private func markHelpful(_ betaID: BetaLinkID) {
+        guard session.requireAuthentication(for: .helpful(betaID: betaID)) else { return }
+        guard helpfulLinkIDs.insert(betaID).inserted else { return }
+        helpfulFeedbackTrigger += 1
     }
 }
 
 private struct BetaLinkCard: View {
     let link: BetaLink
+    let isHelpful: Bool
     let openOriginal: () -> Void
     let markHelpful: () -> Void
     let reportIssue: () -> Void
@@ -350,7 +399,7 @@ private struct BetaLinkCard: View {
             )
             betaMetadataRow(L10n.Beta.originalAuthor, value: link.originalAuthor)
             FlowLayout(tags: link.tags)
-            HelpfulCountView(count: link.helpfulCount)
+            HelpfulCountView(count: link.helpfulCount + (isHelpful ? 1 : 0))
 
             if link.embedSupport == .supported {
                 RoundedRectangle(cornerRadius: DesignRadius.small)
@@ -368,8 +417,11 @@ private struct BetaLinkCard: View {
                     .buttonStyle(SecondaryButtonStyle())
             }
             HStack {
-                Button(L10n.Beta.helpful, action: markHelpful)
+                Button(action: markHelpful) {
+                    Label(L10n.Beta.helpful, systemImage: isHelpful ? "hand.thumbsup.fill" : "hand.thumbsup")
+                }
                     .buttonStyle(CompactActionButtonStyle())
+                    .disabled(isHelpful)
                 Button(L10n.Beta.reportIssue, action: reportIssue)
                     .buttonStyle(CompactActionButtonStyle())
             }

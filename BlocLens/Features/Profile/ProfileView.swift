@@ -27,6 +27,9 @@ struct ProfileView: View {
                     Text(L10n.Profile.signedOutTitle).font(.title2.bold())
                     Text(L10n.Profile.signedOutMessage)
                         .foregroundStyle(DesignColour.secondaryText)
+                    Text(L10n.Brand.tagline)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DesignColour.textTertiary)
                     Button(L10n.Authentication.signIn) {
                         _ = session.requireAuthentication(for: .account)
                     }
@@ -34,6 +37,7 @@ struct ProfileView: View {
                     .accessibilityIdentifier("profile-sign-in-button")
                 }
                 .padding(.vertical, DesignSpacing.small)
+                .cardStyle(elevated: true)
             }
 
             publicSupportLinks
@@ -73,6 +77,7 @@ struct ProfileView: View {
                 )
                 Text("\(profile.helpfulVotes) \(String(localized: L10n.Profile.helpfulProgressSuffix))")
                     .font(.subheadline)
+                    .accessibilityLabel("\(profile.helpfulVotes) \(String(localized: L10n.Profile.helpfulProgressSuffix))")
             }
 
             Section {

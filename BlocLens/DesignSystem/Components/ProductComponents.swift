@@ -12,10 +12,11 @@ struct StatusChip: View {
             if let systemImage { Image(systemName: systemImage) }
         }
         .font(.caption.weight(.semibold))
-        .padding(.horizontal, DesignSpacing.small)
-        .padding(.vertical, DesignSpacing.xSmall)
+        .padding(.horizontal, DesignSpacing.compact)
+        .frame(minHeight: 28)
         .foregroundStyle(colour)
         .background(colour.opacity(0.12), in: Capsule())
+        .overlay { Capsule().stroke(colour.opacity(0.25), lineWidth: 0.5) }
         .accessibilityElement(children: .combine)
     }
 }
@@ -25,14 +26,15 @@ struct GradeChip: View {
     let label: LocalizedStringResource
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
             Text(label).font(.caption2).foregroundStyle(DesignColour.secondaryText)
             Text(grade?.displayName ?? String(localized: L10n.Grade.unknown))
-                .font(.headline.monospacedDigit())
+                .font(DesignTypography.gradeEmphasis)
         }
-        .padding(.horizontal, DesignSpacing.small)
-        .padding(.vertical, DesignSpacing.xSmall)
-        .background(DesignColour.surface, in: RoundedRectangle(cornerRadius: DesignRadius.small))
+        .padding(.horizontal, DesignSpacing.compact)
+        .padding(.vertical, DesignSpacing.small)
+        .background(DesignColour.surfaceElevated, in: RoundedRectangle(cornerRadius: DesignRadius.control))
+        .overlay { RoundedRectangle(cornerRadius: DesignRadius.control).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
         .accessibilityElement(children: .combine)
     }
 }
@@ -43,9 +45,11 @@ struct FacilityChip: View {
     var body: some View {
         Label(L10n.facility(facility), systemImage: L10n.facilityIcon(facility))
             .font(.caption)
-            .padding(.horizontal, DesignSpacing.small)
-            .padding(.vertical, DesignSpacing.xSmall)
-            .background(DesignColour.surface, in: Capsule())
+            .padding(.horizontal, DesignSpacing.compact)
+            .frame(minHeight: 32)
+            .background(DesignColour.surfaceElevated, in: Capsule())
+            .overlay { Capsule().stroke(DesignColour.separator.opacity(0.45), lineWidth: 0.5) }
+            .accessibilityElement(children: .combine)
     }
 }
 
@@ -59,6 +63,7 @@ struct HelpfulCountView: View {
             Image(systemName: "hand.thumbsup")
         }
         .font(.caption.weight(.medium))
+        .foregroundStyle(DesignColour.textSecondary)
         .accessibilityElement(children: .combine)
     }
 }
@@ -81,19 +86,19 @@ struct LogbookStatusControl: View {
     let select: (LogbookStatus) -> Void
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignSpacing.small) {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: DesignSpacing.small), GridItem(.flexible())], spacing: DesignSpacing.small) {
             ForEach(LogbookStatus.allCases, id: \.self) { status in
                 Button {
                     select(status)
                 } label: {
-                    HStack {
-                        Image(systemName: selection == status ? "checkmark.circle.fill" : "circle")
+                    HStack(spacing: DesignSpacing.small) {
+                        Image(systemName: selection == status ? status.selectedSystemImage : status.systemImage)
                         Text(L10n.logbookStatus(status))
+                            .lineLimit(2)
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(SecondaryButtonStyle())
-                .tint(selection == status ? DesignColour.opticBlue : DesignColour.secondaryText)
+                .buttonStyle(LogbookStatusButtonStyle(isSelected: selection == status))
                 .disabled(!isEnabled)
                 .accessibilityValue(selection == status ? L10n.Common.selected : L10n.Common.notSelected)
                 .accessibilityIdentifier("logbook-status-\(status.rawValue)")
@@ -110,5 +115,47 @@ struct SectionTitle: View {
             .font(.title3.bold())
             .foregroundStyle(DesignColour.primaryText)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct LogbookStatusButtonStyle: ButtonStyle {
+    let isSelected: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(isSelected ? Color.white : (isEnabled ? DesignColour.textPrimary : DesignColour.textTertiary))
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .padding(.horizontal, DesignSpacing.small)
+            .background(
+                isSelected ? DesignColour.brandPrimary : DesignColour.surfacePrimary,
+                in: RoundedRectangle(cornerRadius: DesignRadius.control, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignRadius.control, style: .continuous)
+                    .stroke(isSelected ? Color.clear : DesignColour.separator.opacity(0.6), lineWidth: 0.5)
+            }
+            .opacity(configuration.isPressed ? 0.72 : 1)
+    }
+}
+
+private extension LogbookStatus {
+    var systemImage: String {
+        switch self {
+        case .wantToTry: "bookmark"
+        case .projecting: "hammer"
+        case .sent: "checkmark.circle"
+        case .flash: "bolt"
+        }
+    }
+
+    var selectedSystemImage: String {
+        switch self {
+        case .wantToTry: "bookmark.fill"
+        case .projecting: "hammer.fill"
+        case .sent: "checkmark.circle.fill"
+        case .flash: "bolt.fill"
+        }
     }
 }

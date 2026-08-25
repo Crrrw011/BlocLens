@@ -32,6 +32,7 @@ struct WallZoneRouteListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $viewModel.options.query, prompt: Text(L10n.Search.routePrompt))
         .onSubmit(of: .search) { Task { await viewModel.load() } }
+        .onChange(of: viewModel.options.query) { _, _ in Task { await viewModel.load() } }
         .onChange(of: viewModel.options.gradeBand) { _, _ in Task { await viewModel.load() } }
         .onChange(of: viewModel.options.hasBeta) { _, _ in Task { await viewModel.load() } }
         .onChange(of: viewModel.options.sort) { _, _ in Task { await viewModel.load() } }
@@ -56,7 +57,15 @@ struct WallZoneRouteListView: View {
     }
 
     private var filterBar: some View {
-        HStack {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DesignSpacing.small) {
+            if viewModel.options.activeFilterCount > 0 {
+                StatusChip(
+                    title: L10n.Filter.active,
+                    systemImage: "line.3.horizontal.decrease.circle.fill",
+                    colour: DesignColour.brandPrimary
+                )
+            }
             Picker(L10n.Filter.grade, selection: $viewModel.options.gradeBand) {
                 ForEach(GradeBand.allCases, id: \.self) { band in
                     Text(L10n.gradeBand(band)).tag(band)
@@ -64,14 +73,19 @@ struct WallZoneRouteListView: View {
             }
             .pickerStyle(.menu)
             Toggle(L10n.Filter.hasBeta, isOn: $viewModel.options.hasBeta)
+                .toggleStyle(.button)
+                .buttonStyle(CompactActionButtonStyle())
             Picker(L10n.Filter.sort, selection: $viewModel.options.sort) {
                 ForEach(RouteSort.allCases, id: \.self) { sort in
                     Text(L10n.routeSort(sort)).tag(sort)
                 }
             }
             .pickerStyle(.menu)
+            }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, DesignSpacing.medium)
+        .padding(.vertical, DesignSpacing.small)
+        .background(DesignColour.backgroundSecondary)
     }
 
     @ViewBuilder
@@ -103,13 +117,20 @@ struct WallZoneRouteListView: View {
                     }
                 }
             }
-            .listStyle(.plain)
+            .listStyle(.insetGrouped)
         case .empty:
-            EmptyStateView(
-                title: L10n.RouteList.emptyTitle,
-                message: L10n.RouteList.emptyMessage,
-                systemImage: "line.3.horizontal.decrease.circle"
-            )
+            VStack(spacing: DesignSpacing.medium) {
+                EmptyStateView(
+                    title: L10n.RouteList.emptyTitle,
+                    message: L10n.RouteList.emptyMessage,
+                    systemImage: "line.3.horizontal.decrease.circle"
+                )
+                if viewModel.options.hasActiveFilters {
+                    Button(L10n.MapFilter.clear) { Task { await viewModel.clearFilters() } }
+                        .buttonStyle(SecondaryButtonStyle())
+                        .padding(.horizontal, DesignSpacing.large)
+                }
+            }
         case .error:
             ErrorStateView(message: L10n.State.fixtureErrorMessage) {
                 Task { await viewModel.load() }
@@ -133,43 +154,62 @@ private struct RouteRow: View {
     let status: LogbookStatus?
 
     var body: some View {
-        HStack {
-            Circle()
-                .fill(DesignColour.surface)
-                .overlay(Text(String(route.colourOrTag.prefix(1))).font(.caption.bold()))
-                .frame(width: 36, height: 36)
+        HStack(alignment: .top, spacing: DesignSpacing.compact) {
+            RouteColourSwatch(colourOrTag: route.colourOrTag, size: 44)
             VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
                 HStack {
                     Text(route.colourOrTag).font(.headline)
                     if route.lifecycle == .archived {
-                        Text(L10n.Route.archived)
-                            .font(.caption)
-                            .foregroundStyle(DesignColour.warning)
+                        StatusChip(title: L10n.Route.archived, systemImage: "archivebox", colour: DesignColour.archived)
                     }
                 }
-                HStack {
-                    Text(route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown))
-                    if let community = route.communityGradeSummary.displayGrade {
-                        Text(L10n.Route.communityShortLabel) + Text(verbatim: " \(community.displayName)")
-                    }
-                    Label("\(route.betaCount)", systemImage: "link")
+                ViewThatFits(in: .horizontal) {
+                    metadata
+                    VStack(alignment: .leading, spacing: DesignSpacing.xSmall) { metadata }
                 }
-                .font(.caption)
-                .foregroundStyle(DesignColour.secondaryText)
+                if route.communityGradeSummary.displayGrade == nil, route.communityGradeSummary.voteCount > 0 {
+                    Text(route.communityGradeSummary.voteCount, format: .number) + Text(L10n.Route.validVotesSuffix)
+                        .font(.caption2)
+                        .foregroundStyle(DesignColour.textTertiary)
+                }
                 if let reset = route.resetDate {
-                    Text(reset.formatted(date: .abbreviated, time: .omitted))
+                    Label(reset.formatted(.relative(presentation: .named)), systemImage: "clock")
                         .font(.caption2)
                         .foregroundStyle(DesignColour.tertiaryText)
                 }
                 if let status {
-                    Text(L10n.logbookStatus(status))
-                        .font(.caption.bold())
-                        .foregroundStyle(DesignColour.opticBlue)
+                    StatusChip(title: L10n.logbookStatus(status), systemImage: statusIcon(status), colour: DesignColour.brandPrimary)
                 }
             }
         }
-        .padding(.vertical, DesignSpacing.xSmall)
+        .padding(.vertical, DesignSpacing.small)
+        .accessibilityElement(children: .combine)
     }
+
+    private var metadata: some View {
+        HStack(spacing: DesignSpacing.compact) {
+            Label(route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown), systemImage: "number")
+                    if let community = route.communityGradeSummary.displayGrade {
+                Label {
+                    Text(L10n.Route.communityShortLabel) + Text(verbatim: " \(community.displayName)")
+                } icon: {
+                    Image(systemName: "person.3")
+                }
+                    }
+            Label("\(route.betaCount)", systemImage: "link")
+        }
+        .font(.caption)
+        .foregroundStyle(DesignColour.textSecondary)
+    }
+
+    private func statusIcon(_ status: LogbookStatus) -> String {
+        switch status {
+        case .wantToTry: "bookmark.fill"
+        case .projecting: "hammer.fill"
+        case .sent: "checkmark.circle.fill"
+        case .flash: "bolt.fill"
+            }
+        }
 }
 
 #Preview("Wall Zone Route List") {

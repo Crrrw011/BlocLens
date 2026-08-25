@@ -80,3 +80,11 @@ Prompts are contextual, dismissible and session-frequency-limited. They explain 
 ## Future backend replacement boundaries
 
 A backend stage replaces implementations of `GymRepository`, `RouteRepository`, `BetaRepository`, `LogbookRepository` and `AuthenticationRepository` behind `AppEnvironment`. Persistent account state, onboarding migration, cache policy and server-confirmed writes remain behind those boundaries. Views continue to consume domain values and typed session intents rather than transport DTOs or backend client objects.
+
+## Stage 5 visual upgrade
+
+Stage 5 retains this page hierarchy and every Stage 4 mock boundary. It adds formal semantic colour, typography, spacing, shape and motion tokens; purpose-specific cards, rows, chips, metrics, filters and state treatments; route-colour accessibility; compact map controls; clearer Archived and estimate presentation; and responsive Onboarding and Route Detail layouts.
+
+The interface uses native Liquid Glass only when the runtime and SDK support it. iOS 17 and iOS 18 receive a Material and semantic-border fallback. Light, Dark, small-screen, Dynamic Type and Reduce Motion behaviour are now explicit visual-system concerns. See `VisualSystem.md` for the component and compatibility contract.
+
+The unimplemented boundaries above remain unchanged. Stage 5 adds no backend, external API, real OAuth, media loading, video path, camera access, AI recognition or 2D wall geometry.
