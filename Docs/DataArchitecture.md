@@ -198,7 +198,7 @@ There is explicitly no video database table, video bucket, direct video upload, 
 
 ## Known risks and incomplete validation
 
-- These migrations received repository static validation only in Stage 6A. PostgreSQL execution, trigger recursion, concurrent thresholds and transaction rollback must be exercised locally before any remote deployment.
+- These migrations were statically validated in Stage 6A and executed locally in Stage 6B against a disposable Supabase PostgreSQL 17 database: migrations 0001–0010 apply in order, the development seed loads, the pgTAP schema contract (18 tests) passes, and `supabase db lint` reports no errors. Remote deployment remains pending.
 - Direct development inserts into Supabase-managed `auth.users` are version-sensitive and local-only.
 - Account deletion/anonymisation, exported Logbook delivery and production retention require a confirmed legal/product policy before implementation.
 - External URL allow-listing, redirect safety and link health checking need a trusted server boundary.

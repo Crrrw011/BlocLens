@@ -421,7 +421,7 @@ with check (public.is_admin_or_moderator());
 -- Explicit grants keep server-controlled columns away from ordinary clients.
 revoke all on all tables in schema public from anon, authenticated;
 
-grant select (id, username, avatar_path, height_cm, arm_span_cm, regular_grade, is_trusted_contributor)
+grant select (id, username, avatar_path, height_cm, arm_span_cm, regular_grade, is_trusted_contributor, deleted_at)
   on public.profiles to anon, authenticated;
 grant update (username, avatar_path, height_cm, arm_span_cm, regular_grade, favourite_gym_id, age_confirmed_16_plus_at)
   on public.profiles to authenticated;

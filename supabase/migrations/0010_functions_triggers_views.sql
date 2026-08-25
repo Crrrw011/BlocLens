@@ -8,7 +8,7 @@ set search_path = ''
 as $$
 begin
   insert into public.profiles (id, username)
-  values (new.id, 'climber_' || left(replace(new.id::text, '-', ''), 12))
+  values (new.id, 'climber_' || right(replace(new.id::text, '-', ''), 12))
   on conflict (id) do nothing;
   return new;
 end;
@@ -23,7 +23,6 @@ revoke all on function public.initialise_profile_for_auth_user() from public;
 create or replace function public.normalise_beta_link()
 returns trigger
 language plpgsql
-set search_path = ''
 as $$
 begin
   -- Preserve path case because paths may be case-sensitive. A future trusted URL
