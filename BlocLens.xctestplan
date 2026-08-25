@@ -1,0 +1,35 @@
+{
+  "configurations" : [
+    {
+      "id" : "0C5DB490-6325-4B79-CEF3-3D14D2D0E984",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:BlocLens.xcodeproj",
+      "identifier" : "B8A272FF303D1CE7006E5A98",
+      "name" : "BlocLens"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:BlocLens.xcodeproj",
+        "identifier" : "B8A2730C303D1CE8006E5A98",
+        "name" : "BlocLensTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:BlocLens.xcodeproj",
+        "identifier" : "B8A27316303D1CE8006E5A98",
+        "name" : "BlocLensUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

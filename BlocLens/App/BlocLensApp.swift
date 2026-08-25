@@ -19,7 +19,10 @@ struct BlocLensApp: App {
             ? .signedIn(DevelopmentFixtures.mockProfile)
             : .guest
         let languagePreferenceStore = UserDefaultsLanguagePreferenceStore()
-        if arguments.contains("--mock-empty") {
+        if arguments.contains("--local-supabase"),
+           let localConfiguration = try? LocalEnvironmentConfiguration.make() {
+            environment = .localSupabase(configuration: localConfiguration)
+        } else if arguments.contains("--mock-empty") {
             environment = .development(scenario: .empty, authenticationState: authenticationState, onboardingStore: onboardingStore, languagePreferenceStore: languagePreferenceStore)
         } else if arguments.contains("--mock-error") {
             environment = .development(scenario: .error, authenticationState: authenticationState, onboardingStore: onboardingStore, languagePreferenceStore: languagePreferenceStore)

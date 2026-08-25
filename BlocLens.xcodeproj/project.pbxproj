@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B8A2769F303DE546006E5A98 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D0C0FFEE0000000000000002 /* Supabase */; };
+		B8A276A0303DE546006E5A98 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D0C0FFEE0000000000000003 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		B8A2730E303D1CE8006E5A98 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B8A2769F303DE546006E5A98 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B8A276A0303DE546006E5A98 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +119,7 @@
 			);
 			name = BlocLens;
 			packageProductDependencies = (
+				D0C0FFEE0000000000000002 /* Supabase */,
 			);
 			productName = BlocLens;
 			productReference = B8A27300303D1CE7006E5A98 /* BlocLens.app */;
@@ -135,6 +143,7 @@
 			);
 			name = BlocLensTests;
 			packageProductDependencies = (
+				D0C0FFEE0000000000000003 /* Supabase */,
 			);
 			productName = BlocLensTests;
 			productReference = B8A2730D303D1CE8006E5A98 /* BlocLensTests.xctest */;
@@ -197,6 +206,9 @@
 			);
 			mainGroup = B8A272F7303D1CE7006E5A98;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D0C0FFEE0000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B8A27301303D1CE7006E5A98 /* Products */;
 			projectDirPath = "";
@@ -582,6 +594,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D0C0FFEE0000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.51.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D0C0FFEE0000000000000002 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0C0FFEE0000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		D0C0FFEE0000000000000003 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0C0FFEE0000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B8A272F8303D1CE7006E5A98 /* Project object */;
 }

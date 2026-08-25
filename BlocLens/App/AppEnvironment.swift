@@ -32,6 +32,22 @@ struct AppEnvironment: Sendable {
             dataAvailability: scenario == .offlineWithCache ? .offlineCached : .online
         )
     }
+
+    static func localSupabase(configuration: RemoteConfiguration) -> AppEnvironment {
+        let client = SupabaseClientFactory.makeClient(configuration: configuration)
+        let dataSource = SupabaseRemoteDataSource(client: client)
+        return AppEnvironment(
+            gymRepository: RemoteGymRepository(dataSource: dataSource),
+            routeRepository: RemoteRouteRepository(dataSource: dataSource),
+            betaRepository: MockBetaRepository(),
+            logbookRepository: MockLogbookRepository(isOnline: true),
+            authenticationRepository: MockAuthenticationRepository(initialState: .guest),
+            onboardingStore: InMemoryOnboardingStore(isComplete: true),
+            languagePreferenceStore: InMemoryLanguagePreferenceStore(),
+            currentUserID: DevelopmentFixtures.currentUserID,
+            dataAvailability: .online
+        )
+    }
 }
 
 @MainActor

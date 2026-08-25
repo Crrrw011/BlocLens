@@ -69,7 +69,35 @@ Account deletion from the app requires a controlled server-side entry point (Sup
 
 The iPhone app must never contain a `service_role` key, database password, JWT secret or any server secret. Only a non-secret project URL and publishable/anon key may be configured client-side. Configuration must be supplied via a git-ignored local source and never committed.
 
+## Supabase Swift SDK (6D-2B)
+
+The official SDK is installed as an Xcode Swift Package at `https://github.com/supabase/supabase-swift.git`, pinned to exact version `2.51.0`. Only the `Supabase` product is linked (to the app and unit-test targets); `Storage`, `Realtime`, `Functions` and `Auth` write flows are not used in this stage. The resolved dependency lock lives at `BlocLens.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. The SDK's transitive runtime dependencies are Apple's `swift-crypto`, `swift-asn1` and `swift-http-types`, plus pointfree.co's `swift-clocks`, `swift-concurrency-extras` and `xctest-dynamic-overlay`.
+
+## Client composition root
+
+`SupabaseClientFactory.makeClient(configuration:)` is the only place a `SupabaseClient` is created; there is no global `SupabaseClient` singleton. The client flows through `SupabaseRemoteDataSource` into the actor-backed `RemoteGymRepository` and `RemoteRouteRepository`. Domain models, view models and views never import Supabase.
+
+## Remote data sources and repositories
+
+- `RemoteGymDataSource` / `RemoteRouteDataSource` are small protocols implemented by `SupabaseRemoteDataSource`, which performs the SDK queries (`gym_summaries`, `gym_facilities`, `wall_zone_summaries`, `route_summaries`, and the `gym_hard_soft_summary` / `community_grade_summary` RPCs) and maps SDK errors through `RemoteErrorMapping`.
+- `RemoteGymRepository` aggregates gym base data, facilities, wall-zone IDs and the overall hard/soft assessment. `RemoteRouteRepository` composes route summaries with the per-route community grade RPC and applies the shared filter/sort contract. Community grades are fetched with a bounded concurrency limit (8 in flight); this is a documented N+1 limitation to revisit after 6D-2B.
+- The beta count is read from the sanitised `beta_count` column already present on the summary views; the repositories never read `beta_links` or a beta URL. Beta metadata awaits authentication in 6D-3.
+
+## Configuration and Mock default
+
+`RemoteConfiguration` carries an environment mode (`production`, `localDevelopment`, `integrationTest`). Production accepts HTTPS only; local/integration modes accept loopback HTTP (`127.0.0.1`, `localhost`, `::1`) and reject `.supabase.co` hosts. `LocalEnvironmentConfiguration.make()` reads `BLOCLENS_SUPABASE_URL` and `BLOCLENS_SUPABASE_ANON_KEY` from the environment and returns `nil` when absent, so a missing configuration never falls back to Cloud.
+
+`AppEnvironment.development()` (Mock) remains the default everywhere. `AppEnvironment.localSupabase(configuration:)` wires the remote Gym/Route repositories alongside the still-Mock Beta, Logbook and Authentication repositories, and is only reached through the Debug-only `--local-supabase` launch argument or integration-test configuration. Release never connects to Local or Cloud.
+
+## Error mapping
+
+`RemoteErrorMapping.map(_:)` translates SDK errors into `RepositoryError`: `URLError.timedOut` → `.timeout`, connectivity failures → `.network`, `PostgrestError` code `PGRST116` → `.notFound` and `42501` → `.forbidden`, `HTTPError` status codes → `.unauthenticated`/`.forbidden`/`.notFound`/`.rateLimited`/`.timeout`/`.unavailable`, and `DecodingError` → `.decodingFailure`. Cancellation is rethrown, never swallowed. No key, JWT or response body enters a user-visible error.
+
+## Local integration tests
+
+`LocalSupabaseIntegrationTests` is an XCTest suite that skips (`XCTSkip`) unless `BLOCLENS_SUPABASE_URL` and `BLOCLENS_SUPABASE_ANON_KEY` are set. It asserts the local read path (gyms, wall zones, routes, facilities, hard/soft, archived mapping, community-grade thresholds and the guest-safe beta count) and verifies that the anonymous client cannot read `beta_links` or `beta_ranking_inputs`. It performs no writes and never connects to Cloud.
+
 ## Next stages
 
-- Stage 6D-2: add the Supabase Swift SDK, introduce actor-backed remote repositories behind the existing protocols, and exercise read-only Gym/Wall-Zone/Route queries against a disposable local Supabase database.
-- Stage 6D-3: implement the authentication session, age gate and username setup, and private Logbook read/write with the queued/synced/failed sync states.
+- Stage 6D-3: implement the authentication session, age gate and username setup, then authenticated beta metadata reads and private Logbook read/write with the queued/synced/failed sync states.
+- Later: Apple/Google OAuth, Cloud deployment, Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.

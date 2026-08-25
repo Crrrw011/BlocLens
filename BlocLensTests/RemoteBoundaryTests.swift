@@ -151,18 +151,18 @@ struct RemoteBoundaryTests {
     @Test func remoteConfigurationRejectsInsecureOrEmptyValues() throws {
         let http = try #require(URL(string: "http://example.com"))
         #expect(throws: RepositoryError.self) {
-            try RemoteConfiguration(projectURL: http, publishableKey: "key")
+            try RemoteConfiguration(mode: .production, projectURL: http, publishableKey: "key")
         }
 
         let https = try #require(URL(string: "https://example.com"))
         #expect(throws: RepositoryError.self) {
-            try RemoteConfiguration(projectURL: https, publishableKey: "   ")
+            try RemoteConfiguration(mode: .production, projectURL: https, publishableKey: "   ")
         }
     }
 
-    @Test func remoteConfigurationAcceptsValidValues() throws {
-        let https = try #require(URL(string: "https://abc.supabase.co"))
-        let config = try RemoteConfiguration(projectURL: https, publishableKey: "publishable-key")
+    @Test func remoteConfigurationAcceptsValidProductionValues() throws {
+        let https = try #require(URL(string: "https://example.com"))
+        let config = try RemoteConfiguration(mode: .production, projectURL: https, publishableKey: "publishable-key")
         #expect(config.publishableKey == "publishable-key")
         #expect(config.projectURL.absoluteString.hasPrefix("https://"))
     }

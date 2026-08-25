@@ -1,0 +1,8 @@
+# Local Supabase development configuration (placeholders only).
+# Copy these values into your Xcode scheme environment or shell environment.
+# Never commit real keys. The local anon key is non-secret but must not be
+# hardcoded into Swift source. The service-role key must never appear here.
+
+BLOCLENS_SUPABASE_URL=http://127.0.0.1:54321
+BLOCLENS_SUPABASE_ANON_KEY=your-local-anon-key
+BLOCLENS_DATA_SOURCE=local
