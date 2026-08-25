@@ -18,6 +18,7 @@ nonisolated enum RepositoryError: Error, Equatable, Sendable {
     case invalidInput
     case invalidState
     case conflict
+    case persistenceError
     case unknown
 }
 
@@ -92,4 +93,10 @@ nonisolated protocol LogbookRepository: Sendable {
     func setOnline(_ isOnline: Bool) async
     func isOnline() async -> Bool
     func synchroniseQueuedEntries() async throws -> [LogbookEntry]
+
+    func hasAttemptedRoute(_ routeID: ClimbingRouteID) async throws -> Bool
+    func saveEntry(_ entry: LogbookEntry) async throws -> LogbookEntry
+    func deleteEntry(_ entryID: LogbookEntryID) async throws
+    func pendingSyncCount() async -> Int
+    func syncNow() async throws
 }

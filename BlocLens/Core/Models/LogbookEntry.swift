@@ -10,6 +10,7 @@ nonisolated enum LogbookStatus: String, CaseIterable, Codable, Equatable, Sendab
 nonisolated enum LogbookSyncState: String, Codable, Equatable, Sendable {
     case synced
     case queued
+    case failed
 }
 
 nonisolated enum LogbookPrivacy: String, Codable, Equatable, Sendable {

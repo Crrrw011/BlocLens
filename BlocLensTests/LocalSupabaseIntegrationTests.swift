@@ -251,6 +251,88 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         XCTAssertTrue(after)
     }
 
+    private func makeLogbookRepository() -> RemoteLogbookRepository {
+        RemoteLogbookRepository(
+            dataSource: SupabaseLogbookDataSource(client: client),
+            queue: InMemoryLogbookQueue()
+        )
+    }
+
+    private func makeLogbookEntry(
+        userID: UUID,
+        routeID: String,
+        status: LogbookStatus,
+        note: String? = nil
+    ) -> LogbookEntry {
+        LogbookEntry(
+            id: LogbookEntryID(rawValue: UUID().uuidString.lowercased()),
+            userID: UserID(rawValue: userID.uuidString.lowercased()),
+            routeID: ClimbingRouteID(rawValue: routeID),
+            status: status,
+            date: Date(),
+            attemptCount: 2,
+            privateNote: note,
+            predictedVGrade: .v4,
+            syncState: .queued,
+            privacy: .privateByDefault
+        )
+    }
+
+    func testLogbookSaveAndRead() async throws {
+        let userID = try await signUpAndCompleteSetup()
+        let routeID = "30000000-0000-4000-8000-000000000003"
+        let repository = makeLogbookRepository()
+
+        let saved = try await repository.saveEntry(makeLogbookEntry(userID: userID, routeID: routeID, status: .sent))
+        XCTAssertEqual(saved.syncState, .synced)
+
+        let entries = try await repository.entries(userID: UserID(rawValue: userID.uuidString.lowercased()))
+        XCTAssertTrue(entries.contains { $0.routeID.rawValue == routeID && $0.status == .sent })
+    }
+
+    func testLogbookPrivateNoteOwnerOnly() async throws {
+        let ownerID = try await signUpAndCompleteSetup()
+        let routeID = "30000000-0000-4000-8000-000000000003"
+        let repository = makeLogbookRepository()
+
+        _ = try await repository.saveEntry(
+            makeLogbookEntry(userID: ownerID, routeID: routeID, status: .projecting, note: "secret note")
+        )
+
+        let ownerEntries = try await repository.entries(userID: UserID(rawValue: ownerID.uuidString.lowercased()))
+        XCTAssertTrue(ownerEntries.contains { $0.privateNote == "secret note" })
+
+        // Switch to a different user: the owner's entry must be invisible.
+        _ = try await signUpAndCompleteSetup()
+        let otherEntries = try await makeLogbookRepository().entries(
+            userID: UserID(rawValue: (try XCTUnwrap(client.auth.currentUser?.id)).uuidString.lowercased())
+        )
+        XCTAssertFalse(otherEntries.contains { $0.routeID.rawValue == routeID && $0.privateNote == "secret note" })
+    }
+
+    func testLogbookSoftDelete() async throws {
+        let userID = try await signUpAndCompleteSetup()
+        let routeID = "30000000-0000-4000-8000-000000000003"
+        let repository = makeLogbookRepository()
+
+        let saved = try await repository.saveEntry(makeLogbookEntry(userID: userID, routeID: routeID, status: .flash))
+        try await repository.deleteEntry(saved.id)
+
+        let entries = try await repository.entries(userID: UserID(rawValue: userID.uuidString.lowercased()))
+        XCTAssertFalse(entries.contains { $0.id == saved.id })
+    }
+
+    func testLogbookHasAttemptedRoute() async throws {
+        let userID = try await signUpAndCompleteSetup()
+        let routeID = "30000000-0000-4000-8000-000000000003"
+        let repository = makeLogbookRepository()
+
+        _ = try await repository.saveEntry(makeLogbookEntry(userID: userID, routeID: routeID, status: .projecting))
+
+        let attempted = try await repository.hasAttemptedRoute(ClimbingRouteID(rawValue: routeID))
+        XCTAssertTrue(attempted)
+    }
+
     // MARK: - Authentication
 
     func testLocalSignUpThenProfileSetupThenUsername() async throws {

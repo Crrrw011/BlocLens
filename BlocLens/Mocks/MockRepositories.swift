@@ -318,4 +318,34 @@ actor MockLogbookRepository: LogbookRepository {
         }
         return storedEntries.filter { $0.syncState == .synced }
     }
+
+    func hasAttemptedRoute(_ routeID: ClimbingRouteID) -> Bool {
+        storedEntries.contains { $0.routeID == routeID && $0.status != .wantToTry }
+    }
+
+    func saveEntry(_ entry: LogbookEntry) -> LogbookEntry {
+        if let index = storedEntries.firstIndex(where: { $0.id == entry.id }) {
+            storedEntries[index] = entry
+        } else {
+            storedEntries.append(entry)
+        }
+        return entry
+    }
+
+    func deleteEntry(_ entryID: LogbookEntryID) throws {
+        guard let index = storedEntries.firstIndex(where: { $0.id == entryID }) else {
+            throw RepositoryError.notFound
+        }
+        storedEntries.remove(at: index)
+    }
+
+    func pendingSyncCount() -> Int {
+        storedEntries.filter { $0.syncState == .queued }.count
+    }
+
+    func syncNow() {
+        for index in storedEntries.indices where storedEntries[index].syncState == .queued {
+            storedEntries[index].syncState = .synced
+        }
+    }
 }

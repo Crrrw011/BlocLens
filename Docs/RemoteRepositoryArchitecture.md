@@ -134,8 +134,23 @@ Session restore relies on the SDK's own Keychain-backed session storage: `restor
 
 Mock `MockBetaRepository` implements the same protocol in memory for parity.
 
+## Private Logbook and offline queue (6D-3C)
+
+`LogbookRepository` gained `hasAttemptedRoute(_:)`, `saveEntry(_:)`, `deleteEntry(_:)`, `pendingSyncCount()` and `syncNow()` alongside the existing read methods. `LogbookSyncState` now has `queued`, `synced` and `failed`; `RepositoryError` gained `.persistenceError` for local-store failures.
+
+`RemoteLogbookRepository` is an actor backed by `RemoteLogbookDataSource`/`SupabaseLogbookDataSource` and a `LogbookQueue`:
+
+- Reads query `logbook_entries` with the user's JWT and an explicit `deleted_at IS NULL` filter (the owner RLS filters by user but not by soft delete), then merge the still-pending local queue entries so offline writes remain visible.
+- Writes upsert `logbook_entries` on `(user_id, route_id)` (the table grants full insert/update/delete, so the PostgREST merge-duplicates upsert is safe here). Each write carries a stable `client_idempotency_key` derived from the entry identifier, so retries of the same logical write are deduplicated by the existing `(user_id, client_idempotency_key)` unique constraint.
+- Soft delete PATCHes `deleted_at` rather than removing the row.
+- The attempt gate (`hasAttemptedRoute`) reuses the `has_attempted_route(route_id)` security-definer RPC.
+
+The offline queue is a small actor (`FileBackedLogbookQueue`, with an `InMemoryLogbookQueue` for tests) that persists `PendingLogbookOperation` records as Codable JSON in Application Support. `saveEntry`/`deleteEntry` write directly when online and authenticated, and otherwise enqueue. `syncNow()` drains the queue first-in/first-out, removes successful operations, and marks failures with an incremented `retryCount` plus `lastError` for a later retry (exponential backoff is applied by the caller). Pending entries surface in `entries` with a `.queued`/`.failed` sync state.
+
+`AppEnvironment.localSupabase` now wires `RemoteLogbookRepository` with a file-backed queue; `AppEnvironment.development()` keeps `MockLogbookRepository` as the default. A guest (no session) cannot read or write the Logbook.
+
 ## Next stages
 
-- Stage 6D-3C: private Logbook read/write with the queued/synced/failed sync states (Logbook is currently read-only for the attempt check; no Logbook write is implemented yet).
 - Stage 6D-3D: real Apple/Google OAuth (not implemented; the current auth path is local email/password and the Debug mock account only).
+- Stage 6D-4A: contribution writes (Add Route, Share Beta Link, comments) behind the authenticated repositories.
 - Later: Cloud deployment, Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.

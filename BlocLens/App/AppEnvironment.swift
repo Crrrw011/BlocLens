@@ -36,17 +36,31 @@ struct AppEnvironment: Sendable {
     static func localSupabase(configuration: RemoteConfiguration) -> AppEnvironment {
         let client = SupabaseClientFactory.makeClient(configuration: configuration)
         let dataSource = SupabaseRemoteDataSource(client: client)
+        let logbookQueue = FileBackedLogbookQueue(
+            fileURL: Self.logbookQueueFileURL()
+        )
         return AppEnvironment(
             gymRepository: RemoteGymRepository(dataSource: dataSource),
             routeRepository: RemoteRouteRepository(dataSource: dataSource),
             betaRepository: RemoteBetaRepository(dataSource: SupabaseBetaDataSource(client: client)),
-            logbookRepository: MockLogbookRepository(isOnline: true),
+            logbookRepository: RemoteLogbookRepository(
+                dataSource: SupabaseLogbookDataSource(client: client),
+                queue: logbookQueue
+            ),
             authenticationRepository: SupabaseAuthenticationRepository(dataSource: SupabaseAuthDataSource(client: client)),
             onboardingStore: InMemoryOnboardingStore(isComplete: true),
             languagePreferenceStore: InMemoryLanguagePreferenceStore(),
             currentUserID: DevelopmentFixtures.currentUserID,
             dataAvailability: .online
         )
+    }
+
+    private static func logbookQueueFileURL() -> URL {
+        let directory = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        )[0]
+        return directory.appendingPathComponent("bloclens-logbook-queue.json")
     }
 }
 
