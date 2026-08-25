@@ -19,7 +19,7 @@ struct MapView: View {
         _viewModel = StateObject(
             wrappedValue: MapViewModel(
                 repository: environment.gymRepository,
-                scenario: environment.scenario
+                dataAvailability: environment.dataAvailability
             )
         )
         let brisbane = MKCoordinateRegion(

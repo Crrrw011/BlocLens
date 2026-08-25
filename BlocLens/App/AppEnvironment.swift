@@ -10,7 +10,7 @@ struct AppEnvironment: Sendable {
     let onboardingStore: any OnboardingStore
     let languagePreferenceStore: any LanguagePreferenceStore
     let currentUserID: UserID
-    let scenario: MockRepositoryScenario
+    let dataAvailability: DataAvailability
 
     static func development(
         scenario: MockRepositoryScenario = .loaded,
@@ -29,7 +29,7 @@ struct AppEnvironment: Sendable {
             onboardingStore: onboardingStore ?? InMemoryOnboardingStore(isComplete: isOnboardingComplete),
             languagePreferenceStore: languagePreferenceStore,
             currentUserID: DevelopmentFixtures.currentUserID,
-            scenario: scenario
+            dataAvailability: scenario == .offlineWithCache ? .offlineCached : .online
         )
     }
 }

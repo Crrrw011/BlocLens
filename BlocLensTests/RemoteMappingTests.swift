@@ -19,8 +19,7 @@ struct RemoteMappingTests {
           "is_verified":true,
           "data_source":"development_fixture",
           "beta_count":null,
-          "latest_reset_date":"2026-08-20T02:30:00.123Z",
-          "overall_hard_soft_summary":null
+          "latest_reset_date":"2026-08-20T02:30:00.123Z"
         }
         """#.utf8)
 
@@ -75,13 +74,12 @@ struct RemoteMappingTests {
           "is_verified":false,
           "data_source":"development_fixture",
           "beta_count":0,
-          "latest_reset_date":null,
-          "overall_hard_soft_summary":"not_enough_community_data"
+          "latest_reset_date":null
         }
         """#.utf8)
 
         let record = try decoder.decode(GymRecord.self, from: data)
-        let gym = try record.domain(facilities: [], wallZones: [])
+        let gym = try record.domain(facilities: [], wallZones: [], hardSoft: .insufficientData)
 
         #expect(gym.id.rawValue == "10000000-0000-4000-8000-00000000000a")
     }
@@ -101,8 +99,7 @@ struct RemoteMappingTests {
             isVerified: false,
             dataSource: "development_fixture",
             betaCount: 0,
-            latestResetDate: nil,
-            overallHardSoftSummary: nil
+            latestResetDate: nil
         )
         let unavailable = GymFacilityRecord(
             gymID: gymID,
@@ -110,7 +107,7 @@ struct RemoteMappingTests {
             isAvailable: false
         )
 
-        let gym = try record.domain(facilities: [unavailable], wallZones: [])
+        let gym = try record.domain(facilities: [unavailable], wallZones: [], hardSoft: .insufficientData)
 
         #expect(gym.facilities.isEmpty)
     }

@@ -5,6 +5,17 @@ nonisolated enum RepositoryError: Error, Equatable, Sendable {
     case invalidExternalLink
     case fixtureFailure
     case offlineNoCache
+
+    case unavailable
+    case offline
+    case unauthenticated
+    case forbidden
+    case network
+    case timeout
+    case rateLimited
+    case decodingFailure
+    case invalidConfiguration
+    case unknown
 }
 
 nonisolated enum MockRepositoryScenario: Equatable, Sendable {
@@ -13,6 +24,11 @@ nonisolated enum MockRepositoryScenario: Equatable, Sendable {
     case error
     case offlineWithCache
     case offlineWithoutCache
+}
+
+nonisolated enum DataAvailability: Equatable, Sendable {
+    case online
+    case offlineCached
 }
 
 nonisolated struct RouteFilter: Equatable, Hashable, Sendable {

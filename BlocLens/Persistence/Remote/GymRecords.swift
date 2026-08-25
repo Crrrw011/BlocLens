@@ -12,7 +12,6 @@ nonisolated struct GymRecord: Codable, Equatable, Sendable {
     let dataSource: String
     let betaCount: Int?
     let latestResetDate: Date?
-    let overallHardSoftSummary: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, latitude, longitude, suburb, state
@@ -21,12 +20,12 @@ nonisolated struct GymRecord: Codable, Equatable, Sendable {
         case dataSource = "data_source"
         case betaCount = "beta_count"
         case latestResetDate = "latest_reset_date"
-        case overallHardSoftSummary = "overall_hard_soft_summary"
     }
 
     func domain(
         facilities: [GymFacilityRecord],
         wallZones: [WallZoneRecord],
+        hardSoft: HardSoftSummary,
         operatingSummary: OperatingSummary = .detailsUnavailable
     ) throws -> Gym {
         let source: DataSourceState
@@ -34,22 +33,8 @@ nonisolated struct GymRecord: Codable, Equatable, Sendable {
         case "development_fixture": source = .developmentFixture
         case "official": source = .official
         case "community", "public_source", "google_places": source = .community
-        case "estimated": source = .estimated
         default:
             throw RemoteMappingError.unsupportedValue(field: "gyms.data_source", value: dataSource)
-        }
-
-        let hardSoft: HardSoftSummary
-        switch overallHardSoftSummary {
-        case "soft": hardSoft = .soft
-        case "balanced": hardSoft = .balanced
-        case "hard": hardSoft = .hard
-        case nil, "not_enough_community_data": hardSoft = .insufficientData
-        default:
-            throw RemoteMappingError.unsupportedValue(
-                field: "gym_summaries.overall_hard_soft_summary",
-                value: overallHardSoftSummary ?? ""
-            )
         }
 
         let matchingZones = wallZones.filter { $0.gymID == id }
@@ -200,5 +185,40 @@ nonisolated struct ResetRecord: Codable, Equatable, Sendable {
             confirmationCount: max(0, confirmationCount),
             isEstimated: isEstimated
         )
+    }
+}
+
+nonisolated struct GymHardSoftBandRecord: Codable, Equatable, Sendable {
+    let gradeBand: String
+    let eligibleRouteCount: Int
+    let medianGradeDelta: Double?
+    let assessment: String
+
+    enum CodingKeys: String, CodingKey {
+        case gradeBand = "grade_band"
+        case eligibleRouteCount = "eligible_route_count"
+        case medianGradeDelta = "median_grade_delta"
+        case assessment
+    }
+}
+
+nonisolated enum GymHardSoftMapping {
+    static func overallSummary(from bands: [GymHardSoftBandRecord]) throws -> HardSoftSummary {
+        guard let overall = bands.first(where: { $0.gradeBand == "Overall" }) else {
+            throw RemoteMappingError.inconsistentData(
+                "gym_hard_soft_summary is missing the Overall band."
+            )
+        }
+        switch overall.assessment {
+        case "soft": return .soft
+        case "balanced": return .balanced
+        case "hard": return .hard
+        case "not_enough_community_data": return .insufficientData
+        default:
+            throw RemoteMappingError.unsupportedValue(
+                field: "gym_hard_soft_summary.assessment",
+                value: overall.assessment
+            )
+        }
     }
 }

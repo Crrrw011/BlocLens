@@ -131,3 +131,34 @@ nonisolated struct UserProfileRecord: Codable, Equatable, Sendable {
         )
     }
 }
+
+nonisolated struct PublicProfileRecord: Codable, Equatable, Sendable {
+    let id: UUID
+    let username: String
+    let avatarPath: String?
+    let heightCM: Double?
+    let armSpanCM: Double?
+    let regularGrade: Int?
+    let isTrustedContributor: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, username
+        case avatarPath = "avatar_path"
+        case heightCM = "height_cm"
+        case armSpanCM = "arm_span_cm"
+        case regularGrade = "regular_grade"
+        case isTrustedContributor = "is_trusted_contributor"
+    }
+
+    func domain() throws -> PublicUserProfile {
+        PublicUserProfile(
+            userID: UserID(rawValue: RemoteIdentifier.domainString(id)),
+            username: username,
+            avatarPath: avatarPath,
+            heightCentimetres: heightCM,
+            armSpanCentimetres: armSpanCM,
+            regularGrade: try RemoteGrade.domain(regularGrade, field: "public_profiles.regular_grade"),
+            isTrustedContributor: isTrustedContributor
+        )
+    }
+}

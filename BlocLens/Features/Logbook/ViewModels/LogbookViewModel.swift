@@ -52,7 +52,7 @@ final class LogbookViewModel: ObservableObject {
                 state = .empty
                 return
             }
-            state = environment.scenario == .offlineWithCache ? .offlineWithCache(data) : .loaded(data)
+            state = environment.dataAvailability == .offlineCached ? .offlineWithCache(data) : .loaded(data)
         } catch RepositoryError.offlineNoCache {
             state = .offlineWithoutCache
         } catch let error as RepositoryError {

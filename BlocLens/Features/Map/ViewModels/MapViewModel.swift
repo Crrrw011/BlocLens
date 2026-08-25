@@ -7,15 +7,15 @@ final class MapViewModel: ObservableObject {
     @Published var filterOptions = GymFilterOptions()
 
     private let repository: any GymRepository
-    private let scenario: MockRepositoryScenario
+    private let dataAvailability: DataAvailability
     private var allLoadedGyms: [Gym] = []
 
     private static let referenceDate = Date(timeIntervalSince1970: 1_787_623_200)
     private static let mockOpenGymIDs: Set<GymID> = ["urban-climb-west-end", "nine-degrees-enoggera"]
 
-    init(repository: any GymRepository, scenario: MockRepositoryScenario = .loaded) {
+    init(repository: any GymRepository, dataAvailability: DataAvailability = .online) {
         self.repository = repository
-        self.scenario = scenario
+        self.dataAvailability = dataAvailability
     }
 
     func load() async {
@@ -48,7 +48,7 @@ final class MapViewModel: ObservableObject {
             state = .empty
             return
         }
-        state = scenario == .offlineWithCache ? .offlineWithCache(gyms) : .loaded(gyms)
+        state = dataAvailability == .offlineCached ? .offlineWithCache(gyms) : .loaded(gyms)
     }
 
     func clearFilters() {

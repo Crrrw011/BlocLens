@@ -80,7 +80,7 @@ final class HomeViewModel: ObservableObject {
                 resets: Array(resets.prefix(3)),
                 recentRecords: Array(recent)
             )
-            state = environment.scenario == .offlineWithCache ? .offlineWithCache(data) : .loaded(data)
+            state = environment.dataAvailability == .offlineCached ? .offlineWithCache(data) : .loaded(data)
         } catch RepositoryError.offlineNoCache {
             state = .offlineWithoutCache
         } catch let error as RepositoryError {
