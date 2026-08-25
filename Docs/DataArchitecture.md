@@ -75,6 +75,8 @@ The client cannot set roles, `is_trusted_contributor`, `trusted_contributor_awar
 
 `beta_links` contains HTTPS public URLs, a normalised URL and hash, platform, original-author attribution, original-post URL, fixed tags, contributor measurements, Helpful count, health, embed capability, official attribution and moderation state. A trigger validates and normalises both URLs. Broken or source-removed links remain historical rows.
 
+Beta URLs and metadata are login-gated: the `anon` role is revoked from `beta_links` and `beta_ranking_inputs`, so a guest can see a route's beta count (via `visible_beta_count_for_route(uuid)`) but never a URL, author, tag, platform or health value. The SwiftUI Reveal gate is a user-experience layer, not the security boundary; the database revoke is.
+
 There is no uploaded media, download, cache, proxy, transcode, video size, resolution, frame-rate or video Storage field. Client ranking consumes height, arm span, Helpful and stable ID metadata; it does not require profile measurements.
 
 `beta_comments` are flat, public comments capped at 200 characters. Official provenance is recorded explicitly. Soft deletion and moderation hiding preserve auditability.
@@ -100,7 +102,7 @@ Every client-facing business table has RLS enabled and an explicit policy.
 | Data area | Guest | Signed-in user | Verified gym | Admin or moderator |
 |---|---|---|---|---|
 | Public gyms, zones, routes, resets | Read visible data | Read; contribute where permitted | Manage authorised gym scope | Review and manage through secure authority |
-| Public beta metadata and comments | Read visible data | Submit own data, Helpful and comments | May submit official content for own gym | Moderate through audited actions |
+| Public beta metadata and comments | Read count only; no URL or metadata | Read visible data; submit own data, Helpful and comments | May submit official content for own gym | Moderate through audited actions |
 | Community grade | Read only threshold-safe aggregate | Vote only after an attempted Logbook state | Cannot edit community votes | Review abuse; no arbitrary aggregate editing |
 | Profile | Read approved public columns | Read/update own editable profile fields | Same, plus scoped official provenance | Role changes through protected operations |
 | Logbook | No access | Owner-only CRUD | No access to another owner | No routine access and no private public surface |
@@ -115,7 +117,8 @@ Table grants narrow columns before RLS. This matters for `profiles`, `beta_links
 Security-invoker views preserve underlying RLS:
 
 - `public_profiles` exposes username, avatar, optional body dimensions, regular grade and Trusted Contributor status only;
-- `gym_summaries`, `wall_zone_summaries`, `route_summaries`, `beta_ranking_inputs` and `reset_summaries` expose public discovery projections;
+- `gym_summaries`, `wall_zone_summaries` and `route_summaries` expose public discovery projections including only a sanitised beta count (never a beta URL or metadata);
+- `beta_ranking_inputs` is authenticated-only and `reset_summaries` is public;
 - `moderation_queue` and `gym_official_scope` remain role-restricted through source-table policies and grants.
 
 `get_my_profile()` returns the authenticated user's complete application profile through an owner-only RPC. Community-grade and hard/soft RPCs expose only threshold-safe aggregate output. Reporter identities, block membership, private notes, auth provider details and internal penalties never enter public projections.
@@ -153,7 +156,10 @@ Reporter identity stays in restricted tables. Target-validation triggers ensure 
 | Client or admin query | Supporting index |
 |---|---|
 | Map bounds, State and suburb | latitude/longitude, State/suburb indexes |
-| Gym name search | `pg_trgm` GIN index on lowercased name |
+| Gym name search | `pg_trgm` GIN index on lowercased name (`gyms_name_trgm_idx`) |
+| Gym suburb search | `pg_trgm` GIN index on lowercased suburb (`gyms_suburb_trgm_idx`) |
+| Wall-zone name search | `pg_trgm` GIN index on lowercased name (`wall_zones_name_trgm_idx`) |
+| Route colour and label search | `pg_trgm` GIN indexes on lowercased colour/label (`routes_colour_trgm_idx`, `routes_label_trgm_idx`) |
 | Wall zones for a gym | gym/order and live-name indexes |
 | Current or archived routes | gym/lifecycle, zone/lifecycle and archive indexes |
 | Route colour, label and grade | lowercased colour/label and grade indexes |
@@ -163,7 +169,7 @@ Reporter identity stays in restricted tables. Target-validation triggers ensure 
 | Grade votes and report thresholds | route/user and target/status indexes |
 | Official scope and preferences | membership gym/user and owner primary keys |
 
-Indexes are limited to MVP access paths. PostGIS is intentionally absent; numeric latitude and longitude are enough for the first map queries.
+Indexes are limited to MVP access paths. PostGIS is intentionally absent; numeric latitude and longitude are enough for the first map queries. The `pg_trgm` extension is installed in the `extensions` schema; trigram indexes target the fields the client search contract actually matches (gym name, gym suburb, wall-zone name, route colour and route label). Username has no trigram index because the MVP search never targets users.
 
 ## Swift DTO mapping boundary
 

@@ -23,7 +23,7 @@ EXPECTED_VIEWS = %w[
 
 errors = []
 files = MIGRATIONS.glob("*.sql").sort
-expected_names = (1..10).map { |number| format("%04d", number) }
+expected_names = (1..11).map { |number| format("%04d", number) }
 actual_names = files.map { |file| file.basename.to_s.split("_").first }
 errors << "Migration numbering is incomplete or out of order." unless actual_names == expected_names
 
@@ -73,6 +73,15 @@ errors << "Wall-zone geometry is present." if wall_zone_definition.match?(
 errors << "A credential-like value is present." if combined.match?(
   /(?:service_role|anon_key|supabase_url)\s*[=:]\s*['\"][^'\"]+/i
 )
+
+# Stage 6D-2A beta access hardening
+errors << "Anonymous beta_links SELECT revoke is missing." unless combined.match?(/revoke select on public\.beta_links from anon;/i)
+errors << "Anonymous beta_ranking_inputs SELECT revoke is missing." unless combined.match?(/revoke select on public\.beta_ranking_inputs from anon;/i)
+errors << "Beta count helper is missing." unless combined.match?(/visible_beta_count_for_route/i)
+errors << "pg_trgm extension is missing." unless combined.match?(/create extension if not exists pg_trgm/i)
+%w[gyms_name_trgm_idx gyms_suburb_trgm_idx wall_zones_name_trgm_idx routes_colour_trgm_idx routes_label_trgm_idx].each do |index_name|
+  errors << "Trigram index #{index_name} is missing." unless combined.match?(/#{Regexp.escape(index_name)}/i)
+end
 
 swift_sources = ROOT.glob("BlocLens/**/*.swift").map(&:read).join("\n")
 errors << "A Video DTO or Storage model is present in Swift." if swift_sources.match?(

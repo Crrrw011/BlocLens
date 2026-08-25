@@ -49,9 +49,9 @@ A complete `Gym` is composed from several sources, never a single row:
 
 `RemoteConfiguration` is a small value type holding a project URL and a publishable/anon key. It fails safely with `RepositoryError.invalidConfiguration` when the URL is not HTTPS or the key is blank. It deliberately has no service-role key, database password, JWT secret or other server secret. Local, test and production environments are isolated by supplying different configuration values, never by branching inside the domain layer.
 
-## Guest versus beta access — pending decision
+## Guest versus beta access — resolved in 6D-2A
 
-The PRD (§2.1) states that viewing beta requires login, while `AccessMatrix.md` marks beta reveal as authentication-gated. The current SQL grants `SELECT` on `beta_links` and the `beta_ranking_inputs` view to the `anon` role, and those surfaces expose `public_url`, `original_post_url`, `platform` and author metadata. A guest can therefore obtain the actual external beta URL through the Data API without signing in. This is a server-side authorisation gap to resolve before Stage 6D-2 read work; it must be fixed in SQL/RLS or an RPC, not by hiding the URL in SwiftUI. The current pgTAP contract does not assert anonymous beta-access denial.
+The PRD (§2.1) states that viewing beta requires login. Stage 6D-2A enforces this in the database: migration `0011_harden_beta_access_and_search.sql` revokes `SELECT` on `beta_links` and `beta_ranking_inputs` from the `anon` role. Guests keep public discovery surfaces (`gym_summaries`, `wall_zone_summaries`, `route_summaries`) and a sanitised beta count via the `visible_beta_count_for_route(uuid)` SECURITY DEFINER helper; they can no longer read any beta URL, platform, author, tag or health metadata. The SwiftUI Reveal gate is not the security boundary. A pgTAP contract test asserts the anonymous-access denial and the preserved authenticated read path.
 
 ## Block filtering direction
 
@@ -61,9 +61,9 @@ Blocked users' beta, comments and profile content must be excluded by a server-s
 
 Account deletion from the app requires a controlled server-side entry point (Supabase Edge Function or equivalent). The `service_role` key must exist only in server-side secrets; the iPhone app must never contain a service-role key, database password or JWT secret. A client-callable service-role SQL function is not an acceptable workaround. Re-authentication, permanent-deletion confirmation, private-data deletion/anonymisation policy, legal review and integration tests remain before this ships.
 
-## Search index discrepancy
+## Search index discrepancy — resolved in 6D-2A
 
-`DataArchitecture.md` describes a `pg_trgm` GIN index for gym-name search, but the current migrations only create `pgcrypto` and `citext`; no `pg_trgm` extension or trigram index exists. This is a database correction candidate before Stage 6D-2, not a Swift change.
+`DataArchitecture.md` describes a `pg_trgm` GIN index for gym-name search. Migration `0011` installs the `pg_trgm` extension in the `extensions` schema and adds trigram GIN indexes on `lower(gyms.name)`, `lower(gyms.suburb)`, `lower(wall_zones.name)`, `lower(routes.colour)` and `lower(routes.label)`. Username is intentionally excluded because the MVP search never targets users.
 
 ## Client secret prohibitions
 
