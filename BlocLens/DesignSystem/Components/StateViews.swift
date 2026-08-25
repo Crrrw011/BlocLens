@@ -26,7 +26,7 @@ struct LoadingStateView: View {
 }
 
 struct ErrorStateView: View {
-    let message: String
+    let message: LocalizedStringResource
     let retry: () -> Void
 
     var body: some View {
@@ -56,5 +56,5 @@ struct ErrorStateView: View {
 }
 
 #Preview("Error state") {
-    ErrorStateView(message: PreviewFixtures.sampleErrorMessage, retry: {})
+    ErrorStateView(message: L10n.State.fixtureErrorMessage, retry: {})
 }

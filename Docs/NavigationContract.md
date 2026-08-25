@@ -166,3 +166,27 @@ Rules:
 ## 13. Separate Administrator surface
 
 The Administrator web portal is a separate product surface built outside this Xcode project. Moderation queues, route merges, restoration, claims, penalties, audit records, localisation configuration and operational metrics are not iPhone tab destinations. The iPhone app may submit reports, corrections and claims, but it does not expose the Administrator portal inside its navigation hierarchy.
+
+## 14. Stage 3 implementation mapping
+
+The current Swift implementation uses the following concrete navigation types while preserving this contract:
+
+| Contract destination | Swift implementation | Presentation |
+|---|---|---|
+| **Nationwide Gym Map** development slice | `MapView` | Root of the Map tab `NavigationStack` |
+| **Gym Preview Card** | `GymPreviewCard` | Map bottom safe-area inset; transient selection |
+| **Gym Detail** and **Wall Zone Directory** | `GymDetailView` | Typed push using `Gym` |
+| **Wall Zone Route List** | `WallZoneRouteListView` | Typed push using `WallZone` |
+| **Route Detail** | `RouteDetailView` | Typed push using `ClimbingRoute` |
+| Local **Search** | `LocalSearchView` | Sheet owned by `MapView` |
+| **Quick Logbook State** | Route Detail section | Immediate repository write in place |
+| Optional Logbook details | `LogbookDetailsSheet` | Sheet owned by `RouteDetailView` |
+| First **Reveal Beta** safety acknowledgement | Route Detail alert | Session-scoped alert before metadata reveal |
+| **Home** data summary | `HomeView` | Independent Home tab `NavigationStack` |
+| **Logbook Dashboard** | `LogbookView` | Independent Logbook tab `NavigationStack` |
+
+`MapView` owns a local `NavigationPath`; no singleton router is introduced. `AppShellView` owns selected-tab and Add-menu presentation only. The centre Add control continues to present a menu over the previously selected tab rather than becoming a long-lived destination.
+
+In this development slice, `GymDetailView` combines **Gym Detail** and the named **Wall Zone Directory** section. `WallZoneRouteListView` combines the selected wall-zone header and its route list. These implementation compositions do not introduce a two-dimensional wall surface, floor plan, hotspot or indoor geometry.
+
+Archived `ClimbingRoute` values push to the same `RouteDetailView` and render a read-only historical banner. `MockRepositoryScenario` maps Loading, Empty, Error and offline states without replacing or resetting a tab path. External beta metadata requires a loaded or cached repository state; no video player or media transfer is part of navigation.

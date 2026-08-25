@@ -1,7 +1,12 @@
 .DS_Store
 .build/
 DerivedData/
+**/xcuserdata/
 *.xcuserstate
+*.xcresult
+*.log
+*.tmp
+SimulatorScreenshots/
 *.env
 .env*
 !.env.example

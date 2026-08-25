@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct AppShellView: View {
+    let environment: AppEnvironment
+
+    @StateObject private var session = AppSession()
     @State private var selectedTab = AppTab.defaultSelected
     @State private var isAddMenuPresented = false
     @State private var selectedAddAction: AddAction?
@@ -20,11 +23,11 @@ struct AppShellView: View {
 
     var body: some View {
         TabView(selection: tabSelection) {
-            HomeView()
+            HomeView(environment: environment)
                 .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.systemImage) }
                 .tag(AppTab.home)
 
-            MapPlaceholderView()
+            MapView(environment: environment, session: session)
                 .tabItem { Label(AppTab.map.title, systemImage: AppTab.map.systemImage) }
                 .tag(AppTab.map)
 
@@ -32,7 +35,7 @@ struct AppShellView: View {
                 .tabItem { Label(AppTab.add.title, systemImage: AppTab.add.systemImage) }
                 .tag(AppTab.add)
 
-            LogbookView()
+            LogbookView(environment: environment)
                 .tabItem { Label(AppTab.logbook.title, systemImage: AppTab.logbook.systemImage) }
                 .tag(AppTab.logbook)
 
@@ -62,11 +65,11 @@ struct AppShellView: View {
 }
 
 #Preview("Root — Light") {
-    AppShellView()
+    AppShellView(environment: .development())
         .preferredColorScheme(.light)
 }
 
 #Preview("Root — Dark") {
-    AppShellView()
+    AppShellView(environment: .development())
         .preferredColorScheme(.dark)
 }
