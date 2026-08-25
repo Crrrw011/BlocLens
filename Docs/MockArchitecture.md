@@ -94,7 +94,9 @@ Home and Logbook use the same injected in-memory repositories, so Quick Logbook 
 
 A future backend stage can provide actor-backed implementations of the four existing repository protocols and inject them through `AppEnvironment`. Transport DTOs, authentication tokens, retry policy, cache persistence and database mapping belong behind that boundary. The domain models and views must not depend directly on a Supabase client.
 
-This document identifies replacement points only. No Supabase package, client, migration, credential or network request exists in this stage.
+Stage 6A adds transport-only records under `BlocLens/Persistence/Remote` and a local SQL contract under `supabase/`. These records map snake-case PostgreSQL values into the existing Domain models and fail safely for unknown enums, invalid UUIDs, inconsistent grade thresholds or unsafe beta URLs. They do not create a network client or change `AppEnvironment`; the app still constructs Mock repositories by default.
+
+A later remote implementation should decode DTOs inside repository actors, map them before returning values to Features and retain the Mock environment for previews, deterministic tests and offline development. SDK configuration, authentication, durable cache and sync conflict handling remain behind that repository boundary. No Supabase package, credential or network request has been added.
 
 ## Explicitly excluded media upload path
 

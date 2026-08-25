@@ -10,6 +10,11 @@ nonisolated struct CommunityGradeSummary: Codable, Equatable, Hashable, Sendable
         medianGrade = validVotes.isEmpty ? nil : validVotes[(validVotes.count - 1) / 2]
     }
 
+    init(voteCount: Int, medianGrade: VGrade?) {
+        self.voteCount = max(0, voteCount)
+        self.medianGrade = voteCount >= 3 ? medianGrade : nil
+    }
+
     var isDisplayEligible: Bool {
         voteCount >= 3 && medianGrade != nil
     }
