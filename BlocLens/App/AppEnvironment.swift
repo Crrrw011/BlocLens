@@ -34,14 +34,19 @@ struct AppEnvironment: Sendable {
     }
 
     static func localSupabase(configuration: RemoteConfiguration) -> AppEnvironment {
+        supabase(configuration: configuration)
+    }
+
+    static func cloudSupabase(configuration: RemoteConfiguration) -> AppEnvironment {
+        supabase(configuration: configuration)
+    }
+
+    private static func supabase(configuration: RemoteConfiguration) -> AppEnvironment {
         let client = SupabaseClientFactory.makeClient(configuration: configuration)
         let dataSource = SupabaseRemoteDataSource(client: client)
         let logbookQueue = FileBackedLogbookQueue(
             fileURL: Self.logbookQueueFileURL()
         )
-        let cloudClient = (try? LocalEnvironmentConfiguration.makeCloud()).map {
-            SupabaseClientFactory.makeClient(configuration: $0)
-        }
         return AppEnvironment(
             gymRepository: RemoteGymRepository(dataSource: dataSource),
             routeRepository: RemoteRouteRepository(dataSource: dataSource),
@@ -51,7 +56,7 @@ struct AppEnvironment: Sendable {
                 queue: logbookQueue
             ),
             authenticationRepository: SupabaseAuthenticationRepository(
-                dataSource: SupabaseAuthDataSource(client: client, cloudClient: cloudClient)
+                dataSource: SupabaseAuthDataSource(client: client)
             ),
             onboardingStore: InMemoryOnboardingStore(isComplete: true),
             languagePreferenceStore: InMemoryLanguagePreferenceStore(),
@@ -140,9 +145,9 @@ final class AppSession: ObservableObject {
         authenticationState = await authenticationRepository.signUp(email: email, password: password)
     }
 
-    func signInWithApple(idToken: String) async {
+    func signInWithApple(idToken: String, nonce: String) async {
         authenticationState = .authenticating
-        authenticationState = await authenticationRepository.signInWithApple(idToken: idToken)
+        authenticationState = await authenticationRepository.signInWithApple(idToken: idToken, nonce: nonce)
         completeSignInIfPossible()
     }
 

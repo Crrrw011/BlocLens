@@ -13,12 +13,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
 
     func restoreSession() async -> AuthenticationState {
         do {
-            guard dataSource.hasSession() else {
-                currentState = .guest
-                return currentState
-            }
-            let record = try await dataSource.fetchProfile()
-            currentState = try Self.resolveState(from: record)
+            currentState = try await resolvedCurrentSession()
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -28,8 +23,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func signIn(email: String, password: String) async -> AuthenticationState {
         do {
             try await dataSource.signIn(email: email, password: password)
-            let record = try await dataSource.fetchProfile()
-            currentState = try Self.resolveState(from: record)
+            currentState = try await resolvedCurrentSession()
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -39,8 +33,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func signUp(email: String, password: String) async -> AuthenticationState {
         do {
             try await dataSource.signUp(email: email, password: password)
-            let record = try await dataSource.fetchProfile()
-            currentState = try Self.resolveState(from: record)
+            currentState = try await resolvedCurrentSession()
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -54,8 +47,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
                 return currentState
             }
             try await dataSource.updateUsername(username, userID: userID)
-            let record = try await dataSource.fetchProfile()
-            currentState = try Self.resolveState(from: record)
+            currentState = try await resolvedCurrentSession()
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -73,8 +65,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
                 return currentState
             }
             try await dataSource.updateAgeConfirmation(userID: userID)
-            let record = try await dataSource.fetchProfile()
-            currentState = try Self.resolveState(from: record)
+            currentState = try await resolvedCurrentSession()
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -91,10 +82,10 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
         return currentState
     }
 
-    func signInWithApple(idToken: String) async -> AuthenticationState {
+    func signInWithApple(idToken: String, nonce: String) async -> AuthenticationState {
         do {
-            try await dataSource.signInWithApple(idToken: idToken)
-            currentState = .signedIn(Self.oauthPlaceholderProfile())
+            try await dataSource.signInWithApple(idToken: idToken, nonce: nonce)
+            currentState = try await resolvedCurrentSession()
         } catch let error as RepositoryError {
             currentState = .error(error)
         } catch {
@@ -106,7 +97,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func signInWithGoogle() async -> AuthenticationState {
         do {
             try await dataSource.signInWithGoogle()
-            currentState = .signedIn(Self.oauthPlaceholderProfile())
+            currentState = try await resolvedCurrentSession()
         } catch let error as RepositoryError {
             currentState = .error(error)
         } catch {
@@ -119,8 +110,15 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
         .guest
     }
 
-    private static func resolveState(from record: UserProfileRecord?) throws -> AuthenticationState {
-        guard let record else { return .guest }
+    private func resolvedCurrentSession() async throws -> AuthenticationState {
+        guard dataSource.hasSession() else { return .guest }
+        guard let record = try await dataSource.fetchProfile() else {
+            throw RepositoryError.notFound
+        }
+        return try Self.resolveState(from: record)
+    }
+
+    private static func resolveState(from record: UserProfileRecord) throws -> AuthenticationState {
         let profile: UserProfile
         do {
             profile = try record.domain()
@@ -132,16 +130,4 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
         return needsSetup ? .profileSetup(profile) : .signedIn(profile)
     }
 
-    private static func oauthPlaceholderProfile() -> UserProfile {
-        UserProfile(
-            userID: UserID(rawValue: UUID().uuidString.lowercased()),
-            username: "oauth-user",
-            heightCentimetres: nil,
-            armSpanCentimetres: nil,
-            regularGrade: nil,
-            favouriteGymID: nil,
-            isTrustedContributor: false,
-            helpfulVotes: 0
-        )
-    }
 }

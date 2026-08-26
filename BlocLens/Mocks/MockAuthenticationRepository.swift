@@ -46,7 +46,7 @@ actor MockAuthenticationRepository: AuthenticationRepository {
         return authenticationState
     }
 
-    func signInWithApple(idToken: String) -> AuthenticationState {
+    func signInWithApple(idToken: String, nonce: String) -> AuthenticationState {
         authenticationState = .signedIn(profile)
         return authenticationState
     }

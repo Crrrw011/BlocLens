@@ -169,6 +169,17 @@ struct AuthStateMachineTests {
         #expect(environment.authenticationRepository is SupabaseAuthenticationRepository)
     }
 
+    @Test func cloudSupabaseWiresOneRemoteEnvironment() throws {
+        let url = try #require(URL(string: "https://project-ref.supabase.co"))
+        let config = try RemoteConfiguration(mode: .production, projectURL: url, publishableKey: "key")
+        let environment = AppEnvironment.cloudSupabase(configuration: config)
+        #expect(environment.authenticationRepository is SupabaseAuthenticationRepository)
+        #expect(environment.gymRepository is RemoteGymRepository)
+        #expect(environment.routeRepository is RemoteRouteRepository)
+        #expect(environment.betaRepository is RemoteBetaRepository)
+        #expect(environment.logbookRepository is RemoteLogbookRepository)
+    }
+
     @Test func pendingActionRestoresAfterEmailSignIn() async {
         let environment = AppEnvironment.development()
         let session = AppSession(environment: environment)
@@ -182,25 +193,32 @@ struct AuthStateMachineTests {
     // MARK: - OAuth
 
     @Test func appleSignInSuccessReturnsSignedIn() async throws {
-        let fake = FakeAuthDataSource()
+        let fake = FakeAuthDataSource(
+            hasSession: true,
+            profile: makeProfile(username: "alice", ageConfirmed: Date())
+        )
         let repository = SupabaseAuthenticationRepository(dataSource: fake)
-        let state = await repository.signInWithApple(idToken: "valid-token")
+        let state = await repository.signInWithApple(idToken: "valid-token", nonce: "valid-nonce")
         guard case .signedIn = state else {
             Issue.record("Expected signedIn, got \(state)")
             return
         }
+        #expect(fake.receivedAppleNonce == "valid-nonce")
     }
 
     @Test func appleSignInCancellationMapsToUserCancelled() async throws {
         let fake = FakeAuthDataSource()
         fake.appleSignInError = RepositoryError.userCancelled
         let repository = SupabaseAuthenticationRepository(dataSource: fake)
-        let state = await repository.signInWithApple(idToken: "token")
+        let state = await repository.signInWithApple(idToken: "token", nonce: "nonce")
         #expect(state == .error(.userCancelled))
     }
 
     @Test func googleSignInSuccessReturnsSignedIn() async throws {
-        let fake = FakeAuthDataSource()
+        let fake = FakeAuthDataSource(
+            hasSession: true,
+            profile: makeProfile(username: "alice", ageConfirmed: Date())
+        )
         let repository = SupabaseAuthenticationRepository(dataSource: fake)
         let state = await repository.signInWithGoogle()
         guard case .signedIn = state else {
@@ -209,7 +227,7 @@ struct AuthStateMachineTests {
         }
     }
 
-    @Test func googleSignInMissingCloudConfigMapsToInvalidConfiguration() async throws {
+    @Test func googleSignInConfigurationFailureMapsToInvalidConfiguration() async throws {
         let fake = FakeAuthDataSource()
         fake.googleSignInError = RepositoryError.invalidConfiguration
         let repository = SupabaseAuthenticationRepository(dataSource: fake)
@@ -219,7 +237,7 @@ struct AuthStateMachineTests {
 
     @Test func mockAuthenticationSupportsOAuth() async throws {
         let repository = MockAuthenticationRepository()
-        let appleState = await repository.signInWithApple(idToken: "token")
+        let appleState = await repository.signInWithApple(idToken: "token", nonce: "nonce")
         guard case .signedIn = appleState else {
             Issue.record("Expected signedIn, got \(appleState)")
             return
@@ -229,6 +247,13 @@ struct AuthStateMachineTests {
             Issue.record("Expected signedIn, got \(googleState)")
             return
         }
+    }
+
+    @Test func oauthWithoutServerProfileDoesNotCreatePlaceholderIdentity() async throws {
+        let fake = FakeAuthDataSource(hasSession: true)
+        let repository = SupabaseAuthenticationRepository(dataSource: fake)
+        let state = await repository.signInWithGoogle()
+        #expect(state == .error(.notFound))
     }
 }
 
@@ -242,6 +267,7 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
     var appleSignInError: Error?
     var googleSignInError: Error?
     var profileAfterUsernameUpdate: UserProfileRecord?
+    var receivedAppleNonce: String?
 
     init(
         hasSession: Bool = false,
@@ -273,8 +299,9 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
         hasSessionFlag = true
     }
 
-    func signInWithApple(idToken: String) async throws {
+    func signInWithApple(idToken: String, nonce: String) async throws {
         if let appleSignInError { throw appleSignInError }
+        receivedAppleNonce = nonce
         hasSessionFlag = true
     }
 

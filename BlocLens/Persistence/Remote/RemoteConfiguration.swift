@@ -28,7 +28,7 @@ nonisolated struct RemoteConfiguration: Equatable, Sendable {
             }
         }
 
-        if let host = projectURL.host?.lowercased(), host.contains("supabase.co") {
+        if mode != .production, Self.isSupabaseCloud(projectURL) {
             throw RepositoryError.invalidConfiguration
         }
 
@@ -40,5 +40,10 @@ nonisolated struct RemoteConfiguration: Equatable, Sendable {
     private static func isLoopback(_ url: URL) -> Bool {
         guard let host = url.host?.lowercased() else { return false }
         return host == "127.0.0.1" || host == "localhost" || host == "::1"
+    }
+
+    private static func isSupabaseCloud(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == "supabase.co" || host.hasSuffix(".supabase.co")
     }
 }

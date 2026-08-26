@@ -17,6 +17,12 @@ struct RemoteRepositoryTests {
         #expect(config.mode == .production)
     }
 
+    @Test func productionAcceptsSupabaseCloudHTTPS() throws {
+        let url = try #require(URL(string: "https://project-ref.supabase.co"))
+        let config = try RemoteConfiguration(mode: .production, projectURL: url, publishableKey: "key")
+        #expect(config.projectURL.host == "project-ref.supabase.co")
+    }
+
     @Test func productionRejectsHTTP() throws {
         let url = try #require(URL(string: "http://example.com"))
         #expect(throws: RepositoryError.self) {

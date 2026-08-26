@@ -19,9 +19,10 @@ struct BlocLensApp: App {
             ? .signedIn(DevelopmentFixtures.mockProfile)
             : .guest
         let languagePreferenceStore = UserDefaultsLanguagePreferenceStore()
-        if arguments.contains("--local-supabase"),
-           let localConfiguration = try? LocalEnvironmentConfiguration.make() {
-            environment = .localSupabase(configuration: localConfiguration)
+        if arguments.contains("--cloud-supabase") {
+            environment = .cloudSupabase(configuration: Self.requiredCloudConfiguration())
+        } else if arguments.contains("--local-supabase") {
+            environment = .localSupabase(configuration: Self.requiredLocalConfiguration())
         } else if arguments.contains("--mock-empty") {
             environment = .development(scenario: .empty, authenticationState: authenticationState, onboardingStore: onboardingStore, languagePreferenceStore: languagePreferenceStore)
         } else if arguments.contains("--mock-error") {
@@ -43,4 +44,28 @@ struct BlocLensApp: App {
             AppRootView(environment: environment)
         }
     }
+
+    #if DEBUG
+    private static func requiredLocalConfiguration() -> RemoteConfiguration {
+        do {
+            guard let configuration = try LocalEnvironmentConfiguration.make() else {
+                preconditionFailure("--local-supabase requires BLOCLENS_SUPABASE_URL and BLOCLENS_SUPABASE_ANON_KEY.")
+            }
+            return configuration
+        } catch {
+            preconditionFailure("Invalid local Supabase configuration: \(error)")
+        }
+    }
+
+    private static func requiredCloudConfiguration() -> RemoteConfiguration {
+        do {
+            guard let configuration = try LocalEnvironmentConfiguration.makeCloud() else {
+                preconditionFailure("--cloud-supabase requires BLOCLENS_CLOUD_URL and BLOCLENS_CLOUD_ANON_KEY.")
+            }
+            return configuration
+        } catch {
+            preconditionFailure("Invalid Cloud Supabase configuration: \(error)")
+        }
+    }
+    #endif
 }

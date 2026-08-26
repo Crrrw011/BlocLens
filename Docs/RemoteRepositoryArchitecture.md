@@ -87,7 +87,9 @@ The official SDK is installed as an Xcode Swift Package at `https://github.com/s
 
 `RemoteConfiguration` carries an environment mode (`production`, `localDevelopment`, `integrationTest`). Production accepts HTTPS only; local/integration modes accept loopback HTTP (`127.0.0.1`, `localhost`, `::1`) and reject `.supabase.co` hosts. `LocalEnvironmentConfiguration.make()` reads `BLOCLENS_SUPABASE_URL` and `BLOCLENS_SUPABASE_ANON_KEY` from the environment and returns `nil` when absent, so a missing configuration never falls back to Cloud.
 
-`AppEnvironment.development()` (Mock) remains the default everywhere. `AppEnvironment.localSupabase(configuration:)` wires the remote Gym/Route repositories, the remote Authentication repository and the still-Mock Beta/Logbook repositories, and is only reached through the Debug-only `--local-supabase` launch argument or integration-test configuration. Release never connects to Local or Cloud.
+`AppEnvironment.development()` (Mock) remains the default everywhere. `AppEnvironment.localSupabase(configuration:)` and `AppEnvironment.cloudSupabase(configuration:)` both delegate to one composition root that creates exactly one `SupabaseClient` for Gym, Route, Beta, Logbook and Authentication. Debug selects the matching environment explicitly with `--local-supabase` or `--cloud-supabase`; missing or invalid configuration fails immediately instead of silently falling back to Mock. Release remains Mock-only until the production data-source switch is explicitly approved.
+
+Local and Cloud Supabase sessions are intentionally never combined. A Cloud-issued JWT cannot authenticate against the Local project's RLS boundary because the projects have separate Auth users and signing configuration. Local mode is for deterministic integration testing. Cloud mode is the future end-to-end Auth and data path after the approved migrations are deployed.
 
 ## Authentication state machine (6D-3A)
 
@@ -151,16 +153,17 @@ The offline queue is a small actor (`FileBackedLogbookQueue`, with an `InMemoryL
 
 ## Apple and Google OAuth (6D-3D)
 
-`AuthenticationRepository` gained `signInWithApple(idToken:)` and `signInWithGoogle()`. The OAuth flow uses a second `SupabaseClient` pointed at the Cloud project (where the Apple/Google providers are configured), constructed only in Debug from the environment variables `BLOCLENS_CLOUD_URL` and `BLOCLENS_CLOUD_ANON_KEY` (never hardcoded; `Config.local.example` carries placeholders only). When those variables are absent, the OAuth methods fail with `.invalidConfiguration`.
+`AuthenticationRepository` provides Apple and Google sign-in through the same `SupabaseClient` used by the selected remote repositories. Cloud mode is constructed only in Debug from `BLOCLENS_CLOUD_URL` and `BLOCLENS_CLOUD_ANON_KEY` (never hardcoded; `Config.local.example` carries placeholders only). The `--cloud-supabase` launch argument requires both values; an absent or invalid value fails explicitly during Debug bootstrap rather than falling back to another data source.
 
-- Apple Sign-In uses `AuthenticationServices`: `AppleSignInCoordinator` presents `ASAuthorizationController`, extracts the identity token, and `SupabaseAuthDataSource.signInWithApple` calls `auth.signInWithIdToken(provider: .apple, idToken:)`. User cancellation maps to `.userCancelled`.
+- Apple Sign-In uses `AuthenticationServices`: `AppleSignInCoordinator` creates a per-request raw nonce, sends its SHA-256 digest to Apple, returns the identity token with the original nonce, and `SupabaseAuthDataSource.signInWithApple` passes both to `auth.signInWithIdToken`. User cancellation maps to `.userCancelled`.
 - Google Sign-In calls `auth.signInWithOAuth(provider: .google, redirectTo: URL(string: "bloclens://"))`, which uses `ASWebAuthenticationSession`; the SDK intercepts the callback internally (no `application(_:open:options:)` handler is required for this flow). The `bloclens` URL scheme is registered in the app's Info.plist.
-- After a successful OAuth sign-in the repository transitions to `.signedIn` with a development placeholder profile; mapping the Cloud user to a local `profiles` row is deferred to the real device/TestFlight stage, since the OAuth identity lives in the Cloud project while the development data lives in the local Supabase.
+- After OAuth returns, the repository requires a real SDK session and reads the matching `profiles` row before resolving `.profileSetup` or `.signedIn`. It never fabricates a user ID or placeholder profile. Until migrations `0001`–`0011` are deployed to Cloud, OAuth may create an Auth identity but BlocLens deliberately reports a missing-profile error instead of presenting a false signed-in state.
 
 `RemoteErrorMapping` maps `ASWebAuthenticationSessionError.canceledLogin` and `ASAuthorizationError.canceled` to `.userCancelled`. `RepositoryError` gained `.userCancelled` and `.externalServiceError`.
 
 ## Next stages
 
 - Stage 6D-4A: contribution writes (Add Route, Share Beta Link, comments) behind the authenticated repositories.
-- Stage 8 (real device/TestFlight): end-to-end OAuth verification with real Apple/Google accounts and the Cloud project; reconcile the Cloud OAuth identity with a local profile.
+- Before D-4A Cloud writes: deploy and verify migrations `0001`–`0011`, including the Auth-to-Profile trigger and negative RLS tests, under separate approval.
+- Stage 8 (real device/TestFlight): end-to-end OAuth verification with real Apple/Google accounts against the single Cloud Auth/data boundary.
 - Later: Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.

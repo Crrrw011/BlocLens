@@ -221,8 +221,8 @@ struct SignInGateView: View {
 
     private func performAppleSignIn() async {
         do {
-            let token = try await appleCoordinator.identityToken()
-            await session.signInWithApple(idToken: token)
+            let credential = try await appleCoordinator.credential()
+            await session.signInWithApple(idToken: credential.idToken, nonce: credential.nonce)
         } catch let error as RepositoryError {
             session.failSignIn(error)
         } catch {
