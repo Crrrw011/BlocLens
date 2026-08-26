@@ -149,8 +149,18 @@ The offline queue is a small actor (`FileBackedLogbookQueue`, with an `InMemoryL
 
 `AppEnvironment.localSupabase` now wires `RemoteLogbookRepository` with a file-backed queue; `AppEnvironment.development()` keeps `MockLogbookRepository` as the default. A guest (no session) cannot read or write the Logbook.
 
+## Apple and Google OAuth (6D-3D)
+
+`AuthenticationRepository` gained `signInWithApple(idToken:)` and `signInWithGoogle()`. The OAuth flow uses a second `SupabaseClient` pointed at the Cloud project (where the Apple/Google providers are configured), constructed only in Debug from the environment variables `BLOCLENS_CLOUD_URL` and `BLOCLENS_CLOUD_ANON_KEY` (never hardcoded; `Config.local.example` carries placeholders only). When those variables are absent, the OAuth methods fail with `.invalidConfiguration`.
+
+- Apple Sign-In uses `AuthenticationServices`: `AppleSignInCoordinator` presents `ASAuthorizationController`, extracts the identity token, and `SupabaseAuthDataSource.signInWithApple` calls `auth.signInWithIdToken(provider: .apple, idToken:)`. User cancellation maps to `.userCancelled`.
+- Google Sign-In calls `auth.signInWithOAuth(provider: .google, redirectTo: URL(string: "bloclens://"))`, which uses `ASWebAuthenticationSession`; the SDK intercepts the callback internally (no `application(_:open:options:)` handler is required for this flow). The `bloclens` URL scheme is registered in the app's Info.plist.
+- After a successful OAuth sign-in the repository transitions to `.signedIn` with a development placeholder profile; mapping the Cloud user to a local `profiles` row is deferred to the real device/TestFlight stage, since the OAuth identity lives in the Cloud project while the development data lives in the local Supabase.
+
+`RemoteErrorMapping` maps `ASWebAuthenticationSessionError.canceledLogin` and `ASAuthorizationError.canceled` to `.userCancelled`. `RepositoryError` gained `.userCancelled` and `.externalServiceError`.
+
 ## Next stages
 
-- Stage 6D-3D: real Apple/Google OAuth (not implemented; the current auth path is local email/password and the Debug mock account only).
 - Stage 6D-4A: contribution writes (Add Route, Share Beta Link, comments) behind the authenticated repositories.
-- Later: Cloud deployment, Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.
+- Stage 8 (real device/TestFlight): end-to-end OAuth verification with real Apple/Google accounts and the Cloud project; reconcile the Cloud OAuth identity with a local profile.
+- Later: Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.

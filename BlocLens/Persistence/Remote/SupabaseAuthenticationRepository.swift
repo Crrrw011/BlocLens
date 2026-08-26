@@ -91,6 +91,30 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
         return currentState
     }
 
+    func signInWithApple(idToken: String) async -> AuthenticationState {
+        do {
+            try await dataSource.signInWithApple(idToken: idToken)
+            currentState = .signedIn(Self.oauthPlaceholderProfile())
+        } catch let error as RepositoryError {
+            currentState = .error(error)
+        } catch {
+            currentState = .error(RemoteErrorMapping.map(error))
+        }
+        return currentState
+    }
+
+    func signInWithGoogle() async -> AuthenticationState {
+        do {
+            try await dataSource.signInWithGoogle()
+            currentState = .signedIn(Self.oauthPlaceholderProfile())
+        } catch let error as RepositoryError {
+            currentState = .error(error)
+        } catch {
+            currentState = .error(RemoteErrorMapping.map(error))
+        }
+        return currentState
+    }
+
     func signInWithMockAccount() async -> AuthenticationState {
         .guest
     }
@@ -106,5 +130,18 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
         let needsSetup = record.ageConfirmed16PlusAt == nil
             || record.username.lowercased().hasPrefix("climber_")
         return needsSetup ? .profileSetup(profile) : .signedIn(profile)
+    }
+
+    private static func oauthPlaceholderProfile() -> UserProfile {
+        UserProfile(
+            userID: UserID(rawValue: UUID().uuidString.lowercased()),
+            username: "oauth-user",
+            heightCentimetres: nil,
+            armSpanCentimetres: nil,
+            regularGrade: nil,
+            favouriteGymID: nil,
+            isTrustedContributor: false,
+            helpfulVotes: 0
+        )
     }
 }

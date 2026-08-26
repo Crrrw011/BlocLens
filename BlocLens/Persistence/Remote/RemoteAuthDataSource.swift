@@ -6,6 +6,8 @@ nonisolated protocol RemoteAuthDataSource: Sendable {
     func currentUserID() -> UUID?
     func signIn(email: String, password: String) async throws
     func signUp(email: String, password: String) async throws
+    func signInWithApple(idToken: String) async throws
+    func signInWithGoogle() async throws
     func signOut() async throws
     func fetchProfile() async throws -> UserProfileRecord?
     func updateUsername(_ username: String, userID: UUID) async throws
@@ -14,6 +16,12 @@ nonisolated protocol RemoteAuthDataSource: Sendable {
 
 struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
     let client: SupabaseClient
+    let cloudClient: SupabaseClient?
+
+    init(client: SupabaseClient, cloudClient: SupabaseClient? = nil) {
+        self.client = client
+        self.cloudClient = cloudClient
+    }
 
     func hasSession() -> Bool {
         client.auth.currentSession != nil
@@ -31,8 +39,30 @@ struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
         _ = try await client.auth.signUp(email: email, password: password)
     }
 
+    func signInWithApple(idToken: String) async throws {
+        guard let cloudClient else {
+            throw RepositoryError.invalidConfiguration
+        }
+        _ = try await cloudClient.auth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken)
+        )
+    }
+
+    func signInWithGoogle() async throws {
+        guard let cloudClient else {
+            throw RepositoryError.invalidConfiguration
+        }
+        _ = try await cloudClient.auth.signInWithOAuth(
+            provider: .google,
+            redirectTo: URL(string: "bloclens://")
+        )
+    }
+
     func signOut() async throws {
         try await client.auth.signOut()
+        if let cloudClient {
+            try? await cloudClient.auth.signOut()
+        }
     }
 
     func fetchProfile() async throws -> UserProfileRecord? {

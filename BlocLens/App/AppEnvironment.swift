@@ -39,6 +39,9 @@ struct AppEnvironment: Sendable {
         let logbookQueue = FileBackedLogbookQueue(
             fileURL: Self.logbookQueueFileURL()
         )
+        let cloudClient = (try? LocalEnvironmentConfiguration.makeCloud()).map {
+            SupabaseClientFactory.makeClient(configuration: $0)
+        }
         return AppEnvironment(
             gymRepository: RemoteGymRepository(dataSource: dataSource),
             routeRepository: RemoteRouteRepository(dataSource: dataSource),
@@ -47,7 +50,9 @@ struct AppEnvironment: Sendable {
                 dataSource: SupabaseLogbookDataSource(client: client),
                 queue: logbookQueue
             ),
-            authenticationRepository: SupabaseAuthenticationRepository(dataSource: SupabaseAuthDataSource(client: client)),
+            authenticationRepository: SupabaseAuthenticationRepository(
+                dataSource: SupabaseAuthDataSource(client: client, cloudClient: cloudClient)
+            ),
             onboardingStore: InMemoryOnboardingStore(isComplete: true),
             languagePreferenceStore: InMemoryLanguagePreferenceStore(),
             currentUserID: DevelopmentFixtures.currentUserID,
@@ -135,6 +140,18 @@ final class AppSession: ObservableObject {
         authenticationState = await authenticationRepository.signUp(email: email, password: password)
     }
 
+    func signInWithApple(idToken: String) async {
+        authenticationState = .authenticating
+        authenticationState = await authenticationRepository.signInWithApple(idToken: idToken)
+        completeSignInIfPossible()
+    }
+
+    func signInWithGoogle() async {
+        authenticationState = .authenticating
+        authenticationState = await authenticationRepository.signInWithGoogle()
+        completeSignInIfPossible()
+    }
+
     func updateUsername(_ username: String) async {
         authenticationState = await authenticationRepository.updateUsername(username)
         completeSignInIfPossible()
@@ -142,6 +159,10 @@ final class AppSession: ObservableObject {
 
     func confirmAge(isOver16: Bool) async {
         authenticationState = await authenticationRepository.confirmAge(isOver16: isOver16)
+    }
+
+    func failSignIn(_ error: RepositoryError) {
+        authenticationState = .error(error)
     }
 
     private func completeSignInIfPossible() {

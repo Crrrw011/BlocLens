@@ -6,3 +6,9 @@
 BLOCLENS_SUPABASE_URL=http://127.0.0.1:54321
 BLOCLENS_SUPABASE_ANON_KEY=your-local-anon-key
 BLOCLENS_DATA_SOURCE=local
+
+# Cloud OAuth configuration (placeholders only; used for Apple/Google sign-in).
+# Never commit the real Cloud URL or anon key. The service-role key must never
+# appear here.
+BLOCLENS_CLOUD_URL=https://your-project.supabase.co
+BLOCLENS_CLOUD_ANON_KEY=your-cloud-anon-key

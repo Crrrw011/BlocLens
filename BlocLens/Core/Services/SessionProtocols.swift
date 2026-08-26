@@ -8,6 +8,8 @@ nonisolated protocol AuthenticationRepository: Sendable {
     func updateUsername(_ username: String) async -> AuthenticationState
     func confirmAge(isOver16: Bool) async -> AuthenticationState
     func signOut() async -> AuthenticationState
+    func signInWithApple(idToken: String) async -> AuthenticationState
+    func signInWithGoogle() async -> AuthenticationState
     func signInWithMockAccount() async -> AuthenticationState
 }
 

@@ -45,4 +45,14 @@ actor MockAuthenticationRepository: AuthenticationRepository {
         authenticationState = .signedIn(profile)
         return authenticationState
     }
+
+    func signInWithApple(idToken: String) -> AuthenticationState {
+        authenticationState = .signedIn(profile)
+        return authenticationState
+    }
+
+    func signInWithGoogle() -> AuthenticationState {
+        authenticationState = .signedIn(profile)
+        return authenticationState
+    }
 }

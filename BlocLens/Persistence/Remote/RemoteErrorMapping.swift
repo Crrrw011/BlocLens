@@ -1,3 +1,4 @@
+import AuthenticationServices
 import Foundation
 import Supabase
 
@@ -13,6 +14,15 @@ nonisolated enum RemoteErrorMapping {
             default:
                 return .network
             }
+        }
+
+        if let sessionError = error as? ASWebAuthenticationSessionError,
+           sessionError.code == .canceledLogin {
+            return .userCancelled
+        }
+        if let authorizationError = error as? ASAuthorizationError,
+           authorizationError.code == .canceled {
+            return .userCancelled
         }
 
         if let postgrestError = error as? PostgrestError {

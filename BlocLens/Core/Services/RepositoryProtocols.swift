@@ -19,6 +19,8 @@ nonisolated enum RepositoryError: Error, Equatable, Sendable {
     case invalidState
     case conflict
     case persistenceError
+    case userCancelled
+    case externalServiceError
     case unknown
 }
 

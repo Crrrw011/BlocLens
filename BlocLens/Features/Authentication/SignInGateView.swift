@@ -8,6 +8,7 @@ struct SignInGateView: View {
     @State private var username = ""
     @State private var isOver16 = false
     @State private var isCreatingAccount = false
+    @State private var appleCoordinator = AppleSignInCoordinator()
 
     private static let emailPlaceholder = "Email"
     private static let passwordPlaceholder = "Password"
@@ -24,6 +25,8 @@ struct SignInGateView: View {
     private static let ageConfirmation = "I am 16 or older"
     private static let ageGateTitle = "You must be 16 or older to create an account"
     private static let ageGateBody = "You can continue browsing gyms and routes as a guest."
+    private static let appleTitle = "Sign in with Apple"
+    private static let googleTitle = "Sign in with Google"
 
     var body: some View {
         NavigationStack {
@@ -70,6 +73,22 @@ struct SignInGateView: View {
 
     private var signInForm: some View {
         VStack(spacing: DesignSpacing.small) {
+            Button {
+                Task { await performAppleSignIn() }
+            } label: {
+                Text(verbatim: Self.appleTitle)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .accessibilityIdentifier("apple-sign-in-button")
+
+            Button {
+                Task { await session.signInWithGoogle() }
+            } label: {
+                Text(verbatim: Self.googleTitle)
+            }
+            .buttonStyle(SecondaryButtonStyle())
+            .accessibilityIdentifier("google-sign-in-button")
+
             if isCreatingAccount {
                 ageConfirmationRow
             }
@@ -197,6 +216,17 @@ struct SignInGateView: View {
         await session.signUp(email: email, password: password)
         if session.authenticationState.isProfileSetup {
             await session.confirmAge(isOver16: true)
+        }
+    }
+
+    private func performAppleSignIn() async {
+        do {
+            let token = try await appleCoordinator.identityToken()
+            await session.signInWithApple(idToken: token)
+        } catch let error as RepositoryError {
+            session.failSignIn(error)
+        } catch {
+            session.failSignIn(.externalServiceError)
         }
     }
 
