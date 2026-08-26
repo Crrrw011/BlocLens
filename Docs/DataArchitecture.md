@@ -204,7 +204,8 @@ There is explicitly no video database table, video bucket, direct video upload, 
 
 ## Known risks and incomplete validation
 
-- These migrations were statically validated in Stage 6A and executed locally in Stage 6B against a disposable Supabase PostgreSQL 17 database: migrations 0001–0010 apply in order, the development seed loads, the pgTAP schema contract (18 tests) passes, and `supabase db lint` reports no errors. Remote deployment remains pending.
+- Migrations 0001–0012 are deployed to the linked Cloud development project and also apply cleanly to a reset disposable local Supabase PostgreSQL 17 database. The deterministic development seed loads locally, the pgTAP contract suite passes 63 tests, and local `supabase db lint` reports no errors.
+- Migration 0012 removes default client execution rights from trigger-only functions, makes all exposed views read-only, restricts management views to authenticated users, moves `citext` out of `public`, and fixes the beta URL normalisation function search path. Supabase Security Advisor continues to report the deliberately exposed `SECURITY DEFINER` RPCs; those RPCs are limited to public summaries, current-user checks, or functions with internal administrator role enforcement.
 - Direct development inserts into Supabase-managed `auth.users` are version-sensitive and local-only.
 - Account deletion/anonymisation, exported Logbook delivery and production retention require a confirmed legal/product policy before implementation.
 - External URL allow-listing, redirect safety and link health checking need a trusted server boundary.

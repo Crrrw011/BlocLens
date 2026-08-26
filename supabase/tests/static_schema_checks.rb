@@ -23,7 +23,7 @@ EXPECTED_VIEWS = %w[
 
 errors = []
 files = MIGRATIONS.glob("*.sql").sort
-expected_names = (1..11).map { |number| format("%04d", number) }
+expected_names = (1..12).map { |number| format("%04d", number) }
 actual_names = files.map { |file| file.basename.to_s.split("_").first }
 errors << "Migration numbering is incomplete or out of order." unless actual_names == expected_names
 
@@ -78,6 +78,18 @@ errors << "A credential-like value is present." if combined.match?(
 errors << "Anonymous beta_links SELECT revoke is missing." unless combined.match?(/revoke select on public\.beta_links from anon;/i)
 errors << "Anonymous beta_ranking_inputs SELECT revoke is missing." unless combined.match?(/revoke select on public\.beta_ranking_inputs from anon;/i)
 errors << "Beta count helper is missing." unless combined.match?(/visible_beta_count_for_route/i)
+errors << "Client function privileges are not reset." unless combined.match?(
+  /revoke execute on all functions in schema public from PUBLIC, anon, authenticated;/i
+)
+errors << "Client view privileges are not reset." unless combined.match?(
+  /revoke all privileges on table.*?from PUBLIC, anon, authenticated;/im
+)
+errors << "citext is not moved out of public." unless combined.match?(
+  /alter extension citext set schema extensions;/i
+)
+errors << "Beta normalisation does not use a fixed search_path." unless combined.match?(
+  /function public\.normalise_beta_link\(\).*?set search_path = ''/im
+)
 errors << "pg_trgm extension is missing." unless combined.match?(/create extension if not exists pg_trgm/i)
 %w[gyms_name_trgm_idx gyms_suburb_trgm_idx wall_zones_name_trgm_idx routes_colour_trgm_idx routes_label_trgm_idx].each do |index_name|
   errors << "Trigram index #{index_name} is missing." unless combined.match?(/#{Regexp.escape(index_name)}/i)

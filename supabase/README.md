@@ -20,6 +20,8 @@ Apply files in lexical order:
 8. `0008_relationships_notifications_feedback_claims.sql` — favourites, follows, private blocks, preferences, outbox, gym claims and feedback.
 9. `0009_rls_policies.sql` — RLS, policies and least-privilege grants for every client-facing business table.
 10. `0010_functions_triggers_views.sql` — aggregate maintenance, moderation thresholds, safe RPCs, transactional merge and security-invoker views.
+11. `0011_harden_beta_access_and_search.sql` — authenticated beta metadata access, guest-safe counts and indexed local search.
+12. `0012_harden_cloud_function_and_view_privileges.sql` — least-privilege RPC and view grants, safe beta URL normalisation and extension schema hardening.
 
 The sequence is dependency-sensitive. Do not reorder or combine it simply to reduce file count.
 
@@ -46,7 +48,7 @@ Run the repository-owned static contract check without a database:
 ruby supabase/tests/static_schema_checks.rb
 ```
 
-It validates migration ordering and termination, dollar-quote balance, expected tables, RLS and policy coverage, safe `SECURITY DEFINER` search paths, fixture counts, development-only hosts and the absence of video tables or credential-like values. Static validation cannot prove PostgreSQL execution semantics or concurrency behaviour; a real local migration run remains required before remote integration.
+It validates migration ordering and termination, dollar-quote balance, expected tables, RLS and policy coverage, safe function search paths, explicit client RPC and view grants, fixture counts, development-only hosts and the absence of video tables or credential-like values. Static validation complements, but does not replace, the disposable local PostgreSQL reset and pgTAP contract suite.
 
 ## Development and production separation
 

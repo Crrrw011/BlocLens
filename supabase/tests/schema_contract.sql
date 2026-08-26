@@ -149,6 +149,73 @@ select is(
   'SECURITY DEFINER functions declare an empty search_path'
 );
 
+-- 9. Extension and trigger-function hardening.
+select is(
+  (select namespace.nspname
+   from pg_catalog.pg_extension extension
+   join pg_catalog.pg_namespace namespace on namespace.oid = extension.extnamespace
+   where extension.extname = 'citext'),
+  'extensions',
+  'citext is outside the public schema'
+);
+
+select ok(
+  (select procedure.proconfig @> array['search_path=""']::text[]
+   from pg_catalog.pg_proc procedure
+   join pg_catalog.pg_namespace namespace on namespace.oid = procedure.pronamespace
+   where namespace.nspname = 'public' and procedure.proname = 'normalise_beta_link'),
+  'Beta URL normalisation uses an empty search_path'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.initialise_profile_for_auth_user()', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.initialise_profile_for_auth_user()', 'EXECUTE'),
+  'Auth profile trigger cannot be invoked through client roles'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.get_my_profile()', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.get_my_profile()', 'EXECUTE'),
+  'Private profile RPC is authenticated-only'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.merge_routes(uuid,uuid,text)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.merge_routes(uuid,uuid,text)', 'EXECUTE'),
+  'Route merge RPC is authenticated-only and retains its internal admin check'
+);
+
+select ok(
+  has_function_privilege('anon', 'public.community_grade_summary(uuid)', 'EXECUTE')
+  and has_function_privilege('anon', 'public.gym_hard_soft_summary(uuid)', 'EXECUTE')
+  and has_function_privilege('anon', 'public.visible_beta_count_for_route(uuid)', 'EXECUTE'),
+  'Anonymous users retain only the required public summary RPCs'
+);
+
+-- 10. View privileges are read-only and audience-scoped.
+select ok(
+  has_table_privilege('anon', 'public.gym_summaries', 'SELECT')
+  and not has_table_privilege('anon', 'public.gym_summaries', 'INSERT')
+  and not has_table_privilege('anon', 'public.gym_summaries', 'UPDATE')
+  and not has_table_privilege('anon', 'public.gym_summaries', 'DELETE'),
+  'Anonymous gym summaries are read-only'
+);
+
+select ok(
+  not has_table_privilege('anon', 'public.beta_ranking_inputs', 'SELECT')
+  and not has_table_privilege('anon', 'public.moderation_queue', 'SELECT')
+  and not has_table_privilege('anon', 'public.gym_official_scope', 'SELECT'),
+  'Anonymous users cannot read authenticated or management views'
+);
+
+select ok(
+  has_table_privilege('authenticated', 'public.beta_ranking_inputs', 'SELECT')
+  and has_table_privilege('authenticated', 'public.moderation_queue', 'SELECT')
+  and has_table_privilege('authenticated', 'public.gym_official_scope', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.moderation_queue', 'UPDATE'),
+  'Authenticated management views are read-only and remain RLS-filtered'
+);
+
 select * from finish();
 
 rollback;
