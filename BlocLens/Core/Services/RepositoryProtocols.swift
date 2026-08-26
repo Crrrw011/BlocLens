@@ -102,3 +102,27 @@ nonisolated protocol LogbookRepository: Sendable {
     func pendingSyncCount() async -> Int
     func syncNow() async throws
 }
+
+nonisolated protocol ContributionRepository: Sendable {
+    func addRoute(_ request: AddRouteRequest) async throws -> ClimbingRoute
+    func shareBetaLink(_ request: ShareBetaLinkRequest) async throws -> BetaLink
+    func addRoutePhoto(_ request: AddRoutePhotoRequest) async throws -> RoutePhotoMetadata
+    func submitCorrection(_ request: SubmitRouteCorrectionRequest) async throws -> RouteCorrectionReceipt
+    func confirmReset(_ request: ConfirmResetRequest) async throws -> ResetConfirmationReceipt
+    func comments(betaLinkID: BetaLinkID) async throws -> [BetaComment]
+    func addComment(_ request: AddBetaCommentRequest) async throws -> BetaComment
+    func reportContent(_ request: SubmitContentReportRequest) async throws -> ContentReportReceipt
+}
+
+nonisolated protocol RelationshipRepository: Sendable {
+    func publicProfiles() async throws -> [PublicUserProfile]
+    func state(with userID: UserID) async throws -> UserRelationshipState
+    func follow(userID: UserID, idempotencyKey: IdempotencyKey) async throws
+    func unfollow(userID: UserID, idempotencyKey: IdempotencyKey) async throws
+    func block(userID: UserID, idempotencyKey: IdempotencyKey) async throws
+    func unblock(userID: UserID, idempotencyKey: IdempotencyKey) async throws
+}
+
+nonisolated protocol RoleRepository: Sendable {
+    func sessionRoleContext() async throws -> SessionRoleContext
+}

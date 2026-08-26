@@ -36,7 +36,8 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
 
     func testReadsVisibleRoutes() async throws {
         let routes = try await makeEnvironment().routeRepository.allRoutes()
-        XCTAssertEqual(routes.count, 26)
+        let seedIDs = Set(RemoteSeedIdentifiers.routes.values)
+        XCTAssertEqual(routes.filter { seedIDs.contains($0.id.rawValue) }.count, 26)
     }
 
     func testGymFacilitiesAggregate() async throws {
@@ -331,6 +332,187 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
 
         let attempted = try await repository.hasAttemptedRoute(ClimbingRouteID(rawValue: routeID))
         XCTAssertTrue(attempted)
+    }
+
+    // MARK: - Contributions, relationships, and roles
+
+    private func makeContributionRepository() -> RemoteContributionRepository {
+        RemoteContributionRepository(dataSource: SupabaseContributionDataSource(client: client))
+    }
+
+    private func makeRelationshipRepository() -> RemoteRelationshipRepository {
+        RemoteRelationshipRepository(dataSource: SupabaseRelationshipDataSource(client: client))
+    }
+
+    func testContributionWritesRequireAuthentication() async throws {
+        let repository = makeContributionRepository()
+        do {
+            _ = try await repository.addRoute(
+                AddRouteRequest(
+                    idempotencyKey: IdempotencyKey(),
+                    gymID: GymID(rawValue: "10000000-0000-4000-8000-000000000001"),
+                    wallZoneID: WallZoneID(rawValue: "20000000-0000-4000-8000-000000000001"),
+                    colour: "Integration Blue", label: nil, officialGrade: nil, setDate: nil
+                )
+            )
+            XCTFail("Expected unauthenticated")
+        } catch let error as RepositoryError {
+            XCTAssertEqual(error, .unauthenticated)
+        }
+    }
+
+    func testAddRouteContribution() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let key = IdempotencyKey()
+        let request = AddRouteRequest(
+            idempotencyKey: key,
+            gymID: GymID(rawValue: "10000000-0000-4000-8000-000000000001"),
+            wallZoneID: WallZoneID(rawValue: "20000000-0000-4000-8000-000000000001"),
+            colour: "Integration Teal", label: nil, officialGrade: .v4, setDate: Date()
+        )
+
+        let first = try await makeContributionRepository().addRoute(request)
+        let second = try await makeContributionRepository().addRoute(request)
+
+        XCTAssertEqual(first.id, second.id)
+        XCTAssertEqual(first.colourOrTag, "Integration Teal")
+    }
+
+    func testShareExternalBetaLinkContribution() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let unique = UUID().uuidString.lowercased()
+        let link = try await makeContributionRepository().shareBetaLink(
+            ShareBetaLinkRequest(
+                idempotencyKey: IdempotencyKey(),
+                routeID: ClimbingRouteID(rawValue: "30000000-0000-4000-8000-000000000003"),
+                publicURL: try XCTUnwrap(URL(string: "https://example.com/beta/\(unique)")),
+                platform: .youtube, originalAuthor: "Integration Author",
+                originalPostURL: try XCTUnwrap(URL(string: "https://example.com/post/\(unique)")),
+                tags: [.crux], contributorHeightCentimetres: nil,
+                contributorArmSpanCentimetres: nil, embedSupport: .sourcePlatformOnly
+            )
+        )
+
+        XCTAssertEqual(link.sourceURL.scheme, "https")
+        XCTAssertEqual(link.tags, [.crux])
+    }
+
+    func testAddRoutePhotoMetadataContribution() async throws {
+        let userID = try await signUpAndCompleteSetup()
+        let photo = try await makeContributionRepository().addRoutePhoto(
+            AddRoutePhotoRequest(
+                idempotencyKey: IdempotencyKey(),
+                routeID: ClimbingRouteID(rawValue: "30000000-0000-4000-8000-000000000003"),
+                publicImageURL: try XCTUnwrap(URL(string: "https://example.com/route-photo/\(UUID().uuidString).jpg")),
+                width: 1200, height: 900
+            )
+        )
+
+        XCTAssertEqual(photo.contributorID.rawValue, userID.uuidString.lowercased())
+        XCTAssertEqual(photo.publicImageURL.scheme, "https")
+    }
+
+    func testSubmitRouteCorrectionContribution() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let receipt = try await makeContributionRepository().submitCorrection(
+            SubmitRouteCorrectionRequest(
+                idempotencyKey: IdempotencyKey(),
+                routeID: ClimbingRouteID(rawValue: "30000000-0000-4000-8000-000000000003"),
+                issue: .grade, proposedValue: "V4", explanation: "Integration correction"
+            )
+        )
+
+        XCTAssertEqual(receipt.status, "open")
+    }
+
+    func testConfirmResetContribution() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let receipt = try await makeContributionRepository().confirmReset(
+            ConfirmResetRequest(
+                idempotencyKey: IdempotencyKey(),
+                gymID: GymID(rawValue: "10000000-0000-4000-8000-000000000001"),
+                wallZoneID: WallZoneID(rawValue: "20000000-0000-4000-8000-000000000001"),
+                resetDate: Date()
+            )
+        )
+
+        XCTAssertEqual(receipt.state, .pending)
+        XCTAssertEqual(receipt.confirmationCount, 1)
+        XCTAssertFalse(receipt.isOfficial)
+    }
+
+    func testFlatBetaCommentContribution() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let betaID = BetaLinkID(rawValue: "40000000-0000-4000-8000-000000000001")
+        let repository = makeContributionRepository()
+        let comment = try await repository.addComment(
+            AddBetaCommentRequest(
+                idempotencyKey: IdempotencyKey(), betaLinkID: betaID,
+                body: "Integration comment", officialGymID: nil
+            )
+        )
+
+        let comments = try await repository.comments(betaLinkID: betaID)
+        XCTAssertTrue(comments.contains(comment))
+        XCTAssertLessThanOrEqual(comment.body.count, 200)
+    }
+
+    func testContentReportContribution() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let receipt = try await makeContributionRepository().reportContent(
+            SubmitContentReportRequest(
+                idempotencyKey: IdempotencyKey(), targetType: .betaLink,
+                targetID: "40000000-0000-4000-8000-000000000002",
+                category: .brokenLink, details: "Integration report"
+            )
+        )
+
+        XCTAssertFalse(receipt.isSevere)
+    }
+
+    func testFollowBlockAndUnblockRelationship() async throws {
+        let followerEmail = "follower-\(UUID().uuidString.prefix(8))@example.com"
+        let auth = makeAuthRepository()
+        _ = await auth.signUp(email: followerEmail, password: "password123")
+        _ = await auth.confirmAge(isOver16: true)
+        _ = await auth.updateUsername("follower-\(UUID().uuidString.prefix(8))")
+        let followerID = try XCTUnwrap(client.auth.currentUser?.id)
+        _ = await auth.signOut()
+
+        _ = await auth.signUp(
+            email: "relationship-\(UUID().uuidString.prefix(8))@example.com",
+            password: "password123"
+        )
+        _ = await auth.confirmAge(isOver16: true)
+        _ = await auth.updateUsername("rel-\(UUID().uuidString.prefix(8))")
+        let followedID = try XCTUnwrap(client.auth.currentUser?.id)
+        _ = await auth.signOut()
+        _ = await auth.signIn(email: followerEmail, password: "password123")
+
+        XCTAssertEqual(client.auth.currentUser?.id, followerID)
+        let repository = makeRelationshipRepository()
+        let target = UserID(rawValue: followedID.uuidString.lowercased())
+        try await repository.follow(userID: target, idempotencyKey: IdempotencyKey())
+        let followed = try await repository.state(with: target)
+        XCTAssertTrue(followed.isFollowing)
+        try await repository.block(userID: target, idempotencyKey: IdempotencyKey())
+        let blocked = try await repository.state(with: target)
+        XCTAssertTrue(blocked.isBlocked)
+        XCTAssertFalse(blocked.isFollowing)
+        try await repository.unblock(userID: target, idempotencyKey: IdempotencyKey())
+        let unblocked = try await repository.state(with: target)
+        XCTAssertFalse(unblocked.isBlocked)
+    }
+
+    func testOrdinarySessionRoleContextDoesNotExposePrivilegedRoleRows() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let context = try await RemoteRoleRepository(
+            dataSource: SupabaseRoleDataSource(client: client)
+        ).sessionRoleContext()
+
+        XCTAssertEqual(context.appRole, .user)
+        XCTAssertTrue(context.managedGymIDs.isEmpty)
+        XCTAssertFalse(context.isModerator)
     }
 
     // MARK: - Authentication

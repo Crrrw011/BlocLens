@@ -161,9 +161,47 @@ The offline queue is a small actor (`FileBackedLogbookQueue`, with an `InMemoryL
 
 `RemoteErrorMapping` maps `ASWebAuthenticationSessionError.canceledLogin` and `ASAuthorizationError.canceled` to `.userCancelled`. `RepositoryError` gained `.userCancelled` and `.externalServiceError`.
 
+## Contribution writes (6D-4A)
+
+`ContributionRepository` is the single write boundary for route contributions. `RemoteContributionRepository` and `MockContributionRepository` are actors and expose matching operations:
+
+- `addRoute(_:)` requires a gym, wall zone, and either colour or label. The remote implementation supplies the authenticated `created_by` value, asks `is_gym_official(gym_id)` before marking an official source, and relies on the route foreign key plus RLS for the final authority check.
+- `shareBetaLink(_:)` accepts public HTTPS URL metadata, original-post attribution, platform and the fixed beta-tag set. It never accepts bytes, a local path, upload state, download state, transcoding state, or a hosted video object.
+- `addRoutePhoto(_:)` writes a public HTTPS reference into the existing photo metadata boundary. Contributor credit is the authenticated `uploaded_by` identity; no image bytes are sent by this repository. Arbitrary credit text is intentionally not invented because the approved schema has no such column.
+- `submitCorrection(_:)`, `confirmReset(_:)`, `addComment(_:)`, and `reportContent(_:)` write the authenticated evidence rows. Comment validation enforces 1–200 characters. The existing database triggers remain authoritative for three-person correction/reset thresholds and one-severe/three-ordinary report thresholds.
+
+Every insertable contribution entity uses the caller-generated UUID from `IdempotencyKey` as its primary key. A repeated insert resolves a unique conflict by reading that exact row. Reset confirmations and relationship tables already have composite database keys; their actor also remembers completed request keys for the current process. A retry therefore cannot fabricate an additional vote, confirmation, follow, or block.
+
+`RoutePhotoRecord`, `RouteCorrectionRecord`, `ResetEventRecord`, `BetaCommentRecord`, and `ContentReportRecord` are transport-only records. The corresponding write DTOs encode the existing snake-case schema without leaking Supabase into views. Remote failures map to `RepositoryError`; successful UI feedback is shown only after the repository returns.
+
+## Block and Follow (6D-4B)
+
+`RelationshipRepository` provides public profile discovery, relationship state, Follow/Unfollow, and Block/Unblock. `RemoteRelationshipRepository` writes only the authenticated user's `user_follows` and `user_blocks` rows. The database composite keys prevent duplicates, RLS keeps Block rows private, the follow policy rejects either-direction blocks, and the existing `user_block_stop_follows` trigger removes both follow directions when a block is inserted.
+
+The app removes accounts blocked by the current user from the public-profile list and from beta/comment repository results. This filtering lives in actor repositories rather than SwiftUI views, and the Mock implementation mirrors it. The current approved migrations still allow a technically capable authenticated client to query otherwise-public beta/comment/profile rows directly; a future server-filtered RPC or RLS revision is required before describing Block as a database-enforced content-read privacy boundary. No migration was changed in 6D-4 because this delivery explicitly prohibited SQL changes.
+
+Follow exists only as a notification preference input for new beta contributions. There is no activity feed, follower-centric surface, or push implementation.
+
+## Session role context (6D-4C)
+
+`RoleRepository.sessionRoleContext()` returns the minimum role information needed by the iPhone session: an `appRole` capability tier and the set of managed gym IDs. `RemoteRoleRepository` composes this from `get_my_profile()`, `is_admin()`, `is_admin_or_moderator()`, and `gym_official_scope`. SwiftUI receives `SessionRoleContext`, never raw `app_user_roles` or `gym_memberships` rows.
+
+- Trusted Contributor status comes from the server-maintained profile field. The existing Helpful triggers permanently award it at 67 valid Helpful votes; the client cannot set the field or Helpful aggregate.
+- Verified gym capabilities are scoped to `managedGymIDs`. Official comments carry the managed gym ID, and official route/reset decisions still pass RLS and `is_gym_official` checks.
+- Moderator and Administrator are capability flags for the few app presentation decisions that need them. Full moderation and role management remain on the separate administrator web surface.
+- Gym officials do not receive an API for editing community-grade aggregates or Helpful counts. Ordinary voting operations retain their own attempt and self-vote rules.
+
+`AppSession` refreshes this context after session restore, sign-in, and a successful Helpful action; it clears the context on sign-out. A failed role read falls back to no privileged capabilities rather than granting access.
+
+## 6D-4 UI mapping
+
+The central Add menu now opens functional, authenticated forms for Add Route and Share Beta Link. Route Detail provides photo metadata, correction, reset confirmation, flat beta comments, reporting, and real Helpful writes. Profile exposes a deliberately secondary contributor-management list for Follow/Block and shows only the session's minimal capability summary. Existing `ProtectedIntent` recovery reopens a pending Route Detail contribution after successful sign-in.
+
+New hard-coded development-stage copy uses `Text(verbatim:)` and does not alter the String Catalog. Mock remains the default app environment; remote composition remains Debug-only.
+
 ## Next stages
 
-- Stage 6D-4A: contribution writes (Add Route, Share Beta Link, comments) behind the authenticated repositories.
-- Before D-4A Cloud writes: deploy and verify migrations `0001`–`0011`, including the Auth-to-Profile trigger and negative RLS tests, under separate approval.
+- Add a server-filtered Block-aware read RPC or RLS design before treating direct Data API reads as Block-filtered.
+- Add a schema-backed route-photo credit display field only if product requirements require credit text distinct from the authenticated contributor profile.
 - Stage 8 (real device/TestFlight): end-to-end OAuth verification with real Apple/Google accounts against the single Cloud Auth/data boundary.
-- Later: Google Places, the administrator portal, storage/photo policy, notifications, and the account-deletion Edge Function.
+- Later: Google Places, the administrator portal, image storage policy, notification delivery, and the account-deletion Edge Function.

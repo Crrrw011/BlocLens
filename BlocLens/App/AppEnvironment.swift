@@ -6,6 +6,9 @@ struct AppEnvironment: Sendable {
     let routeRepository: any RouteRepository
     let betaRepository: any BetaRepository
     let logbookRepository: any LogbookRepository
+    let contributionRepository: any ContributionRepository
+    let relationshipRepository: any RelationshipRepository
+    let roleRepository: any RoleRepository
     let authenticationRepository: any AuthenticationRepository
     let onboardingStore: any OnboardingStore
     let languagePreferenceStore: any LanguagePreferenceStore
@@ -25,6 +28,16 @@ struct AppEnvironment: Sendable {
             routeRepository: MockRouteRepository(scenario: scenario),
             betaRepository: MockBetaRepository(scenario: scenario),
             logbookRepository: MockLogbookRepository(isOnline: isOnline),
+            contributionRepository: MockContributionRepository(),
+            relationshipRepository: MockRelationshipRepository(),
+            roleRepository: MockRoleRepository(
+                context: authenticationState.profile.map {
+                    SessionRoleContext(
+                        appRole: $0.isTrustedContributor ? .trustedContributor : .user,
+                        managedGymIDs: []
+                    )
+                } ?? .guest
+            ),
             authenticationRepository: MockAuthenticationRepository(initialState: authenticationState),
             onboardingStore: onboardingStore ?? InMemoryOnboardingStore(isComplete: isOnboardingComplete),
             languagePreferenceStore: languagePreferenceStore,
@@ -54,6 +67,15 @@ struct AppEnvironment: Sendable {
             logbookRepository: RemoteLogbookRepository(
                 dataSource: SupabaseLogbookDataSource(client: client),
                 queue: logbookQueue
+            ),
+            contributionRepository: RemoteContributionRepository(
+                dataSource: SupabaseContributionDataSource(client: client)
+            ),
+            relationshipRepository: RemoteRelationshipRepository(
+                dataSource: SupabaseRelationshipDataSource(client: client)
+            ),
+            roleRepository: RemoteRoleRepository(
+                dataSource: SupabaseRoleDataSource(client: client)
             ),
             authenticationRepository: SupabaseAuthenticationRepository(
                 dataSource: SupabaseAuthDataSource(client: client)
@@ -87,21 +109,25 @@ final class AppSession: ObservableObject {
     @Published var appearancePreference: AppearancePreference = .system
     @Published private(set) var languagePreference: LanguagePreference = .system
     @Published private(set) var dismissedContributionPrompts: Set<String> = []
+    @Published private(set) var roleContext: SessionRoleContext = .guest
 
     private let authenticationRepository: any AuthenticationRepository
     private let onboardingStore: any OnboardingStore
     private let languagePreferenceStore: any LanguagePreferenceStore
+    private let roleRepository: any RoleRepository
 
     init(environment: AppEnvironment) {
         authenticationRepository = environment.authenticationRepository
         onboardingStore = environment.onboardingStore
         languagePreferenceStore = environment.languagePreferenceStore
+        roleRepository = environment.roleRepository
         languagePreference = environment.languagePreferenceStore.preference()
     }
 
     func load() async {
         hasCompletedOnboarding = onboardingStore.isComplete()
         authenticationState = await authenticationRepository.restoreSession()
+        await refreshRoleContext()
         hasLoaded = true
     }
 
@@ -175,6 +201,7 @@ final class AppSession: ObservableObject {
             resumedIntent = pendingIntent
             pendingIntent = nil
             isSignInGatePresented = false
+            Task { await refreshRoleContext() }
         }
     }
 
@@ -193,6 +220,7 @@ final class AppSession: ObservableObject {
         pendingIntent = nil
         resumedIntent = nil
         isSignInGatePresented = false
+        roleContext = .guest
     }
 
     func dismissContributionPrompt(_ identifier: String) {
@@ -225,5 +253,13 @@ final class AppSession: ObservableObject {
         case .light: .light
         case .dark: .dark
         }
+    }
+
+    func refreshRoleContext() async {
+        guard authenticationState.isSignedIn else {
+            roleContext = .guest
+            return
+        }
+        roleContext = (try? await roleRepository.sessionRoleContext()) ?? .guest
     }
 }

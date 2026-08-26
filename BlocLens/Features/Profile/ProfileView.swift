@@ -71,13 +71,44 @@ struct ProfileView: View {
 
             Section(L10n.Profile.contributorStatus) {
                 StatusChip(
-                    title: profile.isTrustedContributor ? L10n.Profile.trustedContributor : L10n.Profile.contributorInProgress,
+                    title: session.roleContext.isTrustedContributor ? L10n.Profile.trustedContributor : L10n.Profile.contributorInProgress,
                     systemImage: "checkmark.seal",
                     colour: DesignColour.opticBlue
                 )
                 Text("\(profile.helpfulVotes) \(String(localized: L10n.Profile.helpfulProgressSuffix))")
                     .font(.subheadline)
                     .accessibilityLabel("\(profile.helpfulVotes) \(String(localized: L10n.Profile.helpfulProgressSuffix))")
+            }
+
+            Section {
+                NavigationLink {
+                    RelationshipManagementView(repository: environment.relationshipRepository)
+                } label: {
+                    Label {
+                        Text(verbatim: "Contributors")
+                    } icon: {
+                        Image(systemName: "person.2")
+                    }
+                }
+                if !session.roleContext.managedGymIDs.isEmpty {
+                    LabeledContent {
+                        Text(verbatim: "\(session.roleContext.managedGymIDs.count)")
+                    } label: {
+                        Text(verbatim: "Verified gym access")
+                    }
+                }
+                if session.roleContext.isModerator {
+                    Label {
+                        Text(verbatim: session.roleContext.isAdministrator ? "Administrator access" : "Moderator access")
+                    } icon: {
+                        Image(systemName: "checkmark.shield")
+                    }
+                    .foregroundStyle(DesignColour.textSecondary)
+                }
+            } header: {
+                Text(verbatim: "Account access")
+            } footer: {
+                Text(verbatim: "Role checks come from the authenticated session. Full moderation tools remain on the separate web surface.")
             }
 
             Section {

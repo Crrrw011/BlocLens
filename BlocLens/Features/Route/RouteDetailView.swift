@@ -10,8 +10,9 @@ struct RouteDetailView: View {
     @State private var showsSafetyConfirmation = false
     @State private var showsLogbookDetails = false
     @State private var showsExternalHandoffNotice = false
-    @State private var showsIssueMenu = false
-    @State private var selectedIssue: LocalizedStringResource?
+    @State private var activeContributionSheet: RouteContributionSheet?
+    @State private var pendingContributionSheet: RouteContributionSheet?
+    @State private var reportBetaID: BetaLinkID?
     @State private var helpfulLinkIDs: Set<BetaLinkID> = []
     @State private var saveFeedbackTrigger = 0
     @State private var helpfulFeedbackTrigger = 0
@@ -42,7 +43,7 @@ struct RouteDetailView: View {
                 quickLogbookSection
                 betaSection
                 communityGradeSection
-                commentsPlaceholder
+                commentsSection
                 reportAndCorrectionSection
             }
             .padding()
@@ -62,6 +63,11 @@ struct RouteDetailView: View {
             case .helpful(let betaID):
                 session.consumeResumedIntent(intent)
                 markHelpful(betaID)
+            case .account:
+                guard let pendingContributionSheet else { break }
+                session.consumeResumedIntent(.account)
+                self.pendingContributionSheet = nil
+                activeContributionSheet = pendingContributionSheet
             default:
                 break
             }
@@ -80,20 +86,6 @@ struct RouteDetailView: View {
             Button(L10n.Common.ok, role: .cancel) {}
         } message: {
             Text(L10n.Beta.externalHandoffMessage)
-        }
-        .confirmationDialog(L10n.Beta.reportIssue, isPresented: $showsIssueMenu) {
-            Button(L10n.Beta.wrongRoute) { selectedIssue = L10n.Beta.wrongRoute }
-            Button(L10n.Beta.brokenLink) { selectedIssue = L10n.Beta.brokenLink }
-            Button(L10n.Beta.unsafeContent, role: .destructive) { selectedIssue = L10n.Beta.unsafeContent }
-            Button(L10n.Common.cancel, role: .cancel) {}
-        }
-        .alert(L10n.Beta.feedbackPlaceholderTitle, isPresented: Binding(
-            get: { selectedIssue != nil },
-            set: { if !$0 { selectedIssue = nil } }
-        )) {
-            Button(L10n.Common.ok, role: .cancel) {}
-        } message: {
-            Text(L10n.Beta.feedbackPlaceholderMessage)
         }
         .alert(
             L10n.State.errorTitle,
@@ -118,6 +110,20 @@ struct RouteDetailView: View {
                     }
                 }
             }
+        }
+        .sheet(item: $activeContributionSheet) { sheet in
+            contributionSheet(sheet)
+        }
+        .alert(
+            Text(verbatim: "Contribution saved"),
+            isPresented: Binding(
+                get: { viewModel.contributionMessage != nil },
+                set: { if !$0 { viewModel.clearContributionMessage() } }
+            )
+        ) {
+            Button { viewModel.clearContributionMessage() } label: { Text(verbatim: "OK") }
+        } message: {
+            Text(verbatim: viewModel.contributionMessage ?? "")
         }
         .sensoryFeedback(.success, trigger: saveFeedbackTrigger)
         .sensoryFeedback(.success, trigger: helpfulFeedbackTrigger)
@@ -162,7 +168,7 @@ struct RouteDetailView: View {
                     title: L10n.Route.photoContributionTitle,
                     message: L10n.Route.photoContributionMessage,
                     primaryActionTitle: L10n.Route.addPhoto,
-                    primaryAction: { _ = session.requireAuthentication(for: .account) },
+                    primaryAction: { requestContribution(.photo) },
                     dismissAction: { session.dismissContributionPrompt("route-photo-\(route.id.rawValue)") }
                 )
             }
@@ -275,7 +281,10 @@ struct RouteDetailView: View {
                     isHelpful: helpfulLinkIDs.contains(link.id),
                     openOriginal: { showsExternalHandoffNotice = true },
                     markHelpful: { markHelpful(link.id) },
-                    reportIssue: { showsIssueMenu = true }
+                    reportIssue: {
+                        reportBetaID = link.id
+                        requestContribution(.reportBeta)
+                    }
                 )
             }
             ForEach(viewModel.brokenLinks) { link in
@@ -316,11 +325,34 @@ struct RouteDetailView: View {
         .cardStyle()
     }
 
-    private var commentsPlaceholder: some View {
+    private var commentsSection: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.small) {
             Text(L10n.Route.commentsTitle).font(.title3.bold())
-            Text(L10n.Route.commentsPlaceholder)
-                .foregroundStyle(DesignColour.secondaryText)
+            if viewModel.comments.isEmpty {
+                Text(verbatim: "No comments yet. Keep comments practical and specific to this beta.")
+                    .foregroundStyle(DesignColour.secondaryText)
+            } else {
+                ForEach(viewModel.comments) { comment in
+                    VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+                        HStack {
+                            Text(verbatim: comment.officialGymID == nil ? "Climber" : "Verified gym")
+                                .font(.caption.weight(.semibold))
+                            Spacer()
+                            Text(verbatim: comment.createdAt.formatted(date: .abbreviated, time: .omitted))
+                                .font(.caption)
+                                .foregroundStyle(DesignColour.textTertiary)
+                        }
+                        Text(verbatim: comment.body)
+                    }
+                    if comment.id != viewModel.comments.last?.id { Divider() }
+                }
+            }
+            Button {
+                requestContribution(.comment)
+            } label: {
+                Label { Text(verbatim: "Add comment") } icon: { Image(systemName: "text.bubble") }
+            }
+            .buttonStyle(CompactActionButtonStyle())
         }
         .cardStyle()
     }
@@ -329,11 +361,17 @@ struct RouteDetailView: View {
         VStack(alignment: .leading, spacing: DesignSpacing.small) {
             SectionTitle(title: L10n.Route.accuracyTitle)
             Button(L10n.Route.suggestCorrection) {
-                _ = session.requireAuthentication(for: .account)
+                requestContribution(.correction)
             }
             .buttonStyle(SecondaryButtonStyle())
             Button(L10n.Route.reportRoute) {
-                _ = session.requireAuthentication(for: .account)
+                requestContribution(.reportRoute)
+            }
+            .buttonStyle(CompactActionButtonStyle())
+            Button {
+                requestContribution(.reset)
+            } label: {
+                Label { Text(verbatim: "Confirm wall reset") } icon: { Image(systemName: "arrow.clockwise") }
             }
             .buttonStyle(CompactActionButtonStyle())
         }
@@ -379,8 +417,84 @@ struct RouteDetailView: View {
 
     private func markHelpful(_ betaID: BetaLinkID) {
         guard session.requireAuthentication(for: .helpful(betaID: betaID)) else { return }
-        guard helpfulLinkIDs.insert(betaID).inserted else { return }
-        helpfulFeedbackTrigger += 1
+        guard !helpfulLinkIDs.contains(betaID) else { return }
+        Task {
+            if await viewModel.markHelpful(betaID: betaID) {
+                helpfulLinkIDs.insert(betaID)
+                helpfulFeedbackTrigger += 1
+                await session.refreshRoleContext()
+            }
+        }
+    }
+
+    private func requestContribution(_ sheet: RouteContributionSheet) {
+        pendingContributionSheet = sheet
+        if session.requireAuthentication(for: .account) {
+            pendingContributionSheet = nil
+            activeContributionSheet = sheet
+        }
+    }
+
+    @ViewBuilder
+    private func contributionSheet(_ sheet: RouteContributionSheet) -> some View {
+        switch sheet {
+        case .photo:
+            RoutePhotoMetadataSheet(
+                username: session.authenticationState.profile?.username ?? "Current account",
+                submit: { await viewModel.addPhoto(url: $0) }
+            )
+        case .correction:
+            RouteCorrectionSheet { issue, proposedValue, explanation in
+                await viewModel.submitCorrection(
+                    issue: issue, proposedValue: proposedValue, explanation: explanation
+                )
+            }
+        case .comment:
+            if let betaID = firstVisibleBetaID {
+                BetaCommentSheet { body in
+                    let officialGymID = session.roleContext.manages(gymID: route.gymID) ? route.gymID : nil
+                    return await viewModel.addComment(
+                        betaID: betaID, body: body, officialGymID: officialGymID
+                    )
+                }
+            } else {
+                NavigationStack {
+                    VStack(spacing: DesignSpacing.medium) {
+                        Image(systemName: "text.bubble")
+                            .font(.largeTitle)
+                        Text(verbatim: "No beta link available").font(.title2.bold())
+                        Text(verbatim: "Comments belong to a beta link. Share a public beta link first.")
+                            .foregroundStyle(DesignColour.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                }
+            }
+        case .reportRoute:
+            ContentReportSheet { category, details in
+                await viewModel.report(
+                    targetType: .route, targetID: route.id.rawValue,
+                    category: category, details: details
+                )
+            }
+        case .reportBeta:
+            ContentReportSheet { category, details in
+                guard let reportBetaID else { return false }
+                return await viewModel.report(
+                    targetType: .betaLink, targetID: reportBetaID.rawValue,
+                    category: category, details: details
+                )
+            }
+        case .reset:
+            ResetConfirmationSheet { await viewModel.confirmReset() }
+        }
+    }
+
+    private var firstVisibleBetaID: BetaLinkID? {
+        switch viewModel.betaState {
+        case .loaded(let links), .offlineWithCache(let links): links.first?.id
+        default: nil
+        }
     }
 }
 

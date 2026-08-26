@@ -61,7 +61,12 @@ struct AppShellView: View {
             Text(L10n.Add.menuMessage)
         }
         .sheet(item: $selectedAddAction) { action in
-            AddActionPlaceholderView(action: action)
+            switch action {
+            case .addNewRoute, .publishBetaLink:
+                AddContributionView(action: action, environment: environment)
+            case .recordCompletedRoute, .identifyOrMarkRoute:
+                AddActionPlaceholderView(action: action)
+            }
         }
         .sheet(isPresented: $session.isSignInGatePresented) {
             SignInGateView(session: session)
