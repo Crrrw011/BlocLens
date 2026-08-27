@@ -144,13 +144,10 @@ actor RemoteContributionRepository: ContributionRepository {
                 guard RemoteErrorMapping.map(error) == .conflict else { throw RemoteErrorMapping.map(error) }
             }
         }
-        let receipt = try await mapped { try await dataSource.fetchResetEvent(id: eventID) }?
-            .domain() ?? ResetConfirmationReceipt(
-                resetEventID: eventID,
-                state: official ? .confirmed : .pending,
-                confirmationCount: official ? 0 : 1,
-                isOfficial: official
-            )
+        guard let record = try await mapped({ try await dataSource.fetchResetEvent(id: eventID) }) else {
+            throw RepositoryError.notFound
+        }
+        let receipt = try record.domain()
         completedResetRequests[request.idempotencyKey] = receipt
         return receipt
     }

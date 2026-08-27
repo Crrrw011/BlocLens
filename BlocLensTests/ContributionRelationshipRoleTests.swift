@@ -264,6 +264,8 @@ struct RelationshipAndRoleRepositoryTests {
         #expect(!state.isFollowing)
         let visibleAfterBlock = await repository.publicProfiles()
         #expect(!visibleAfterBlock.contains { $0.userID == user.userID })
+        let blockedProfiles = await repository.blockedProfiles()
+        #expect(blockedProfiles.contains { $0.userID == user.userID })
     }
 
     @Test func unblockRestoresProfileVisibility() async throws {

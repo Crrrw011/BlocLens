@@ -85,11 +85,37 @@ struct AuthStateMachineTests {
         #expect(state == .error(.unauthenticated))
     }
 
+    @Test func signUpWithoutServerSessionReturnsUnauthenticated() async throws {
+        let fake = FakeAuthDataSource(signUpHasSession: false)
+        let repository = SupabaseAuthenticationRepository(dataSource: fake)
+
+        let state = await repository.signUp(email: "alice@example.com", password: "password123")
+
+        #expect(state == .error(.unauthenticated))
+        #expect(!fake.hasSession())
+    }
+
     @Test func signOutReturnsGuest() async throws {
         let fake = FakeAuthDataSource(hasSession: true, profile: makeProfile(username: "alice", ageConfirmed: Date()))
         let repository = SupabaseAuthenticationRepository(dataSource: fake)
-        let state = await repository.signOut()
+        let state = try await repository.signOut()
         #expect(state == .guest)
+    }
+
+    @Test func signOutFailurePreservesAuthenticatedRepositoryState() async throws {
+        let profile = makeProfile(username: "alice", ageConfirmed: Date())
+        let fake = FakeAuthDataSource(hasSession: true, profile: profile)
+        fake.signOutError = URLError(.cannotConnectToHost)
+        let repository = SupabaseAuthenticationRepository(dataSource: fake)
+        _ = await repository.restoreSession()
+
+        await #expect(throws: RepositoryError.network) {
+            _ = try await repository.signOut()
+        }
+        guard case .signedIn = await repository.state() else {
+            Issue.record("A failed SDK sign-out must preserve the authenticated state")
+            return
+        }
     }
 
     @Test func firstLoginWithoutUsernameEntersProfileSetup() async throws {
@@ -266,6 +292,8 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
     var updateUsernameError: Error?
     var appleSignInError: Error?
     var googleSignInError: Error?
+    var signOutError: Error?
+    var signUpHasSession: Bool
     var profileAfterUsernameUpdate: UserProfileRecord?
     var receivedAppleNonce: String?
 
@@ -275,7 +303,8 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
         profile: UserProfileRecord? = nil,
         signInError: Error? = nil,
         signUpError: Error? = nil,
-        updateUsernameError: Error? = nil
+        updateUsernameError: Error? = nil,
+        signUpHasSession: Bool = true
     ) {
         hasSessionFlag = hasSession
         userIDValue = userID ?? profile?.id
@@ -283,6 +312,7 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
         self.signInError = signInError
         self.signUpError = signUpError
         self.updateUsernameError = updateUsernameError
+        self.signUpHasSession = signUpHasSession
     }
 
     func hasSession() -> Bool { hasSessionFlag }
@@ -294,9 +324,12 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
         hasSessionFlag = true
     }
 
-    func signUp(email: String, password: String) async throws {
+    func signUp(email: String, password: String) async throws -> RemoteAuthSignUpResult {
         if let signUpError { throw signUpError }
-        hasSessionFlag = true
+        hasSessionFlag = signUpHasSession
+        let userID = userIDValue ?? UUID()
+        userIDValue = userID
+        return RemoteAuthSignUpResult(userID: userID, hasSession: signUpHasSession)
     }
 
     func signInWithApple(idToken: String, nonce: String) async throws {
@@ -311,6 +344,7 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
     }
 
     func signOut() async throws {
+        if let signOutError { throw signOutError }
         hasSessionFlag = false
         userIDValue = nil
     }

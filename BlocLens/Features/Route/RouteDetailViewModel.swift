@@ -14,7 +14,7 @@ final class RouteDetailViewModel: ObservableObject {
     private let route: ClimbingRoute
     private let betaRepository: any BetaRepository
     private let logbookRepository: any LogbookRepository
-    private let userID: UserID
+    private let userIDProvider: @Sendable () -> UserID?
     private let gymRepository: any GymRepository
     private let contributionRepository: any ContributionRepository
 
@@ -24,7 +24,7 @@ final class RouteDetailViewModel: ObservableObject {
         logbookRepository = environment.logbookRepository
         gymRepository = environment.gymRepository
         contributionRepository = environment.contributionRepository
-        userID = environment.currentUserID
+        userIDProvider = environment.currentUserID
     }
 
     func load(viewerProfile: UserProfile? = nil) async {
@@ -40,7 +40,7 @@ final class RouteDetailViewModel: ObservableObject {
                 }
             )
             async let brokenRequest = betaRepository.brokenBetaLinks(routeID: route.id)
-            async let entryRequest = logbookRepository.entry(userID: userID, routeID: route.id)
+            async let entryRequest = currentUserEntry()
             async let zonesRequest = gymRepository.allWallZones()
             let (links, broken, entry, zones) = try await (betaRequest, brokenRequest, entryRequest, zonesRequest)
             betaState = links.isEmpty ? .empty : .loaded(links)
@@ -48,7 +48,7 @@ final class RouteDetailViewModel: ObservableObject {
             logbookEntry = entry
             wallZone = zones.first { $0.id == route.wallZoneID }
             if let betaID = links.first?.id {
-                comments = (try? await contributionRepository.comments(betaLinkID: betaID)) ?? []
+                comments = try await contributionRepository.comments(betaLinkID: betaID)
             } else {
                 comments = []
             }
@@ -64,6 +64,7 @@ final class RouteDetailViewModel: ObservableObject {
     @discardableResult
     func save(status: LogbookStatus) async -> LogbookEntry? {
         do {
+            guard let userID = userIDProvider() else { throw RepositoryError.unauthenticated }
             let entry = try await logbookRepository.saveStatus(
                 userID: userID,
                 routeID: route.id,
@@ -80,6 +81,11 @@ final class RouteDetailViewModel: ObservableObject {
             saveError = .fixtureFailure
             return nil
         }
+    }
+
+    private func currentUserEntry() async throws -> LogbookEntry? {
+        guard let userID = userIDProvider() else { return nil }
+        return try await logbookRepository.entry(userID: userID, routeID: route.id)
     }
 
     @discardableResult

@@ -216,6 +216,10 @@ actor MockRelationshipRepository: RelationshipRepository {
         profiles.filter { !blocked.contains($0.userID) && $0.userID != currentUserID }
     }
 
+    func blockedProfiles() -> [PublicUserProfile] {
+        profiles.filter { blocked.contains($0.userID) && $0.userID != currentUserID }
+    }
+
     func state(with userID: UserID) -> UserRelationshipState {
         UserRelationshipState(isFollowing: following.contains(userID), isBlocked: blocked.contains(userID))
     }

@@ -116,6 +116,7 @@ nonisolated protocol ContributionRepository: Sendable {
 
 nonisolated protocol RelationshipRepository: Sendable {
     func publicProfiles() async throws -> [PublicUserProfile]
+    func blockedProfiles() async throws -> [PublicUserProfile]
     func state(with userID: UserID) async throws -> UserRelationshipState
     func follow(userID: UserID, idempotencyKey: IdempotencyKey) async throws
     func unfollow(userID: UserID, idempotencyKey: IdempotencyKey) async throws

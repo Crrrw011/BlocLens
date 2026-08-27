@@ -211,3 +211,13 @@ There is explicitly no video database table, video bucket, direct video upload, 
 - External URL allow-listing, redirect safety and link health checking need a trusted server boundary.
 - The separate administrator portal and secure server operations are not implemented.
 - Storage policies are not defined because no bucket is created in this stage.
+
+## D-4R authenticated read enforcement
+
+Migration `20260827001650_secure_block_aware_reads.sql` adds the database-enforced mutual Block boundary for authenticated clients. Anonymous users retain the approved discovery contract: public profiles and comments remain public where already permitted, and route summaries expose a sanitised beta count without URL, author, platform or tags. A Block is an authenticated relationship and cannot promise to hide otherwise-public information from a person who signs out.
+
+For signed-in users, the database filters both directions on `profiles`, `beta_links` and `beta_comments`. The same predicate governs direct table reads, by-ID filters and security-invoker views. `visible_beta_count_for_route` keeps its count-only output and excludes blocked submitters only when an authenticated identity is present. The reverse `(blocked_id, blocker_id)` index supports the second direction efficiently.
+
+The helper functions live in the non-exposed `private` schema, are `SECURITY DEFINER` only to inspect the private Block relation without RLS recursion, fix `search_path` to the empty path and derive the caller solely from `auth.uid()`. `PUBLIC` and `anon` execution are revoked. The owner-only `get_my_blocked_profiles()` RPC exposes only safe profile fields for accounts the caller personally blocked, enabling Unblock without revealing incoming Block relationships.
+
+Local role fixtures are development seed data, not production migrations. Reset creates ordinary, Trusted Contributor, Verified Gym, Moderator and Administrator identities with reserved `.invalid` addresses. pgTAP verifies the 67-valid-Helpful threshold, permanent award semantics, self-vote rejection, gym-specific membership, moderator/admin separation, owner-only Logbook access and direct Data API Block enforcement. Integration and Local Remote UI tests must use a normally signed Simulator so Supabase Auth can persist its session securely.

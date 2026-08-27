@@ -100,11 +100,13 @@ struct SignInGateView: View {
                 .autocorrectionDisabled()
                 .padding(DesignSpacing.small)
                 .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityIdentifier("auth-email-field")
 
             SecureField(Self.passwordPlaceholder, text: $password)
                 .textContentType(.password)
                 .padding(DesignSpacing.small)
                 .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityIdentifier("auth-password-field")
 
             if case .error = session.authenticationState {
                 Text(verbatim: Self.signInFailed)
@@ -120,6 +122,7 @@ struct SignInGateView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(email.isEmpty || password.isEmpty || !isOver16)
+                .accessibilityIdentifier("auth-create-account-button")
 
                 Button {
                     isCreatingAccount = false
@@ -127,6 +130,7 @@ struct SignInGateView: View {
                     Text(verbatim: Self.signInInstead)
                 }
                 .buttonStyle(CompactActionButtonStyle())
+                .accessibilityIdentifier("auth-sign-in-instead-button")
             } else {
                 Button {
                     Task { await session.signIn(email: email, password: password) }
@@ -135,6 +139,7 @@ struct SignInGateView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(email.isEmpty || password.isEmpty)
+                .accessibilityIdentifier("auth-email-sign-in-button")
 
                 Button {
                     isCreatingAccount = true
@@ -142,6 +147,7 @@ struct SignInGateView: View {
                     Text(verbatim: Self.createAccountLink)
                 }
                 .buttonStyle(CompactActionButtonStyle())
+                .accessibilityIdentifier("auth-create-account-link")
             }
 
             #if DEBUG
@@ -159,6 +165,7 @@ struct SignInGateView: View {
             Text(verbatim: Self.ageConfirmation)
                 .font(DesignTypography.body)
         }
+        .accessibilityIdentifier("auth-age-confirmation")
     }
 
     private var profileSetupForm: some View {
@@ -171,6 +178,7 @@ struct SignInGateView: View {
                 .autocorrectionDisabled()
                 .padding(DesignSpacing.small)
                 .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityIdentifier("auth-username-field")
 
             if case .error = session.authenticationState {
                 Text(verbatim: Self.usernameUnavailable)
@@ -185,6 +193,7 @@ struct SignInGateView: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityIdentifier("auth-profile-continue-button")
 
             Button(L10n.Common.notNow) { session.cancelSignIn() }
                 .buttonStyle(CompactActionButtonStyle())

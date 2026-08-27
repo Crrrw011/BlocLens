@@ -5,13 +5,18 @@ nonisolated protocol RemoteAuthDataSource: Sendable {
     func hasSession() -> Bool
     func currentUserID() -> UUID?
     func signIn(email: String, password: String) async throws
-    func signUp(email: String, password: String) async throws
+    func signUp(email: String, password: String) async throws -> RemoteAuthSignUpResult
     func signInWithApple(idToken: String, nonce: String) async throws
     func signInWithGoogle() async throws
     func signOut() async throws
     func fetchProfile() async throws -> UserProfileRecord?
     func updateUsername(_ username: String, userID: UUID) async throws
     func updateAgeConfirmation(userID: UUID) async throws
+}
+
+nonisolated struct RemoteAuthSignUpResult: Equatable, Sendable {
+    let userID: UUID
+    let hasSession: Bool
 }
 
 struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
@@ -33,8 +38,14 @@ struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
         _ = try await client.auth.signIn(email: email, password: password)
     }
 
-    func signUp(email: String, password: String) async throws {
-        _ = try await client.auth.signUp(email: email, password: password)
+    func signUp(email: String, password: String) async throws -> RemoteAuthSignUpResult {
+        let response = try await client.auth.signUp(email: email, password: password)
+        switch response {
+        case .session(let session):
+            return RemoteAuthSignUpResult(userID: session.user.id, hasSession: true)
+        case .user(let user):
+            return RemoteAuthSignUpResult(userID: user.id, hasSession: false)
+        }
     }
 
     func signInWithApple(idToken: String, nonce: String) async throws {

@@ -36,7 +36,7 @@ actor MockAuthenticationRepository: AuthenticationRepository {
         return authenticationState
     }
 
-    func signOut() -> AuthenticationState {
+    func signOut() throws -> AuthenticationState {
         authenticationState = .guest
         return authenticationState
     }

@@ -25,7 +25,11 @@ errors = []
 files = MIGRATIONS.glob("*.sql").sort
 expected_names = (1..12).map { |number| format("%04d", number) }
 actual_names = files.map { |file| file.basename.to_s.split("_").first }
-errors << "Migration numbering is incomplete or out of order." unless actual_names == expected_names
+base_names = actual_names.first(expected_names.length)
+later_names = actual_names.drop(expected_names.length)
+valid_later_names = later_names.all? { |name| name.match?(/\A\d{14}\z/) }
+errors << "Migration numbering is incomplete or out of order." unless
+  base_names == expected_names && valid_later_names && later_names == later_names.sort.uniq
 
 combined = files.map do |file|
   sql = file.read
@@ -56,7 +60,7 @@ end
 combined.scan(/create(?: or replace)? function.*?(?=create(?: or replace)? function|\z)/im).each do |function_sql|
   next unless function_sql.match?(/security definer/i)
 
-  function_name = function_sql[/function\s+public\.(\w+)/i, 1] || "unknown"
+  function_name = function_sql[/function\s+(?:public|private)\.(\w+)/i, 1] || "unknown"
   errors << "SECURITY DEFINER function #{function_name} has no empty search_path." unless function_sql.match?(
     /set search_path = ''/i
   )

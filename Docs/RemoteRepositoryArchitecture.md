@@ -205,3 +205,15 @@ New hard-coded development-stage copy uses `Text(verbatim:)` and does not alter 
 - Add a schema-backed route-photo credit display field only if product requirements require credit text distinct from the authenticated contributor profile.
 - Stage 8 (real device/TestFlight): end-to-end OAuth verification with real Apple/Google accounts against the single Cloud Auth/data boundary.
 - Later: Google Places, the administrator portal, image storage policy, notification delivery, and the account-deletion Edge Function.
+
+## D-4R authentication and Block boundary
+
+Local email sign-up was verified to return a real Supabase session. The earlier integration failures were caused by invoking Simulator tests with code signing disabled: the SDK could not use its secure session storage in that test configuration. Simulator tests that exercise Auth therefore run with normal local signing. The repository never fabricates a session, and profile setup, the 16+ declaration, restoration and pending-intent recovery all use the authenticated SDK user.
+
+The composition root now exposes the current Domain `UserID` through a closure backed by the single shared `SupabaseClient`. Mock mode deliberately returns the development fixture identity; Local Remote mode derives it from the current Auth session. Views do not retain a second SDK user or authenticated Boolean. Sign-out errors are propagated and preserve the existing authenticated state instead of presenting a false guest state. A role refresh failure fails closed, records an unconfirmed capability state and hides privileged UI.
+
+Migration `20260827001650_secure_block_aware_reads.sql` separates anonymous and authenticated read policies for profiles, beta links and beta comments. Authenticated policies use `auth.uid()` through narrowly granted, fixed-search-path helpers to enforce a block in either direction. Security-invoker views inherit those policies, the guest beta-count RPC returns only a count, and authenticated counts exclude blocked contributors. Follow, Helpful and comment inserts also reject either-direction blocks. Direct table, by-ID, list, view and count paths are covered by pgTAP.
+
+`get_my_blocked_profiles()` is the narrow owner-only exception used by the Block management screen. It returns safe profile fields only for rows where `blocker_id = auth.uid()`; it does not reveal who blocked the caller. This lets a user unblock an account without reopening ordinary public-profile, beta or comment reads. Unblock never restores Follow.
+
+The local seed now includes deterministic email/password identities for ordinary, Trusted Contributor, Verified Gym, Moderator and Administrator test roles. They use reserved `.invalid` addresses and a local-only test password. No service-role credential enters the app or UI tests. Mock remains the default and Release remains Mock-only. Cloud behaviour and complete D-4 localisation remain separate follow-up scopes.

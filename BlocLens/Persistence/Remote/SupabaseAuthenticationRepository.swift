@@ -14,6 +14,8 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func restoreSession() async -> AuthenticationState {
         do {
             currentState = try await resolvedCurrentSession()
+        } catch let error as RepositoryError {
+            currentState = .error(error)
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -24,6 +26,8 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
         do {
             try await dataSource.signIn(email: email, password: password)
             currentState = try await resolvedCurrentSession()
+        } catch let error as RepositoryError {
+            currentState = .error(error)
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -32,8 +36,15 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
 
     func signUp(email: String, password: String) async -> AuthenticationState {
         do {
-            try await dataSource.signUp(email: email, password: password)
+            let result = try await dataSource.signUp(email: email, password: password)
+            guard result.hasSession,
+                  dataSource.hasSession(),
+                  dataSource.currentUserID() == result.userID else {
+                throw RepositoryError.unauthenticated
+            }
             currentState = try await resolvedCurrentSession()
+        } catch let error as RepositoryError {
+            currentState = .error(error)
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -48,6 +59,8 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
             }
             try await dataSource.updateUsername(username, userID: userID)
             currentState = try await resolvedCurrentSession()
+        } catch let error as RepositoryError {
+            currentState = .error(error)
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
@@ -66,17 +79,25 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
             }
             try await dataSource.updateAgeConfirmation(userID: userID)
             currentState = try await resolvedCurrentSession()
+        } catch let error as RepositoryError {
+            currentState = .error(error)
         } catch {
             currentState = .error(RemoteErrorMapping.map(error))
         }
         return currentState
     }
 
-    func signOut() async -> AuthenticationState {
-        do {
-            try await dataSource.signOut()
-        } catch {
-            // Even when the remote sign-out fails, the local state is cleared.
+    func signOut() async throws -> AuthenticationState {
+        do { try await dataSource.signOut() }
+        catch is CancellationError { throw CancellationError() }
+        catch {
+            // The SDK clears the local session before it attempts the server
+            // logout. If the server call fails, the local session is already
+            // gone, so the user is signed out locally rather than still signed
+            // in. Only surface an error when a session actually remains.
+            if dataSource.hasSession() {
+                throw RemoteErrorMapping.map(error)
+            }
         }
         currentState = .guest
         return currentState

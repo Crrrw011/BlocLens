@@ -4,6 +4,7 @@ import Supabase
 nonisolated protocol RemoteRelationshipDataSource: Sendable {
     func currentUserID() -> UUID?
     func fetchPublicProfiles() async throws -> [PublicProfileRecord]
+    func fetchBlockedProfiles() async throws -> [PublicProfileRecord]
     func fetchBlockedUserIDs(blockerID: UUID) async throws -> [UUID]
     func isFollowing(followerID: UUID, followedID: UUID) async throws -> Bool
     func isBlocked(blockerID: UUID, blockedID: UUID) async throws -> Bool
@@ -21,6 +22,12 @@ struct SupabaseRelationshipDataSource: RemoteRelationshipDataSource, Sendable {
     func fetchPublicProfiles() async throws -> [PublicProfileRecord] {
         let response: PostgrestResponse<[PublicProfileRecord]> = try await client
             .from("public_profiles").select().execute()
+        return response.value
+    }
+
+    func fetchBlockedProfiles() async throws -> [PublicProfileRecord] {
+        let response: PostgrestResponse<[PublicProfileRecord]> = try await client
+            .rpc("get_my_blocked_profiles").execute()
         return response.value
     }
 
@@ -89,6 +96,15 @@ actor RemoteRelationshipRepository: RelationshipRepository {
                 .map { try $0.domain() }
         } catch is CancellationError { throw CancellationError() }
         catch let error as RepositoryError { throw error }
+        catch is RemoteMappingError { throw RepositoryError.decodingFailure }
+        catch { throw RemoteErrorMapping.map(error) }
+    }
+
+    func blockedProfiles() async throws -> [PublicUserProfile] {
+        _ = try requireUser()
+        do {
+            return try await dataSource.fetchBlockedProfiles().map { try $0.domain() }
+        } catch is CancellationError { throw CancellationError() }
         catch is RemoteMappingError { throw RepositoryError.decodingFailure }
         catch { throw RemoteErrorMapping.map(error) }
     }

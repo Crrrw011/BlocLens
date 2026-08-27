@@ -1,4 +1,5 @@
 import Combine
+import Supabase
 import SwiftUI
 
 struct AppEnvironment: Sendable {
@@ -12,7 +13,7 @@ struct AppEnvironment: Sendable {
     let authenticationRepository: any AuthenticationRepository
     let onboardingStore: any OnboardingStore
     let languagePreferenceStore: any LanguagePreferenceStore
-    let currentUserID: UserID
+    let currentUserID: @Sendable () -> UserID?
     let dataAvailability: DataAvailability
 
     static func development(
@@ -41,7 +42,7 @@ struct AppEnvironment: Sendable {
             authenticationRepository: MockAuthenticationRepository(initialState: authenticationState),
             onboardingStore: onboardingStore ?? InMemoryOnboardingStore(isComplete: isOnboardingComplete),
             languagePreferenceStore: languagePreferenceStore,
-            currentUserID: DevelopmentFixtures.currentUserID,
+            currentUserID: { DevelopmentFixtures.currentUserID },
             dataAvailability: scenario == .offlineWithCache ? .offlineCached : .online
         )
     }
@@ -82,7 +83,11 @@ struct AppEnvironment: Sendable {
             ),
             onboardingStore: InMemoryOnboardingStore(isComplete: true),
             languagePreferenceStore: InMemoryLanguagePreferenceStore(),
-            currentUserID: DevelopmentFixtures.currentUserID,
+            currentUserID: {
+                client.auth.currentUser.map {
+                    UserID(rawValue: RemoteIdentifier.domainString($0.id))
+                }
+            },
             dataAvailability: .online
         )
     }
@@ -110,6 +115,8 @@ final class AppSession: ObservableObject {
     @Published private(set) var languagePreference: LanguagePreference = .system
     @Published private(set) var dismissedContributionPrompts: Set<String> = []
     @Published private(set) var roleContext: SessionRoleContext = .guest
+    @Published private(set) var isRoleContextConfirmed = true
+    @Published private(set) var sessionError: RepositoryError?
 
     private let authenticationRepository: any AuthenticationRepository
     private let onboardingStore: any OnboardingStore
@@ -216,11 +223,19 @@ final class AppSession: ObservableObject {
     }
 
     func signOut() async {
-        authenticationState = await authenticationRepository.signOut()
-        pendingIntent = nil
-        resumedIntent = nil
-        isSignInGatePresented = false
-        roleContext = .guest
+        do {
+            authenticationState = try await authenticationRepository.signOut()
+            pendingIntent = nil
+            resumedIntent = nil
+            isSignInGatePresented = false
+            roleContext = .guest
+            isRoleContextConfirmed = true
+            sessionError = nil
+        } catch let error as RepositoryError {
+            sessionError = error
+        } catch {
+            sessionError = .unknown
+        }
     }
 
     func dismissContributionPrompt(_ identifier: String) {
@@ -258,8 +273,22 @@ final class AppSession: ObservableObject {
     func refreshRoleContext() async {
         guard authenticationState.isSignedIn else {
             roleContext = .guest
+            isRoleContextConfirmed = true
+            sessionError = nil
             return
         }
-        roleContext = (try? await roleRepository.sessionRoleContext()) ?? .guest
+        do {
+            roleContext = try await roleRepository.sessionRoleContext()
+            isRoleContextConfirmed = true
+            sessionError = nil
+        } catch let error as RepositoryError {
+            roleContext = .guest
+            isRoleContextConfirmed = false
+            sessionError = error
+        } catch {
+            roleContext = .guest
+            isRoleContextConfirmed = false
+            sessionError = .unknown
+        }
     }
 }

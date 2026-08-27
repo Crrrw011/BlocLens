@@ -37,7 +37,7 @@ final class LogbookViewModel: ObservableObject {
         state = .loading
         do {
             async let routeRequest = environment.routeRepository.allRoutes()
-            async let entryRequest = environment.logbookRepository.entries(userID: environment.currentUserID)
+            async let entryRequest = currentUserEntries()
             let (routes, entries) = try await (routeRequest, entryRequest)
             let routesByID = Dictionary(uniqueKeysWithValues: routes.map { ($0.id, $0) })
             let items = entries.compactMap { entry in
@@ -60,5 +60,10 @@ final class LogbookViewModel: ObservableObject {
         } catch {
             state = .error(.fixtureFailure)
         }
+    }
+
+    private func currentUserEntries() async throws -> [LogbookEntry] {
+        guard let userID = environment.currentUserID() else { return [] }
+        return try await environment.logbookRepository.entries(userID: userID)
     }
 }

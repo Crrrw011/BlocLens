@@ -129,6 +129,17 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         return try XCTUnwrap(client.auth.currentUser?.id)
     }
 
+    private func signInFixture(_ email: String) async throws -> SessionRoleContext {
+        let repository = makeAuthRepository()
+        let state = await repository.signIn(email: email, password: "BlocLensLocalTest1!")
+        guard case .signedIn = state else {
+            throw XCTSkip("Local role fixture could not authenticate: \(email)")
+        }
+        return try await RemoteRoleRepository(
+            dataSource: SupabaseRoleDataSource(client: client)
+        ).sessionRoleContext()
+    }
+
     private func insertBeta(routeID: String, submittedBy: UUID) async throws -> UUID {
         let betaID = UUID()
         let values: [String: AnyJSON] = [
@@ -477,7 +488,7 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         _ = await auth.confirmAge(isOver16: true)
         _ = await auth.updateUsername("follower-\(UUID().uuidString.prefix(8))")
         let followerID = try XCTUnwrap(client.auth.currentUser?.id)
-        _ = await auth.signOut()
+        _ = try await auth.signOut()
 
         _ = await auth.signUp(
             email: "relationship-\(UUID().uuidString.prefix(8))@example.com",
@@ -486,7 +497,7 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         _ = await auth.confirmAge(isOver16: true)
         _ = await auth.updateUsername("rel-\(UUID().uuidString.prefix(8))")
         let followedID = try XCTUnwrap(client.auth.currentUser?.id)
-        _ = await auth.signOut()
+        _ = try await auth.signOut()
         _ = await auth.signIn(email: followerEmail, password: "password123")
 
         XCTAssertEqual(client.auth.currentUser?.id, followerID)
@@ -515,6 +526,54 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         XCTAssertFalse(context.isModerator)
     }
 
+    func testDeterministicTrustedContributorRoleFixture() async throws {
+        let context = try await signInFixture("fixture-trusted@bloclens.invalid")
+        XCTAssertEqual(context.appRole, .trustedContributor)
+        XCTAssertTrue(context.managedGymIDs.isEmpty)
+    }
+
+    func testDeterministicVerifiedGymRoleFixtureIsGymScoped() async throws {
+        let context = try await signInFixture("fixture-gym-official@bloclens.invalid")
+        XCTAssertEqual(context.appRole, .user)
+        XCTAssertEqual(
+            context.managedGymIDs,
+            [GymID(rawValue: "10000000-0000-4000-8000-000000000001")]
+        )
+        XCTAssertFalse(context.manages(gymID: GymID(rawValue: "10000000-0000-4000-8000-000000000002")))
+    }
+
+    func testDeterministicModeratorAndAdministratorRoleFixtures() async throws {
+        let moderator = try await signInFixture("fixture-moderator@bloclens.invalid")
+        XCTAssertEqual(moderator.appRole, .moderator)
+        _ = try await makeAuthRepository().signOut()
+
+        let administrator = try await signInFixture("fixture-admin@bloclens.invalid")
+        XCTAssertEqual(administrator.appRole, .administrator)
+        XCTAssertTrue(administrator.isAdministrator)
+    }
+
+    func testRevokedGymMembershipImmediatelyRemovesDatabaseCapability() async throws {
+        _ = try await signInFixture("fixture-admin@bloclens.invalid")
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        _ = try await client.from("gym_memberships")
+            .update(["revoked_at": timestamp], returning: .minimal)
+            .eq("gym_id", value: "10000000-0000-4000-8000-000000000001")
+            .eq("user_id", value: "90000000-0000-4000-8000-000000000005")
+            .execute()
+        _ = try await makeAuthRepository().signOut()
+
+        let revoked = try await signInFixture("fixture-gym-official@bloclens.invalid")
+        XCTAssertTrue(revoked.managedGymIDs.isEmpty)
+        _ = try await makeAuthRepository().signOut()
+
+        _ = try await signInFixture("fixture-admin@bloclens.invalid")
+        _ = try await client.from("gym_memberships")
+            .update(["revoked_at": AnyJSON.null], returning: .minimal)
+            .eq("gym_id", value: "10000000-0000-4000-8000-000000000001")
+            .eq("user_id", value: "90000000-0000-4000-8000-000000000005")
+            .execute()
+    }
+
     // MARK: - Authentication
 
     func testLocalSignUpThenProfileSetupThenUsername() async throws {
@@ -541,7 +600,7 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         let repository = makeAuthRepository()
         let email = "auth-\(UUID().uuidString.prefix(8))@example.com"
         _ = await repository.signUp(email: email, password: "password123")
-        _ = await repository.signOut()
+        _ = try await repository.signOut()
 
         let state = await repository.signIn(email: email, password: "wrong-password")
         XCTAssertEqual(state, .error(.unauthenticated))
@@ -560,7 +619,7 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         _ = await repository.signUp(email: email, password: "password123")
         _ = await repository.updateUsername("climber-\(UUID().uuidString.prefix(8))")
 
-        let signedOut = await repository.signOut()
+        let signedOut = try await repository.signOut()
         XCTAssertEqual(signedOut, .guest)
 
         let restored = await repository.restoreSession()

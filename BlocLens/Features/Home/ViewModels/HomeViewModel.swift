@@ -46,7 +46,7 @@ final class HomeViewModel: ObservableObject {
         do {
             async let gymRequest = environment.gymRepository.allGyms()
             async let routeRequest = environment.routeRepository.allRoutes()
-            async let entryRequest = environment.logbookRepository.entries(userID: environment.currentUserID)
+            async let entryRequest = currentUserEntries()
             let (gyms, routes, entries) = try await (gymRequest, routeRequest, entryRequest)
             let routesByID = Dictionary(uniqueKeysWithValues: routes.map { ($0.id, $0) })
             var zones: [WallZone] = []
@@ -88,5 +88,10 @@ final class HomeViewModel: ObservableObject {
         } catch {
             state = .error(.fixtureFailure)
         }
+    }
+
+    private func currentUserEntries() async throws -> [LogbookEntry] {
+        guard let userID = environment.currentUserID() else { return [] }
+        return try await environment.logbookRepository.entries(userID: userID)
     }
 }

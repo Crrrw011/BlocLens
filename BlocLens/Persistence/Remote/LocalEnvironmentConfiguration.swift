@@ -1,8 +1,9 @@
 import Foundation
 
 nonisolated enum LocalEnvironmentConfiguration {
-    static func make() throws -> RemoteConfiguration? {
-        let environment = ProcessInfo.processInfo.environment
+    static func make(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) throws -> RemoteConfiguration? {
         guard let urlString = environment["BLOCLENS_SUPABASE_URL"],
               !urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               let url = URL(string: urlString) else {
@@ -12,8 +13,9 @@ nonisolated enum LocalEnvironmentConfiguration {
         return try RemoteConfiguration(mode: .localDevelopment, projectURL: url, publishableKey: key)
     }
 
-    static func makeCloud() throws -> RemoteConfiguration? {
-        let environment = ProcessInfo.processInfo.environment
+    static func makeCloud(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) throws -> RemoteConfiguration? {
         guard let urlString = environment["BLOCLENS_CLOUD_URL"],
               !urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               let url = URL(string: urlString) else {

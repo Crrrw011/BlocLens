@@ -95,6 +95,7 @@ struct AddContributionView: View {
             Section {
                 TextField("", text: $colour, prompt: Text(verbatim: "e.g. Blue"))
                     .accessibilityLabel(Text(verbatim: "Colour"))
+                    .accessibilityIdentifier("add-route-colour-field")
                 TextField("", text: $label, prompt: Text(verbatim: "Optional route label"))
                     .accessibilityLabel(Text(verbatim: "Route label"))
                 Picker(selection: $grade) {
@@ -138,11 +139,14 @@ struct AddContributionView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     .accessibilityLabel(Text(verbatim: "Public beta URL"))
+                    .accessibilityIdentifier("share-beta-url-field")
                 TextField("", text: $originalPostURL, prompt: Text(verbatim: "Original post URL"))
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     .accessibilityLabel(Text(verbatim: "Original post URL"))
+                    .accessibilityIdentifier("share-beta-original-url-field")
                 TextField("", text: $author, prompt: Text(verbatim: "Original author"))
+                    .accessibilityIdentifier("share-beta-author-field")
                 Picker(selection: $platform) {
                     ForEach(BetaPlatform.allCases, id: \.self) { value in
                         Text(verbatim: value.rawValue.capitalized).tag(value)

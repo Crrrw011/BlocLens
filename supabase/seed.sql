@@ -9,16 +9,86 @@ insert into auth.users (
 ) values
   ('90000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fixture-climber-1@bloclens.invalid', null, now(), '{"provider":"fixture","providers":["fixture"]}', '{"username":"Fixture Climber 1"}', now(), now()),
   ('90000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fixture-climber-2@bloclens.invalid', null, now(), '{"provider":"fixture","providers":["fixture"]}', '{"username":"Fixture Climber 2"}', now(), now()),
-  ('90000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fixture-climber-3@bloclens.invalid', null, now(), '{"provider":"fixture","providers":["fixture"]}', '{"username":"Fixture Climber 3"}', now(), now())
+  ('90000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fixture-climber-3@bloclens.invalid', null, now(), '{"provider":"fixture","providers":["fixture"]}', '{"username":"Fixture Climber 3"}', now(), now()),
+  ('90000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fixture-trusted@bloclens.invalid', null, now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('90000000-0000-4000-8000-000000000005', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fixture-gym-official@bloclens.invalid', null, now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('90000000-0000-4000-8000-000000000006', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fixture-moderator@bloclens.invalid', null, now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('90000000-0000-4000-8000-000000000007', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fixture-admin@bloclens.invalid', null, now(), '{"provider":"email","providers":["email"]}', '{}', now(), now())
 on conflict (id) do nothing;
+
+-- Local/test-only login identities. The fixed password is not a production
+-- credential and these reserved .invalid accounts never leave local Supabase.
+update auth.users
+set encrypted_password = extensions.crypt('BlocLensLocalTest1!', extensions.gen_salt('bf')),
+    raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
+    confirmation_token = '',
+    recovery_token = '',
+    email_change_token_new = '',
+    email_change_token_current = '',
+    email_change = '',
+    phone_change = '',
+    phone_change_token = '',
+    reauthentication_token = ''
+where id between '90000000-0000-4000-8000-000000000001'::uuid
+             and '90000000-0000-4000-8000-000000000007'::uuid;
+
+insert into auth.identities (
+  id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+)
+select
+  ('91000000-0000-4000-8000-' || lpad(number::text, 12, '0'))::uuid,
+  user_id::text,
+  user_id,
+  jsonb_build_object('sub', user_id::text, 'email', email, 'email_verified', true),
+  'email', now(), now(), now()
+from (
+  values
+    (1, '90000000-0000-4000-8000-000000000001'::uuid, 'fixture-climber-1@bloclens.invalid'),
+    (2, '90000000-0000-4000-8000-000000000002'::uuid, 'fixture-climber-2@bloclens.invalid'),
+    (3, '90000000-0000-4000-8000-000000000003'::uuid, 'fixture-climber-3@bloclens.invalid'),
+    (4, '90000000-0000-4000-8000-000000000004'::uuid, 'fixture-trusted@bloclens.invalid'),
+    (5, '90000000-0000-4000-8000-000000000005'::uuid, 'fixture-gym-official@bloclens.invalid'),
+    (6, '90000000-0000-4000-8000-000000000006'::uuid, 'fixture-moderator@bloclens.invalid'),
+    (7, '90000000-0000-4000-8000-000000000007'::uuid, 'fixture-admin@bloclens.invalid')
+) fixture(number, user_id, email)
+on conflict (provider_id, provider) do nothing;
 
 update public.profiles
 set age_confirmed_16_plus_at = coalesce(age_confirmed_16_plus_at, '2026-08-20T00:00:00Z'::timestamptz)
 where id in (
   '90000000-0000-4000-8000-000000000001',
   '90000000-0000-4000-8000-000000000002',
-  '90000000-0000-4000-8000-000000000003'
+  '90000000-0000-4000-8000-000000000003',
+  '90000000-0000-4000-8000-000000000004',
+  '90000000-0000-4000-8000-000000000005',
+  '90000000-0000-4000-8000-000000000006',
+  '90000000-0000-4000-8000-000000000007'
 );
+
+update public.profiles
+set username = case id
+  when '90000000-0000-4000-8000-000000000001' then 'Fixture Climber One'
+  when '90000000-0000-4000-8000-000000000002' then 'Fixture Climber Two'
+  when '90000000-0000-4000-8000-000000000003' then 'Fixture Climber Three'
+  when '90000000-0000-4000-8000-000000000004' then 'Fixture Trusted'
+  when '90000000-0000-4000-8000-000000000005' then 'Fixture Gym Official'
+  when '90000000-0000-4000-8000-000000000006' then 'Fixture Moderator'
+  when '90000000-0000-4000-8000-000000000007' then 'Fixture Administrator'
+  else username
+end
+where id between '90000000-0000-4000-8000-000000000001'::uuid
+             and '90000000-0000-4000-8000-000000000007'::uuid;
+
+update public.profiles
+set is_trusted_contributor = true,
+    trusted_contributor_awarded_at = '2026-08-20T00:00:00Z',
+    helpful_received_count = 67
+where id = '90000000-0000-4000-8000-000000000004';
+
+insert into public.app_user_roles (user_id, role) values
+  ('90000000-0000-4000-8000-000000000006', 'moderator'),
+  ('90000000-0000-4000-8000-000000000007', 'admin')
+on conflict (user_id, role) do update set revoked_at = null;
 
 insert into public.gyms (
   id, name, brand_name, slug, description, suburb, state, postcode,
@@ -33,6 +103,10 @@ on conflict (id) do update set
   postcode = excluded.postcode, latitude = excluded.latitude, longitude = excluded.longitude,
   is_claimed = excluded.is_claimed, is_verified = excluded.is_verified,
   data_source = excluded.data_source;
+
+insert into public.gym_memberships (gym_id, user_id, role) values
+  ('10000000-0000-4000-8000-000000000001', '90000000-0000-4000-8000-000000000005', 'verified_representative')
+on conflict (gym_id, user_id, role) do update set revoked_at = null;
 
 insert into public.gym_facilities (gym_id, facility, source) values
   ('10000000-0000-4000-8000-000000000001', 'parking', 'development_fixture'),

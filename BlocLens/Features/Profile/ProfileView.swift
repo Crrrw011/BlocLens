@@ -90,20 +90,23 @@ struct ProfileView: View {
                         Image(systemName: "person.2")
                     }
                 }
-                if !session.roleContext.managedGymIDs.isEmpty {
+                .accessibilityIdentifier("profile-contributors-link")
+                if session.isRoleContextConfirmed, !session.roleContext.managedGymIDs.isEmpty {
                     LabeledContent {
                         Text(verbatim: "\(session.roleContext.managedGymIDs.count)")
                     } label: {
                         Text(verbatim: "Verified gym access")
                     }
+                    .accessibilityIdentifier("profile-verified-gym-access")
                 }
-                if session.roleContext.isModerator {
+                if session.isRoleContextConfirmed, session.roleContext.isModerator {
                     Label {
                         Text(verbatim: session.roleContext.isAdministrator ? "Administrator access" : "Moderator access")
                     } icon: {
                         Image(systemName: "checkmark.shield")
                     }
                     .foregroundStyle(DesignColour.textSecondary)
+                    .accessibilityIdentifier("profile-moderation-access")
                 }
             } header: {
                 Text(verbatim: "Account access")
@@ -211,6 +214,7 @@ private struct SettingsView: View {
                 Button(L10n.Settings.mockSignOut, role: .destructive) {
                     Task { await session.signOut() }
                 }
+                .accessibilityIdentifier("settings-debug-sign-out")
             }
             #endif
         }

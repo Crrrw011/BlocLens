@@ -72,6 +72,7 @@ struct RelationshipManagementView: View {
                 }
                 .buttonStyle(CompactActionButtonStyle())
                 .disabled(state.isBlocked)
+                .accessibilityIdentifier("relationship-follow-\(profile.userID.rawValue)")
 
                 Button(role: state.isBlocked ? nil : .destructive) {
                     Task { await toggleBlock(profile.userID, state: state) }
@@ -79,10 +80,12 @@ struct RelationshipManagementView: View {
                     Text(verbatim: state.isBlocked ? "Unblock" : "Block")
                 }
                 .buttonStyle(CompactActionButtonStyle())
+                .accessibilityIdentifier("relationship-block-\(profile.userID.rawValue)")
             }
         }
         .padding(.vertical, DesignSpacing.xSmall)
         .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("relationship-profile-\(profile.userID.rawValue)")
     }
 
     @MainActor
@@ -90,7 +93,10 @@ struct RelationshipManagementView: View {
         isLoading = true
         errorMessage = nil
         do {
-            let loadedProfiles = try await repository.publicProfiles()
+            async let visibleRequest = repository.publicProfiles()
+            async let blockedRequest = repository.blockedProfiles()
+            let loaded = try await (visibleRequest, blockedRequest)
+            let loadedProfiles = loaded.0 + loaded.1
             var loadedStates: [UserID: UserRelationshipState] = [:]
             for profile in loadedProfiles {
                 loadedStates[profile.userID] = try await repository.state(with: profile.userID)
@@ -126,7 +132,10 @@ struct RelationshipManagementView: View {
                 try await repository.block(userID: userID, idempotencyKey: IdempotencyKey())
             }
             states[userID] = try await repository.state(with: userID)
-            profiles = try await repository.publicProfiles()
+            async let visibleRequest = repository.publicProfiles()
+            async let blockedRequest = repository.blockedProfiles()
+            let loaded = try await (visibleRequest, blockedRequest)
+            profiles = loaded.0 + loaded.1
         } catch {
             errorMessage = "The block setting could not be changed."
         }

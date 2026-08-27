@@ -17,7 +17,7 @@ struct WallZoneRouteListView: View {
                 wallZone: wallZone,
                 repository: environment.routeRepository,
                 logbookRepository: environment.logbookRepository,
-                userID: environment.currentUserID
+                userIDProvider: environment.currentUserID
             )
         )
     }

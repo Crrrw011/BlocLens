@@ -10,18 +10,18 @@ final class WallZoneRouteListViewModel: ObservableObject {
     private let wallZone: WallZone
     private let repository: any RouteRepository
     private let logbookRepository: any LogbookRepository
-    private let userID: UserID
+    private let userIDProvider: @Sendable () -> UserID?
 
     init(
         wallZone: WallZone,
         repository: any RouteRepository,
         logbookRepository: any LogbookRepository,
-        userID: UserID
+        userIDProvider: @escaping @Sendable () -> UserID?
     ) {
         self.wallZone = wallZone
         self.repository = repository
         self.logbookRepository = logbookRepository
-        self.userID = userID
+        self.userIDProvider = userIDProvider
     }
 
     func load() async {
@@ -31,7 +31,7 @@ final class WallZoneRouteListViewModel: ObservableObject {
                 wallZoneID: wallZone.id,
                 filter: RouteFilter(query: "", gradeBand: .all, includesArchived: true)
             )
-            async let entryRequest = logbookRepository.entries(userID: userID)
+            async let entryRequest = currentUserEntries()
             let (routes, entries) = try await (routeRequest, entryRequest)
             statusByRouteID = Dictionary(uniqueKeysWithValues: entries.map { ($0.routeID, $0.status) })
             let current = RouteListPresentation.currentRoutes(routes, options: options)
@@ -44,6 +44,11 @@ final class WallZoneRouteListViewModel: ObservableObject {
         } catch {
             state = .error(.fixtureFailure)
         }
+    }
+
+    private func currentUserEntries() async throws -> [LogbookEntry] {
+        guard let userID = userIDProvider() else { return [] }
+        return try await logbookRepository.entries(userID: userID)
     }
 
     func clearFilters() async {
