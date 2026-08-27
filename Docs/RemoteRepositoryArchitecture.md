@@ -178,7 +178,7 @@ Every insertable contribution entity uses the caller-generated UUID from `Idempo
 
 `RelationshipRepository` provides public profile discovery, relationship state, Follow/Unfollow, and Block/Unblock. `RemoteRelationshipRepository` writes only the authenticated user's `user_follows` and `user_blocks` rows. The database composite keys prevent duplicates, RLS keeps Block rows private, the follow policy rejects either-direction blocks, and the existing `user_block_stop_follows` trigger removes both follow directions when a block is inserted.
 
-The app removes accounts blocked by the current user from the public-profile list and from beta/comment repository results. This filtering lives in actor repositories rather than SwiftUI views, and the Mock implementation mirrors it. The current approved migrations still allow a technically capable authenticated client to query otherwise-public beta/comment/profile rows directly; a future server-filtered RPC or RLS revision is required before describing Block as a database-enforced content-read privacy boundary. No migration was changed in 6D-4 because this delivery explicitly prohibited SQL changes.
+The app removes accounts blocked by the current user from the public-profile list and from beta/comment repository results. This filtering lives in actor repositories rather than SwiftUI views, and the Mock implementation mirrors it. Since D-4R, the same exclusion is also enforced at the database boundary (see the D-4R section below), so a signed-in client cannot bypass a mutual Block through a direct table read, a security-invoker view, or the by-ID Data API path. The 6D-4 delivery itself changed no SQL; the database enforcement landed in migration `20260827001650_secure_block_aware_reads.sql`.
 
 Follow exists only as a notification preference input for new beta contributions. There is no activity feed, follower-centric surface, or push implementation.
 
@@ -201,7 +201,6 @@ New hard-coded development-stage copy uses `Text(verbatim:)` and does not alter 
 
 ## Next stages
 
-- Add a server-filtered Block-aware read RPC or RLS design before treating direct Data API reads as Block-filtered.
 - Add a schema-backed route-photo credit display field only if product requirements require credit text distinct from the authenticated contributor profile.
 - Stage 8 (real device/TestFlight): end-to-end OAuth verification with real Apple/Google accounts against the single Cloud Auth/data boundary.
 - Later: Google Places, the administrator portal, image storage policy, notification delivery, and the account-deletion Edge Function.
