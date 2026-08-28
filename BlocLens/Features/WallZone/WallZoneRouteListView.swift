@@ -10,7 +10,6 @@ struct WallZoneRouteListView: View {
     @State private var isAddRoutePresented = false
     @State private var isEditZonePresented = false
     @State private var isReportPresented = false
-    @State private var showsZoneActions = false
 
     init(wallZone: WallZone, environment: AppEnvironment, session: AppSession) {
         self.wallZone = wallZone
@@ -51,24 +50,24 @@ struct WallZoneRouteListView: View {
                 .accessibilityIdentifier("add-route-in-zone-button")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showsZoneActions = true
+                Menu {
+                    if isCreator {
+                        Button {
+                            isEditZonePresented = true
+                        } label: {
+                            Label(L10n.WallZone.edit, systemImage: "pencil")
+                        }
+                    }
+                    Button(role: .destructive) {
+                        isReportPresented = true
+                    } label: {
+                        Label(L10n.WallZone.reportIssue, systemImage: "exclamationmark.bubble")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
                 .accessibilityIdentifier("wall-zone-more-button")
             }
-        }
-        .confirmationDialog(L10n.WallZone.zoneActionsTitle, isPresented: $showsZoneActions, titleVisibility: .hidden) {
-            if isCreator {
-                Button(L10n.WallZone.edit) {
-                    isEditZonePresented = true
-                }
-            }
-            Button(L10n.WallZone.reportIssue, role: .destructive) {
-                isReportPresented = true
-            }
-            Button(L10n.Common.cancel, role: .cancel) {}
         }
         .sheet(isPresented: $isAddRoutePresented, onDismiss: {
             Task { await viewModel.load() }

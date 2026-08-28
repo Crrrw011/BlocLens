@@ -16,7 +16,6 @@ struct RouteDetailView: View {
     @State private var helpfulLinkIDs: Set<BetaLinkID> = []
     @State private var saveFeedbackTrigger = 0
     @State private var helpfulFeedbackTrigger = 0
-    @State private var showsRouteActions = false
     @State private var isEditRoutePresented = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -60,20 +59,18 @@ struct RouteDetailView: View {
         .toolbar {
             if isRouteCreator {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showsRouteActions = true
+                    Menu {
+                        Button {
+                            isEditRoutePresented = true
+                        } label: {
+                            Label(L10n.Route.edit, systemImage: "pencil")
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
                     .accessibilityIdentifier("route-more-button")
                 }
             }
-        }
-        .confirmationDialog(L10n.Route.actionsTitle, isPresented: $showsRouteActions, titleVisibility: .hidden) {
-            Button(L10n.Route.edit) {
-                isEditRoutePresented = true
-            }
-            Button(L10n.Common.cancel, role: .cancel) {}
         }
         .sheet(isPresented: $isEditRoutePresented) {
             EditRouteView(environment: environment, session: session, route: route)
