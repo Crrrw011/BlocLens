@@ -211,6 +211,7 @@ There is explicitly no video database table, video bucket, direct video upload, 
 - External URL allow-listing, redirect safety and link health checking need a trusted server boundary.
 - The separate administrator portal and secure server operations are not implemented.
 - Storage policies are not defined because no bucket is created in this stage.
+- Stage 7-D1/D2: the linked Cloud project (`atmtqesdhxpgnrjedwsu`) serves as the staging environment. Local and Cloud migrations are aligned (the two management-API-applied migrations were re-versioned to match repository filenames), and Cloud schema health was verified read-only (all client-facing tables RLS-enabled and policy-backed; four block-aware functions present; no video or wall-zone geometry surfaces). Because the Cloud project holds no development fixtures, seed-dependent pgTAP cardinality assertions and `pgtap` installation are intentionally not applied to the remote. Stage 7-D3 external services (Google Places, route-photo storage, notifications, feedback, crash reporting) are deferred and each requires separate authorisation.
 
 ## D-4R authenticated read enforcement
 
