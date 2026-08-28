@@ -14,3 +14,4 @@ SimulatorScreenshots/
 supabase/.branches/
 supabase/.temp/
 supabase/.env*
+data/

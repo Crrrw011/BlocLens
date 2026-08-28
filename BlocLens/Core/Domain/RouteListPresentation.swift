@@ -34,10 +34,10 @@ nonisolated enum RouteListPresentation {
         let term = options.query.trimmingCharacters(in: .whitespacesAndNewlines)
         return routes.filter { route in
             let matchesQuery = term.isEmpty
-                || route.colourOrTag.localizedCaseInsensitiveContains(term)
-                || route.officialGrade?.displayName.localizedCaseInsensitiveContains(term) == true
+                || route.colour.localizedCaseInsensitiveContains(term)
+                || route.displayGrade?.displayName.localizedCaseInsensitiveContains(term) == true
             return matchesQuery
-                && options.gradeBand.contains(route.officialGrade)
+                && options.gradeBand.contains(route.displayGrade)
                 && (!options.hasBeta || route.betaCount > 0)
         }
         .sorted { lhs, rhs in
@@ -47,8 +47,8 @@ nonisolated enum RouteListPresentation {
                 let rhsDate = rhs.resetDate ?? .distantPast
                 if lhsDate != rhsDate { return lhsDate > rhsDate }
             case .grade:
-                let lhsGrade = lhs.officialGrade ?? .unknown
-                let rhsGrade = rhs.officialGrade ?? .unknown
+                let lhsGrade = lhs.displayGrade ?? .unknown
+                let rhsGrade = rhs.displayGrade ?? .unknown
                 if lhsGrade != rhsGrade { return lhsGrade < rhsGrade }
             case .mostBeta:
                 if lhs.betaCount != rhs.betaCount { return lhs.betaCount > rhs.betaCount }

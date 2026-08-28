@@ -47,7 +47,7 @@ struct AppShellView: View {
             isPresented: $isAddMenuPresented,
             titleVisibility: .visible
         ) {
-            ForEach(AddAction.allCases) { action in
+            ForEach(AddAction.menuCases) { action in
                 Button {
                     if session.requireAuthentication(for: .add(action)) {
                         selectedAddAction = action
@@ -62,10 +62,12 @@ struct AppShellView: View {
         }
         .sheet(item: $selectedAddAction) { action in
             switch action {
-            case .addNewRoute, .publishBetaLink:
+            case .publishBetaLink:
                 AddContributionView(action: action, environment: environment)
             case .recordCompletedRoute, .identifyOrMarkRoute:
                 AddActionPlaceholderView(action: action)
+            case .addNewRoute:
+                EmptyView()
             }
         }
         .sheet(isPresented: $session.isSignInGatePresented) {

@@ -134,21 +134,21 @@ on conflict (gym_id, facility) do update set
   is_available = true, source = excluded.source;
 
 insert into public.wall_zones (
-  id, gym_id, name, location_description, wall_type, display_order,
+  id, gym_id, name, location_description, wall_kind, display_order,
   availability, last_reset_date
 ) values
-  ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'River Slab', 'Near the river-side entry', 'slab', 0, 'active', '2026-08-18T00:00:00Z'),
-  ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'Main Cave', 'Central steep section', 'cave', 1, 'active', '2026-08-11T00:00:00Z'),
-  ('20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', 'Competition Wall', 'Beside the spectator area', 'mixed', 2, 'active', '2026-08-22T00:00:00Z'),
-  ('20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000002', 'The Island', 'Freestanding centre wall', 'mixed', 0, 'active', '2026-08-20T00:00:00Z'),
-  ('20000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000002', 'Steep Bay', 'Rear overhanging bay', 'overhang', 1, 'active', '2026-08-14T00:00:00Z'),
-  ('20000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000002', 'North Vertical', 'Along the northern wall', 'vertical', 2, 'active', '2026-08-07T00:00:00Z'),
-  ('20000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000003', 'Front Slab', 'Immediately left of reception', 'slab', 0, 'active', '2026-08-19T00:00:00Z'),
-  ('20000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000003', 'Back Cave', 'Rear corner steep section', 'cave', 1, 'active', '2026-08-12T00:00:00Z'),
-  ('20000000-0000-4000-8000-000000000009', '10000000-0000-4000-8000-000000000003', 'Main Wall', 'Long wall through the centre', 'vertical', 2, 'active', '2026-08-05T00:00:00Z')
+  ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'River Slab', 'Near the river-side entry', 'regular_set_wall', 0, 'active', '2026-08-18T00:00:00Z'),
+  ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'Main Cave', 'Central steep section', 'regular_set_wall', 1, 'active', '2026-08-11T00:00:00Z'),
+  ('20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', 'Competition Wall', 'Beside the spectator area', 'comp_wall', 2, 'active', '2026-08-22T00:00:00Z'),
+  ('20000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000002', 'The Island', 'Freestanding centre wall', 'regular_set_wall', 0, 'active', '2026-08-20T00:00:00Z'),
+  ('20000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000002', 'Steep Bay', 'Rear overhanging bay', 'spray_wall', 1, 'active', '2026-08-14T00:00:00Z'),
+  ('20000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000002', 'North Vertical', 'Along the northern wall', 'regular_set_wall', 2, 'active', '2026-08-07T00:00:00Z'),
+  ('20000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000003', 'Front Slab', 'Immediately left of reception', 'regular_set_wall', 0, 'active', '2026-08-19T00:00:00Z'),
+  ('20000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000003', 'Back Cave', 'Rear corner steep section', 'regular_set_wall', 1, 'active', '2026-08-12T00:00:00Z'),
+  ('20000000-0000-4000-8000-000000000009', '10000000-0000-4000-8000-000000000003', 'Main Wall', 'Long wall through the centre', 'spray_wall', 2, 'active', '2026-08-05T00:00:00Z')
 on conflict (id) do update set
   gym_id = excluded.gym_id, name = excluded.name,
-  location_description = excluded.location_description, wall_type = excluded.wall_type,
+  location_description = excluded.location_description, wall_kind = excluded.wall_kind,
   display_order = excluded.display_order, availability = excluded.availability,
   last_reset_date = excluded.last_reset_date;
 

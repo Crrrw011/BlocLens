@@ -3,15 +3,21 @@ import SwiftUI
 struct AddWallZoneView: View {
     let environment: AppEnvironment
     let session: AppSession
-    let gym: Gym
+    var gym: Gym?
+    var existingZone: WallZone?
 
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var locationDescription = ""
-    @State private var wallType: WallType = .slab
+    @State private var wallKind: WallKind = .regularSetWall
+    @State private var surfaceMaterial: SurfaceMaterial = .plywood
+    @State private var surfaceTexture: SurfaceTexture = .lightlyTextured
+    @State private var hasBoltHoles = true
     @State private var sortOrder = 0
     @State private var isSubmitting = false
     @State private var errorMessage: String?
+
+    private var isEditing: Bool { existingZone != nil }
 
     var body: some View {
         NavigationStack {
@@ -20,21 +26,44 @@ struct AddWallZoneView: View {
                     TextField("", text: $name, prompt: Text(L10n.WallZone.namePrompt))
                         .accessibilityLabel(Text(L10n.WallZone.nameField))
                         .accessibilityIdentifier("add-wall-zone-name-field")
-                    TextField("", text: $locationDescription, prompt: Text(L10n.WallZone.locationPrompt), axis: .vertical)
-                        .lineLimit(1...3)
-                        .accessibilityLabel(Text(L10n.WallZone.locationField))
-                        .accessibilityIdentifier("add-wall-zone-location-field")
-                    Picker(selection: $wallType) {
-                        ForEach(WallType.allCases, id: \.self) { type in
-                            Text(L10n.wallType(type)).tag(type)
+
+                    Picker(selection: $wallKind) {
+                        ForEach(WallKind.allCases, id: \.self) { kind in
+                            Text(L10n.wallKind(kind)).tag(kind)
                         }
                     } label: {
-                        Text(L10n.WallZone.wallTypeField)
+                        Text(L10n.WallZone.wallKindField)
                     }
+
+                    Picker(selection: $surfaceMaterial) {
+                        ForEach(SurfaceMaterial.allCases, id: \.self) { material in
+                            Text(L10n.surfaceMaterial(material)).tag(material)
+                        }
+                    } label: {
+                        Text(L10n.WallZone.surfaceMaterialField)
+                    }
+
+                    Picker(selection: $surfaceTexture) {
+                        ForEach(SurfaceTexture.allCases, id: \.self) { texture in
+                            Text(L10n.surfaceTexture(texture)).tag(texture)
+                        }
+                    } label: {
+                        Text(L10n.WallZone.surfaceTextureField)
+                    }
+
+                    Toggle(L10n.WallZone.boltHolesField, isOn: $hasBoltHoles)
+                        .accessibilityIdentifier("add-wall-zone-bolt-holes")
                 } header: {
-                    Text(gym.name)
+                    Text(verbatim: gym?.name ?? "")
                 } footer: {
                     Text(L10n.WallZone.requiredFooter)
+                }
+
+                Section(L10n.WallZone.locationField) {
+                    TextField("", text: $locationDescription, prompt: Text(L10n.WallZone.locationPrompt), axis: .vertical)
+                        .lineLimit(4...8)
+                        .accessibilityLabel(Text(L10n.WallZone.locationField))
+                        .accessibilityIdentifier("add-wall-zone-location-field")
                 }
 
                 if let errorMessage {
@@ -55,7 +84,7 @@ struct AddWallZoneView: View {
                         HStack {
                             Spacer()
                             if isSubmitting { ProgressView() }
-                            Text(L10n.WallZone.addTitle)
+                            Text(isEditing ? L10n.Common.save : L10n.WallZone.addTitle)
                             Spacer()
                         }
                     }
@@ -63,11 +92,22 @@ struct AddWallZoneView: View {
                     .accessibilityIdentifier("add-wall-zone-submit")
                 }
             }
-            .navigationTitle(L10n.WallZone.addTitle)
+            .navigationTitle(isEditing ? L10n.WallZone.edit : L10n.WallZone.addTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.Common.cancel) { dismiss() }
+                }
+            }
+            .onAppear {
+                if let existingZone {
+                    name = existingZone.name
+                    locationDescription = existingZone.locationDescription
+                    wallKind = existingZone.wallKind
+                    surfaceMaterial = existingZone.surfaceMaterial
+                    surfaceTexture = existingZone.surfaceTexture
+                    hasBoltHoles = existingZone.hasBoltHoles
+                    sortOrder = existingZone.sortOrder
                 }
             }
         }
@@ -86,16 +126,36 @@ struct AddWallZoneView: View {
         errorMessage = nil
         defer { isSubmitting = false }
         do {
-            _ = try await environment.contributionRepository.createWallZone(
-                AddWallZoneRequest(
-                    idempotencyKey: IdempotencyKey(),
-                    gymID: gym.id,
-                    name: name,
-                    locationDescription: locationDescription,
-                    wallType: wallType,
-                    sortOrder: sortOrder
+            if let existingZone {
+                _ = try await environment.contributionRepository.updateWallZone(
+                    existingZone.id,
+                    request: AddWallZoneRequest(
+                        idempotencyKey: IdempotencyKey(),
+                        gymID: existingZone.gymID,
+                        name: name,
+                        locationDescription: locationDescription,
+                        wallKind: wallKind,
+                        surfaceMaterial: surfaceMaterial,
+                        surfaceTexture: surfaceTexture,
+                        hasBoltHoles: hasBoltHoles,
+                        sortOrder: sortOrder
+                    )
                 )
-            )
+            } else if let gym {
+                _ = try await environment.contributionRepository.createWallZone(
+                    AddWallZoneRequest(
+                        idempotencyKey: IdempotencyKey(),
+                        gymID: gym.id,
+                        name: name,
+                        locationDescription: locationDescription,
+                        wallKind: wallKind,
+                        surfaceMaterial: surfaceMaterial,
+                        surfaceTexture: surfaceTexture,
+                        hasBoltHoles: hasBoltHoles,
+                        sortOrder: sortOrder
+                    )
+                )
+            }
             dismiss()
         } catch let error as RepositoryError {
             errorMessage = message(for: error)

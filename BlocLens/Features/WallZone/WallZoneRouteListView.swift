@@ -8,6 +8,8 @@ struct WallZoneRouteListView: View {
     @StateObject private var viewModel: WallZoneRouteListViewModel
     @State private var showsArchived = false
     @State private var isAddRoutePresented = false
+    @State private var isEditZonePresented = false
+    @State private var isReportPresented = false
 
     init(wallZone: WallZone, environment: AppEnvironment, session: AppSession) {
         self.wallZone = wallZone
@@ -21,6 +23,11 @@ struct WallZoneRouteListView: View {
                 userIDProvider: environment.currentUserID
             )
         )
+    }
+
+    private var isCreator: Bool {
+        guard let current = environment.currentUserID() else { return false }
+        return wallZone.createdBy == current
     }
 
     var body: some View {
@@ -42,9 +49,34 @@ struct WallZoneRouteListView: View {
                 }
                 .accessibilityIdentifier("add-route-in-zone-button")
             }
+            ToolbarItem(placement: .secondaryAction) {
+                Menu {
+                    if isCreator {
+                        Button {
+                            isEditZonePresented = true
+                        } label: {
+                            Label(L10n.WallZone.edit, systemImage: "pencil")
+                        }
+                    }
+                    Button(role: .destructive) {
+                        isReportPresented = true
+                    } label: {
+                        Label(L10n.WallZone.reportIssue, systemImage: "exclamationmark.bubble")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityIdentifier("wall-zone-more-button")
+            }
         }
         .sheet(isPresented: $isAddRoutePresented) {
             AddContributionView(action: .addNewRoute, environment: environment, preselectedWallZone: wallZone)
+        }
+        .sheet(isPresented: $isEditZonePresented) {
+            AddWallZoneView(environment: environment, session: session, gym: nil, existingZone: wallZone)
+        }
+        .sheet(isPresented: $isReportPresented) {
+            ReportWallZoneView(environment: environment, wallZone: wallZone)
         }
         .searchable(text: $viewModel.options.query, prompt: Text(L10n.Search.routePrompt))
         .onSubmit(of: .search) { Task { await viewModel.load() } }
@@ -59,7 +91,7 @@ struct WallZoneRouteListView: View {
         VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
             Text(wallZone.locationDescription)
             HStack {
-                Label(L10n.wallType(wallZone.wallType), systemImage: "angle")
+                Label(L10n.wallKind(wallZone.wallKind), systemImage: "rectangle.stack")
                 if let reset = wallZone.latestResetDate {
                     Label(reset.formatted(date: .abbreviated, time: .omitted), systemImage: "arrow.clockwise")
                 }
@@ -171,10 +203,12 @@ private struct RouteRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: DesignSpacing.compact) {
-            RouteColourSwatch(colourOrTag: route.colourOrTag, size: 44)
+            RouteColourSwatch(colourOrTag: route.colour, size: 44)
             VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
                 HStack {
-                    Text(route.colourOrTag).font(.headline)
+                    Text("\(route.colour) \(L10n.terrain(route.terrain))")
+                        .font(DesignTypography.cardTitle)
+                        .fontWeight(.bold)
                     if route.lifecycle == .archived {
                         StatusChip(title: L10n.Route.archived, systemImage: "archivebox", colour: DesignColour.archived)
                     }
@@ -204,7 +238,7 @@ private struct RouteRow: View {
 
     private var metadata: some View {
         HStack(spacing: DesignSpacing.compact) {
-            Label(route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown), systemImage: "number")
+            Label(route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown), systemImage: "number")
                     if let community = route.communityGradeSummary.displayGrade {
                 Label {
                     Text(L10n.Route.communityShortLabel) + Text(verbatim: " \(community.displayName)")

@@ -184,47 +184,46 @@ struct WallZoneSummaryRow: View {
     let wallZone: WallZone
 
     var body: some View {
-        HStack(alignment: .top, spacing: DesignSpacing.compact) {
-            Image(systemName: wallZone.wallType == .overhang || wallZone.wallType == .cave ? "angle" : "square.stack.3d.up")
-                .font(.headline)
-                .foregroundStyle(DesignColour.brandPrimary)
-                .frame(width: 32, height: 32)
-                .background(DesignColour.brandTint, in: RoundedRectangle(cornerRadius: DesignRadius.control))
-
-            VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(wallZone.name).font(DesignTypography.cardTitle)
-                    Spacer(minLength: DesignSpacing.small)
-                    StatusChip(
-                        title: L10n.wallAvailability(wallZone.availability),
-                        systemImage: wallZone.availability == .active ? "checkmark.circle" : "pause.circle",
-                        colour: wallZone.availability == .active ? DesignColour.success : DesignColour.warning
-                    )
-                }
+        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(wallZone.name)
+                    .font(DesignTypography.navigationTitle)
+                    .fontWeight(.bold)
+                Spacer(minLength: DesignSpacing.small)
+                StatusChip(
+                    title: L10n.wallAvailability(wallZone.availability),
+                    systemImage: wallZone.availability == .active ? "checkmark.circle" : "pause.circle",
+                    colour: wallZone.availability == .active ? DesignColour.success : DesignColour.warning
+                )
+            }
+            if !wallZone.locationDescription.isEmpty {
                 Text(wallZone.locationDescription)
                     .font(DesignTypography.supporting)
                     .foregroundStyle(DesignColour.textSecondary)
-                ViewThatFits(in: .horizontal) {
-                    metadata
-                    VStack(alignment: .leading, spacing: DesignSpacing.xSmall) { metadata }
+            }
+            HStack(spacing: DesignSpacing.compact) {
+                Label(L10n.wallKind(wallZone.wallKind), systemImage: wallKindIcon)
+                    .font(DesignTypography.caption)
+                    .foregroundStyle(DesignColour.textSecondary)
+                Label("\(wallZone.routeCount)", systemImage: "circle.hexagongrid")
+                Label("\(wallZone.betaCount)", systemImage: "link")
+                if let date = wallZone.latestResetDate {
+                    Label(date.formatted(.relative(presentation: .named)), systemImage: "arrow.clockwise")
                 }
             }
+            .font(DesignTypography.caption)
+            .foregroundStyle(DesignColour.textSecondary)
         }
         .padding(.vertical, DesignSpacing.small)
         .accessibilityElement(children: .combine)
     }
 
-    private var metadata: some View {
-        HStack(spacing: DesignSpacing.compact) {
-            Label(L10n.wallType(wallZone.wallType), systemImage: "angle")
-            Label("\(wallZone.routeCount)", systemImage: "circle.hexagongrid")
-            Label("\(wallZone.betaCount)", systemImage: "link")
-            if let date = wallZone.latestResetDate {
-                Label(date.formatted(.relative(presentation: .named)), systemImage: "arrow.clockwise")
-            }
+    private var wallKindIcon: String {
+        switch wallZone.wallKind {
+        case .regularSetWall: "rectangle.stack"
+        case .sprayWall: "square.grid.3x3"
+        case .compWall: "flag"
         }
-        .font(DesignTypography.caption)
-        .foregroundStyle(DesignColour.textSecondary)
     }
 }
 

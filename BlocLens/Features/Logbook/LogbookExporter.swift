@@ -36,8 +36,8 @@ nonisolated enum LogbookExporter {
             let route = item.route
             let fields = [
                 formatter.string(from: entry.date),
-                route.colourOrTag,
-                route.officialGrade?.displayName ?? "",
+                route.colour,
+                route.displayGrade?.displayName ?? "",
                 entry.status.rawValue,
                 entry.attemptCount.map(String.init) ?? "",
                 entry.predictedVGrade?.displayName ?? "",
@@ -82,9 +82,9 @@ nonisolated enum LogbookExporter {
                 let entry = item.entry
                 let route = item.route
                 let grade = entry.predictedVGrade?.displayName
-                    ?? route.officialGrade?.displayName
+                    ?? route.displayGrade?.displayName
                     ?? "Unknown"
-                draw("\(dateFormatter.string(from: entry.date))  ·  \(route.colourOrTag)  ·  \(grade)", font: .boldSystemFont(ofSize: 13))
+                draw("\(dateFormatter.string(from: entry.date))  ·  \(route.colour)  ·  \(grade)", font: .boldSystemFont(ofSize: 13))
                 var detail = "Status: \(entry.status.rawValue)"
                 if let attempts = entry.attemptCount { detail += "  ·  Attempts: \(attempts)" }
                 if let note = entry.privateNote { detail += "\n\(note)" }

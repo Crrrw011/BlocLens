@@ -5,7 +5,9 @@ nonisolated struct RouteRecord: Codable, Equatable, Sendable {
     let gymID: UUID
     let wallZoneID: UUID
     let colour: String?
-    let label: String?
+    let terrain: String?
+    let styles: [String]?
+    let subjectiveGrade: Int?
     let gymGrade: Int?
     let lifecycle: String
     let setDate: Date?
@@ -15,9 +17,10 @@ nonisolated struct RouteRecord: Codable, Equatable, Sendable {
     let betaCount: Int?
 
     enum CodingKeys: String, CodingKey {
-        case id, colour, label, lifecycle
+        case id, colour, terrain, styles, lifecycle
         case gymID = "gym_id"
         case wallZoneID = "wall_zone_id"
+        case subjectiveGrade = "subjective_grade"
         case gymGrade = "gym_grade"
         case setDate = "set_date"
         case estimatedArchiveDate = "estimated_archive_date"
@@ -33,11 +36,9 @@ nonisolated struct RouteRecord: Codable, Equatable, Sendable {
         guard communityGrade.routeID == id else {
             throw RemoteMappingError.inconsistentData("Community grade belongs to a different route.")
         }
-        let identity = [colour, label]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty }
-        guard let identity else {
-            throw RemoteMappingError.inconsistentData("A route requires a colour or label.")
+        let colourValue = colour?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let colourValue, !colourValue.isEmpty else {
+            throw RemoteMappingError.inconsistentData("A route requires a colour.")
         }
 
         let domainLifecycle: RouteLifecycle
@@ -55,11 +56,32 @@ nonisolated struct RouteRecord: Codable, Equatable, Sendable {
             throw RemoteMappingError.inconsistentData("An estimated archive flag requires a date.")
         }
 
+        let domainTerrain: RouteTerrain
+        switch terrain {
+        case "slab", nil: domainTerrain = .slab
+        case "vertical": domainTerrain = .vertical
+        case "overhang": domainTerrain = .overhang
+        case "roof": domainTerrain = .roof
+        case "cave": domainTerrain = .cave
+        case "mixed": domainTerrain = .mixed
+        default: throw RemoteMappingError.unsupportedValue(field: "routes.terrain", value: terrain ?? "")
+        }
+
+        let domainStyles: [RouteStyle] = try (styles ?? []).map { raw in
+            guard let style = RouteStyle(rawValue: raw) else {
+                throw RemoteMappingError.unsupportedValue(field: "routes.styles", value: raw)
+            }
+            return style
+        }
+
         return ClimbingRoute(
             id: ClimbingRouteID(rawValue: RemoteIdentifier.domainString(id)),
             gymID: GymID(rawValue: RemoteIdentifier.domainString(gymID)),
             wallZoneID: WallZoneID(rawValue: RemoteIdentifier.domainString(wallZoneID)),
-            colourOrTag: identity,
+            colour: colourValue,
+            terrain: domainTerrain,
+            styles: domainStyles,
+            subjectiveGrade: try RemoteGrade.domain(subjectiveGrade, field: "routes.subjective_grade"),
             officialGrade: try RemoteGrade.domain(gymGrade, field: "routes.gym_grade"),
             communityGradeSummary: try communityGrade.domain(),
             resetDate: setDate,

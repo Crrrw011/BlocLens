@@ -37,6 +37,12 @@ enum L10n {
         static let placeholderMessage: LocalizedStringResource = "add.placeholder.message"
         static let markRouteComingLater: LocalizedStringResource = "add.markRoute.comingLater"
         static let done: LocalizedStringResource = "add.done"
+        static let terrainField: LocalizedStringResource = "add.route.terrain"
+        static let terrainHelper: LocalizedStringResource = "add.route.terrain.helper"
+        static let styleField: LocalizedStringResource = "add.route.style"
+        static let styleHelper: LocalizedStringResource = "add.route.style.helper"
+        static let gradeField: LocalizedStringResource = "add.route.grade"
+        static let gradeHelper: LocalizedStringResource = "add.route.grade.helper"
     }
 
     enum Home {
@@ -128,9 +134,14 @@ enum L10n {
         static let namePrompt: LocalizedStringResource = "wallZone.add.namePrompt"
         static let locationField: LocalizedStringResource = "wallZone.add.location"
         static let locationPrompt: LocalizedStringResource = "wallZone.add.locationPrompt"
-        static let wallTypeField: LocalizedStringResource = "wallZone.add.wallType"
+        static let wallKindField: LocalizedStringResource = "wallZone.add.wallKind"
+        static let surfaceMaterialField: LocalizedStringResource = "wallZone.add.surfaceMaterial"
+        static let surfaceTextureField: LocalizedStringResource = "wallZone.add.surfaceTexture"
+        static let boltHolesField: LocalizedStringResource = "wallZone.add.boltHoles"
         static let sortOrderField: LocalizedStringResource = "wallZone.add.sortOrder"
         static let requiredFooter: LocalizedStringResource = "wallZone.add.requiredFooter"
+        static let edit: LocalizedStringResource = "wallZone.edit"
+        static let reportIssue: LocalizedStringResource = "wallZone.reportIssue"
     }
 
     enum RouteList {
@@ -155,6 +166,7 @@ enum L10n {
         static let commentsTitle: LocalizedStringResource = "route.comments.title"
         static let commentsPlaceholder: LocalizedStringResource = "route.comments.placeholder"
         static let gymGrade: LocalizedStringResource = "route.gymGrade"
+        static let subjectiveGrade: LocalizedStringResource = "route.subjectiveGrade"
         static let photoContributionTitle: LocalizedStringResource = "route.photoContribution.title"
         static let photoContributionMessage: LocalizedStringResource = "route.photoContribution.message"
         static let addPhoto: LocalizedStringResource = "route.addPhoto"
@@ -412,13 +424,51 @@ enum L10n {
         }
     }
 
-    static func wallType(_ type: WallType) -> LocalizedStringResource {
-        switch type {
-        case .slab: "wallType.slab"
-        case .vertical: "wallType.vertical"
-        case .overhang: "wallType.overhang"
-        case .cave: "wallType.cave"
-        case .mixed: "wallType.mixed"
+    static func wallKind(_ kind: WallKind) -> LocalizedStringResource {
+        switch kind {
+        case .regularSetWall: "wallKind.regularSetWall"
+        case .sprayWall: "wallKind.sprayWall"
+        case .compWall: "wallKind.compWall"
+        }
+    }
+
+    static func terrain(_ terrain: RouteTerrain) -> LocalizedStringResource {
+        switch terrain {
+        case .slab: "terrain.slab"
+        case .vertical: "terrain.vertical"
+        case .overhang: "terrain.overhang"
+        case .roof: "terrain.roof"
+        case .cave: "terrain.cave"
+        case .mixed: "terrain.mixed"
+        }
+    }
+
+    static func routeStyle(_ style: RouteStyle) -> LocalizedStringResource {
+        switch style {
+        case .staticMovement: "routeStyle.static"
+        case .dynamic: "routeStyle.dynamic"
+        case .technical: "routeStyle.technical"
+        case .powerful: "routeStyle.powerful"
+        case .coordination: "routeStyle.coordination"
+        }
+    }
+
+    static func surfaceMaterial(_ material: SurfaceMaterial) -> LocalizedStringResource {
+        switch material {
+        case .plywood: "surfaceMaterial.plywood"
+        case .fibreglass: "surfaceMaterial.fibreglass"
+        case .concrete: "surfaceMaterial.concrete"
+        case .composite: "surfaceMaterial.composite"
+        case .other: "surfaceMaterial.other"
+        }
+    }
+
+    static func surfaceTexture(_ texture: SurfaceTexture) -> LocalizedStringResource {
+        switch texture {
+        case .smooth: "surfaceTexture.smooth"
+        case .lightlyTextured: "surfaceTexture.lightlyTextured"
+        case .textured: "surfaceTexture.textured"
+        case .rough: "surfaceTexture.rough"
         }
     }
 

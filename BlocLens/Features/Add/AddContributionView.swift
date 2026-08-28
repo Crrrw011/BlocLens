@@ -9,11 +9,11 @@ struct AddContributionView: View {
     @State private var gyms: [Gym] = []
     @State private var wallZones: [WallZone] = []
     @State private var routes: [ClimbingRoute] = []
-    @State private var selectedGymID: GymID?
-    @State private var selectedWallZoneID: WallZoneID?
     @State private var selectedRouteID: ClimbingRouteID?
+    @State private var lockedGymName = ""
     @State private var colour = ""
-    @State private var label = ""
+    @State private var terrain: RouteTerrain = .slab
+    @State private var selectedStyles: Set<RouteStyle> = []
     @State private var grade = VGrade.unknown
     @State private var publicURL = ""
     @State private var originalPostURL = ""
@@ -67,28 +67,14 @@ struct AddContributionView: View {
                 }
             }
             .task { await loadOptions() }
-            .onChange(of: selectedGymID) { _, gymID in
-                guard let gymID else { return }
-                let available = wallZones.filter { $0.gymID == gymID }
-                if !available.contains(where: { $0.id == selectedWallZoneID }) {
-                    selectedWallZoneID = available.first?.id
-                }
-            }
         }
     }
 
     private var routeFields: some View {
         Group {
             Section {
-                Picker(selection: $selectedGymID) {
-                    ForEach(gyms) { gym in Text(verbatim: gym.name).tag(Optional(gym.id)) }
-                } label: { Text(verbatim: "Gym") }
-
-                Picker(selection: $selectedWallZoneID) {
-                    ForEach(wallZones.filter { $0.gymID == selectedGymID }) { zone in
-                        Text(verbatim: zone.name).tag(Optional(zone.id))
-                    }
-                } label: { Text(verbatim: "Wall zone") }
+                LabeledContent("Gym", value: lockedGymName)
+                    .foregroundStyle(DesignColour.textSecondary)
             } header: {
                 Text(verbatim: "Location")
             }
@@ -97,23 +83,41 @@ struct AddContributionView: View {
                 TextField("", text: $colour, prompt: Text(verbatim: "e.g. Blue"))
                     .accessibilityLabel(Text(verbatim: "Colour"))
                     .accessibilityIdentifier("add-route-colour-field")
-                TextField("", text: $label, prompt: Text(verbatim: "Optional route label"))
-                    .accessibilityLabel(Text(verbatim: "Route label"))
+
+                Picker(selection: $terrain) {
+                    ForEach(RouteTerrain.allCases, id: \.self) { value in
+                        Text(L10n.terrain(value)).tag(value)
+                    }
+                } label: {
+                    helperLabel(L10n.Add.terrainField, helper: L10n.Add.terrainHelper)
+                }
+
+                VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+                    helperLabel(L10n.Add.styleField, helper: L10n.Add.styleHelper)
+                    ForEach(RouteStyle.allCases, id: \.self) { style in
+                        Toggle(isOn: styleBinding(style)) {
+                            Text(L10n.routeStyle(style))
+                        }
+                    }
+                }
+
                 Picker(selection: $grade) {
                     ForEach(VGrade.allCases, id: \.self) { value in
                         Text(verbatim: value.displayName).tag(value)
                     }
-                } label: { Text(verbatim: "Gym grade (optional)") }
+                } label: {
+                    helperLabel(L10n.Add.gradeField, helper: L10n.Add.gradeHelper)
+                }
             } header: {
-                Text(verbatim: "Route identity")
+                Text(verbatim: "Route details")
             } footer: {
-                Text(verbatim: "Gym, wall zone, and either colour or label are required.")
+                Text(verbatim: "Colour is required.")
             }
 
             if !suspectedDuplicates.isEmpty {
                 Section {
                     ForEach(suspectedDuplicates) { route in
-                        Text(verbatim: "\(route.colourOrTag) · \(route.officialGrade?.displayName ?? "Unknown")")
+                        Text(verbatim: "\(route.colour) \(L10n.terrain(route.terrain))")
                     }
                 } header: {
                     Text(verbatim: "Possible existing routes")
@@ -124,12 +128,19 @@ struct AddContributionView: View {
         }
     }
 
+    private func helperLabel(_ title: LocalizedStringResource, helper: LocalizedStringResource) -> some View {
+        HStack(spacing: DesignSpacing.xSmall) {
+            Text(title)
+            FieldHelperButton(helper: helper)
+        }
+    }
+
     private var betaFields: some View {
         Group {
             Section {
                 Picker(selection: $selectedRouteID) {
                     ForEach(routes.filter { $0.lifecycle == .active }) { route in
-                        Text(verbatim: "\(route.colourOrTag) · \(route.officialGrade?.displayName ?? "Unknown")")
+                        Text(verbatim: "\(route.colour) \(L10n.terrain(route.terrain))")
                             .tag(Optional(route.id))
                     }
                 } label: { Text(verbatim: "Route") }
@@ -173,9 +184,8 @@ struct AddContributionView: View {
 
     private var isValid: Bool {
         if action == .addNewRoute {
-            return selectedGymID != nil && selectedWallZoneID != nil
-                && (!colour.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            return preselectedWallZone != nil
+                && !colour.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
         return selectedRouteID != nil && URL(string: publicURL) != nil
             && URL(string: originalPostURL) != nil
@@ -193,12 +203,7 @@ struct AddContributionView: View {
             wallZones = values.1
             routes = values.2
             if let zone = preselectedWallZone {
-                let available = wallZones.contains { $0.id == zone.id }
-                selectedGymID = zone.gymID
-                selectedWallZoneID = available ? zone.id : nil
-            } else {
-                selectedGymID = gyms.first?.id
-                selectedWallZoneID = wallZones.first { $0.gymID == selectedGymID }?.id
+                lockedGymName = gyms.first { $0.id == zone.gymID }?.name ?? ""
             }
             selectedRouteID = routes.first { $0.lifecycle == .active }?.id
         } catch {
@@ -213,13 +218,15 @@ struct AddContributionView: View {
         defer { isSubmitting = false }
         do {
             if action == .addNewRoute {
-                guard let gymID = selectedGymID, let zoneID = selectedWallZoneID else {
+                guard let zone = preselectedWallZone else {
                     throw RepositoryError.invalidInput
                 }
+                let gymID = zone.gymID
+                let zoneID = zone.id
                 let duplicateQuery = DuplicateRouteQuery(
                     gymID: gymID,
                     wallZoneID: zoneID,
-                    colourOrTag: colour.isEmpty ? label : colour,
+                    colour: colour,
                     resetDate: nil
                 )
                 if suspectedDuplicates.isEmpty {
@@ -229,7 +236,9 @@ struct AddContributionView: View {
                 _ = try await environment.contributionRepository.addRoute(
                     AddRouteRequest(
                         idempotencyKey: IdempotencyKey(), gymID: gymID, wallZoneID: zoneID,
-                        colour: colour, label: label, officialGrade: grade == .unknown ? nil : grade, setDate: nil
+                        colour: colour, terrain: terrain,
+                        styles: RouteStyle.allCases.filter(selectedStyles.contains),
+                        subjectiveGrade: grade == .unknown ? nil : grade, setDate: nil
                     )
                 )
             } else {
@@ -265,6 +274,15 @@ struct AddContributionView: View {
         )
     }
 
+    private func styleBinding(_ style: RouteStyle) -> Binding<Bool> {
+        Binding(
+            get: { selectedStyles.contains(style) },
+            set: { selected in
+                if selected { selectedStyles.insert(style) } else { selectedStyles.remove(style) }
+            }
+        )
+    }
+
     private func message(for error: RepositoryError) -> String {
         switch error {
         case .invalidExternalLink: "Use a public HTTPS link and include the original attribution."
@@ -283,6 +301,27 @@ struct AddContributionView: View {
         case .dynamicMovement: "Dynamic"
         case .shortPersonBeta: "Short climber"
         case .tallLongReachBeta: "Tall climber"
+        }
+    }
+}
+
+private struct FieldHelperButton: View {
+    let helper: LocalizedStringResource
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            isPresented.toggle()
+        } label: {
+            Image(systemName: "info.circle")
+                .foregroundStyle(DesignColour.textSecondary)
+        }
+        .buttonStyle(.borderless)
+        .popover(isPresented: $isPresented) {
+            Text(helper)
+                .font(DesignTypography.supporting)
+                .padding()
+                .presentationCompactAdaptation(.popover)
         }
     }
 }

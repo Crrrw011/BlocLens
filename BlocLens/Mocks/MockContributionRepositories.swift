@@ -22,10 +22,8 @@ actor MockContributionRepository: ContributionRepository {
 
     func addRoute(_ request: AddRouteRequest) throws -> ClimbingRoute {
         if let existing = routesByKey[request.idempotencyKey] { return existing }
-        let colour = request.colour?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let label = request.label?.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard colour?.isEmpty == false || label?.isEmpty == false,
-              request.officialGrade != .unknown,
+        let colour = request.colour.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !colour.isEmpty,
               DevelopmentFixtures.wallZones.contains(where: {
                   $0.id == request.wallZoneID && $0.gymID == request.gymID
               }) else {
@@ -35,8 +33,11 @@ actor MockContributionRepository: ContributionRepository {
             id: ClimbingRouteID(rawValue: request.idempotencyKey.rawValue.uuidString.lowercased()),
             gymID: request.gymID,
             wallZoneID: request.wallZoneID,
-            colourOrTag: colour?.isEmpty == false ? colour ?? "" : label ?? "",
-            officialGrade: request.officialGrade,
+            colour: colour,
+            terrain: request.terrain,
+            styles: request.styles,
+            subjectiveGrade: request.subjectiveGrade,
+            officialGrade: nil,
             communityGradeSummary: CommunityGradeSummary(voteCount: 0, medianGrade: nil),
             resetDate: request.setDate,
             expectedArchiveDate: nil,
@@ -61,7 +62,11 @@ actor MockContributionRepository: ContributionRepository {
             gymID: request.gymID,
             name: name,
             locationDescription: location ?? "",
-            wallType: request.wallType,
+            wallKind: request.wallKind,
+            surfaceMaterial: request.surfaceMaterial,
+            surfaceTexture: request.surfaceTexture,
+            hasBoltHoles: request.hasBoltHoles,
+            createdBy: currentUserID,
             latestResetDate: nil,
             routeCount: 0,
             betaCount: 0,
@@ -69,6 +74,31 @@ actor MockContributionRepository: ContributionRepository {
             sortOrder: max(0, request.sortOrder)
         )
         zonesByKey[request.idempotencyKey] = zone
+        return zone
+    }
+
+    func updateWallZone(_ wallZoneID: WallZoneID, request: AddWallZoneRequest) throws -> WallZone {
+        let name = request.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let location = request.locationDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, DevelopmentFixtures.gyms.contains(where: { $0.id == request.gymID }) else {
+            throw RepositoryError.invalidInput
+        }
+        let zone = WallZone(
+            id: wallZoneID,
+            gymID: request.gymID,
+            name: name,
+            locationDescription: location ?? "",
+            wallKind: request.wallKind,
+            surfaceMaterial: request.surfaceMaterial,
+            surfaceTexture: request.surfaceTexture,
+            hasBoltHoles: request.hasBoltHoles,
+            createdBy: currentUserID,
+            latestResetDate: nil,
+            routeCount: 0,
+            betaCount: 0,
+            availability: .active,
+            sortOrder: max(0, request.sortOrder)
+        )
         return zone
     }
 

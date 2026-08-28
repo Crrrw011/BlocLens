@@ -35,8 +35,8 @@ actor RemoteRouteRepository: RouteRepository {
         let candidates = records.filter {
             $0.gymID == gymUUID
                 && $0.wallZoneID == zoneUUID
-                && ($0.colour ?? $0.label ?? "")
-                    .localizedCaseInsensitiveCompare(query.colourOrTag) == .orderedSame
+                && ($0.colour ?? "")
+                    .localizedCaseInsensitiveCompare(query.colour) == .orderedSame
         }
         return try await map(candidates, filter: RouteFilter(includesArchived: true))
     }
@@ -116,18 +116,17 @@ actor RemoteRouteRepository: RouteRepository {
     private static func apply(_ filter: RouteFilter, to routes: [ClimbingRoute]) -> [ClimbingRoute] {
         routes.filter { route in
             let matchesLifecycle = filter.includesArchived || route.lifecycle == .active
-            let matchesGrade = filter.gradeBand.contains(route.officialGrade)
+            let matchesGrade = filter.gradeBand.contains(route.displayGrade)
             let term = filter.query.trimmingCharacters(in: .whitespacesAndNewlines)
             let matchesQuery = term.isEmpty
-                || route.colourOrTag.localizedCaseInsensitiveContains(term)
-                || route.officialGrade?.displayName.localizedCaseInsensitiveContains(term) == true
-                || route.communityGradeSummary.displayGrade?.displayName.localizedCaseInsensitiveContains(term) == true
+                || route.colour.localizedCaseInsensitiveContains(term)
+                || route.displayGrade?.displayName.localizedCaseInsensitiveContains(term) == true
             return matchesLifecycle && matchesGrade && matchesQuery
         }
         .sorted { lhs, rhs in
             if lhs.lifecycle != rhs.lifecycle { return lhs.lifecycle == .active }
-            let lhsGrade = lhs.officialGrade ?? .unknown
-            let rhsGrade = rhs.officialGrade ?? .unknown
+            let lhsGrade = lhs.displayGrade ?? .unknown
+            let rhsGrade = rhs.displayGrade ?? .unknown
             if lhsGrade != rhsGrade { return lhsGrade < rhsGrade }
             return lhs.id.rawValue < rhs.id.rawValue
         }

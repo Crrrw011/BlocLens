@@ -106,12 +106,12 @@ select ok(has_column_privilege('authenticated', 'public.wall_zones', 'created_by
 set local role authenticated;
 set local request.jwt.claim.sub to '90000000-0000-4000-8000-000000000001';
 insert into public.wall_zones (
-  id, gym_id, name, location_description, wall_type, display_order,
+  id, gym_id, name, location_description, wall_kind, display_order,
   availability, created_by
 ) values (
   '90000000-0000-4000-8000-00000000ff01',
   '10000000-0000-4000-8000-000000000001',
-  'User Added Slab', 'Left wall near the mats', 'slab', 3,
+  'User Added Slab', 'Left wall near the mats', 'regular_set_wall', 3,
   'active', auth.uid()
 );
 create temp table _t_auth_zone_created as
@@ -128,11 +128,11 @@ set local request.jwt.claim.sub to '90000000-0000-4000-8000-000000000001';
 do $$
 begin
   insert into public.wall_zones (
-    id, gym_id, name, wall_type, display_order, availability, created_by
+    id, gym_id, name, wall_kind, display_order, availability, created_by
   ) values (
     '90000000-0000-4000-8000-00000000ff02',
     '10000000-0000-4000-8000-000000000001',
-    'Forged Zone', 'slab', 4, 'active', '90000000-0000-4000-8000-000000000002'
+    'Forged Zone', 'regular_set_wall', 4, 'active', '90000000-0000-4000-8000-000000000002'
   );
   raise exception 'expected forged wall zone insert to be rejected';
 exception when insufficient_privilege then
@@ -178,8 +178,8 @@ select ok(
   'route colour trigram index exists'
 );
 select ok(
-  exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'routes_label_trgm_idx'),
-  'route label trigram index exists'
+  not exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'routes_label_trgm_idx'),
+  'route label trigram index is gone'
 );
 select ok(
   exists (

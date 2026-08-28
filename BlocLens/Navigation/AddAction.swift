@@ -12,6 +12,10 @@ enum AddAction: String, CaseIterable, Identifiable {
 
     var id: Self { self }
 
+    static var menuCases: [AddAction] {
+        [.publishBetaLink, .recordCompletedRoute, .identifyOrMarkRoute]
+    }
+
     var title: LocalizedStringResource {
         switch self {
         case .publishBetaLink: L10n.Add.publishBetaLink

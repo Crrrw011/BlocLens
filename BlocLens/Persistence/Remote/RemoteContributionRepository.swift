@@ -13,8 +13,7 @@ actor RemoteContributionRepository: ContributionRepository {
         let gymID = try uuid(request.gymID, field: "routes.gym_id")
         let zoneID = try uuid(request.wallZoneID, field: "routes.wall_zone_id")
         let colour = trimmed(request.colour)
-        let label = trimmed(request.label)
-        guard colour != nil || label != nil, request.officialGrade != .unknown else {
+        guard let colour, !colour.isEmpty else {
             throw RepositoryError.invalidInput
         }
         let official = try await mapped { try await dataSource.isGymOfficial(gymID: gymID) }
@@ -23,8 +22,9 @@ actor RemoteContributionRepository: ContributionRepository {
             gymID: gymID.uuidString,
             wallZoneID: zoneID.uuidString,
             colour: colour,
-            label: label,
-            gymGrade: request.officialGrade?.rawValue,
+            terrain: request.terrain.rawValue,
+            styles: request.styles.map(\.rawValue),
+            subjectiveGrade: request.subjectiveGrade?.rawValue,
             setDate: request.setDate.map(Self.timestamp),
             createdBy: userID.uuidString,
             isOfficialSource: official
@@ -49,7 +49,10 @@ actor RemoteContributionRepository: ContributionRepository {
             gymID: gymID.uuidString,
             name: name,
             locationDescription: location,
-            wallType: request.wallType.rawValue,
+            wallKind: request.wallKind.rawValue,
+            surfaceMaterial: request.surfaceMaterial.rawValue,
+            surfaceTexture: request.surfaceTexture.rawValue,
+            hasBoltHoles: request.hasBoltHoles,
             displayOrder: max(0, request.sortOrder),
             createdBy: userID.uuidString
         )
@@ -58,6 +61,27 @@ actor RemoteContributionRepository: ContributionRepository {
             insert: { try await self.dataSource.insertWallZone(write) },
             fetch: { try await self.dataSource.fetchWallZone(id: $0) }
         )
+        return try domainZone(record)
+    }
+
+    func updateWallZone(_ wallZoneID: WallZoneID, request: AddWallZoneRequest) async throws -> WallZone {
+        let userID = try requireUser()
+        let zoneID = try uuid(wallZoneID, field: "wall_zones.id")
+        let name = trimmed(request.name)
+        guard let name, !name.isEmpty else { throw RepositoryError.invalidInput }
+        let location = trimmed(request.locationDescription)
+        let write = WallZoneUpdateWrite(
+            name: name,
+            locationDescription: location,
+            wallKind: request.wallKind.rawValue,
+            surfaceMaterial: request.surfaceMaterial.rawValue,
+            surfaceTexture: request.surfaceTexture.rawValue,
+            hasBoltHoles: request.hasBoltHoles,
+            displayOrder: max(0, request.sortOrder)
+        )
+        let record: WallZoneRecord = try await mapped {
+            try await self.dataSource.updateWallZone(id: zoneID, write: write)
+        }
         return try domainZone(record)
     }
 

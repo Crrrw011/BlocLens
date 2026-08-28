@@ -17,15 +17,15 @@ nonisolated enum DevelopmentFixtures {
     )
 
     static let wallZones: [WallZone] = [
-        zone("west-end-slab", gym: "urban-climb-west-end", name: "River Slab", location: "Near the river-side entry", type: .slab, order: 0, reset: date(2026, 8, 18), betaCount: 4),
-        zone("west-end-cave", gym: "urban-climb-west-end", name: "Main Cave", location: "Central steep section", type: .cave, order: 1, reset: date(2026, 8, 11), betaCount: 1),
-        zone("west-end-comp", gym: "urban-climb-west-end", name: "Competition Wall", location: "Beside the spectator area", type: .mixed, order: 2, reset: date(2026, 8, 22), betaCount: 0),
-        zone("newstead-island", gym: "urban-climb-newstead", name: "The Island", location: "Freestanding centre wall", type: .mixed, order: 0, reset: date(2026, 8, 20), betaCount: 1),
-        zone("newstead-steep", gym: "urban-climb-newstead", name: "Steep Bay", location: "Rear overhanging bay", type: .overhang, order: 1, reset: date(2026, 8, 14), betaCount: 0),
-        zone("newstead-vertical", gym: "urban-climb-newstead", name: "North Vertical", location: "Along the northern wall", type: .vertical, order: 2, reset: date(2026, 8, 7), betaCount: 0),
-        zone("enoggera-slab", gym: "nine-degrees-enoggera", name: "Front Slab", location: "Immediately left of reception", type: .slab, order: 0, reset: date(2026, 8, 19), betaCount: 0),
-        zone("enoggera-cave", gym: "nine-degrees-enoggera", name: "Back Cave", location: "Rear corner steep section", type: .cave, order: 1, reset: date(2026, 8, 12), betaCount: 0),
-        zone("enoggera-main", gym: "nine-degrees-enoggera", name: "Main Wall", location: "Long wall through the centre", type: .vertical, order: 2, reset: date(2026, 8, 5), betaCount: 0)
+        zone("west-end-slab", gym: "urban-climb-west-end", name: "River Slab", location: "Near the river-side entry", kind: .regularSetWall, order: 0, reset: date(2026, 8, 18), betaCount: 4),
+        zone("west-end-cave", gym: "urban-climb-west-end", name: "Main Cave", location: "Central steep section", kind: .regularSetWall, order: 1, reset: date(2026, 8, 11), betaCount: 1),
+        zone("west-end-comp", gym: "urban-climb-west-end", name: "Competition Wall", location: "Beside the spectator area", kind: .compWall, order: 2, reset: date(2026, 8, 22), betaCount: 0),
+        zone("newstead-island", gym: "urban-climb-newstead", name: "The Island", location: "Freestanding centre wall", kind: .regularSetWall, order: 0, reset: date(2026, 8, 20), betaCount: 1),
+        zone("newstead-steep", gym: "urban-climb-newstead", name: "Steep Bay", location: "Rear overhanging bay", kind: .sprayWall, order: 1, reset: date(2026, 8, 14), betaCount: 0),
+        zone("newstead-vertical", gym: "urban-climb-newstead", name: "North Vertical", location: "Along the northern wall", kind: .regularSetWall, order: 2, reset: date(2026, 8, 7), betaCount: 0),
+        zone("enoggera-slab", gym: "nine-degrees-enoggera", name: "Front Slab", location: "Immediately left of reception", kind: .regularSetWall, order: 0, reset: date(2026, 8, 19), betaCount: 0),
+        zone("enoggera-cave", gym: "nine-degrees-enoggera", name: "Back Cave", location: "Rear corner steep section", kind: .regularSetWall, order: 1, reset: date(2026, 8, 12), betaCount: 0),
+        zone("enoggera-main", gym: "nine-degrees-enoggera", name: "Main Wall", location: "Long wall through the centre", kind: .sprayWall, order: 2, reset: date(2026, 8, 5), betaCount: 0)
     ]
 
     static let gyms: [Gym] = [
@@ -210,6 +210,7 @@ nonisolated enum DevelopmentFixtures {
             .vb, .v2, .v4, .v1, .v3, .v6, .v0, .v5, .v8
         ]
         let colours = ["Blue", "Red", "Yellow", "Green", "Purple", "Black", "Pink", "White", "Orange"]
+        let terrains: [RouteTerrain] = [.slab, .vertical, .overhang, .roof, .cave, .mixed]
 
         return wallZones.enumerated().flatMap { zoneIndex, zone in
             (0 ..< 3).map { routeIndex in
@@ -222,8 +223,11 @@ nonisolated enum DevelopmentFixtures {
                     id: routeID,
                     gymID: zone.gymID,
                     wallZoneID: zone.id,
-                    colourOrTag: colours[index % colours.count],
-                    officialGrade: grade,
+                    colour: colours[index % colours.count],
+                    terrain: terrains[index % terrains.count],
+                    styles: index.isMultiple(of: 2) ? [.staticMovement] : [.dynamic, .technical],
+                    subjectiveGrade: grade,
+                    officialGrade: nil,
                     communityGradeSummary: CommunityGradeSummary(votes: votes),
                     resetDate: zone.latestResetDate,
                     expectedArchiveDate: index == 2 ? date(2026, 9, 1) : nil,
@@ -251,7 +255,7 @@ nonisolated enum DevelopmentFixtures {
         gym: GymID,
         name: String,
         location: String,
-        type: WallType,
+        kind: WallKind,
         order: Int,
         reset: Date,
         betaCount: Int
@@ -261,7 +265,11 @@ nonisolated enum DevelopmentFixtures {
             gymID: gym,
             name: name,
             locationDescription: location,
-            wallType: type,
+            wallKind: kind,
+            surfaceMaterial: .plywood,
+            surfaceTexture: .lightlyTextured,
+            hasBoltHoles: true,
+            createdBy: nil,
             latestResetDate: reset,
             routeCount: 3,
             betaCount: betaCount,

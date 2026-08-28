@@ -12,9 +12,10 @@ nonisolated struct AddRouteRequest: Equatable, Sendable {
     let idempotencyKey: IdempotencyKey
     let gymID: GymID
     let wallZoneID: WallZoneID
-    let colour: String?
-    let label: String?
-    let officialGrade: VGrade?
+    let colour: String
+    let terrain: RouteTerrain
+    let styles: [RouteStyle]
+    let subjectiveGrade: VGrade?
     let setDate: Date?
 }
 
@@ -23,7 +24,10 @@ nonisolated struct AddWallZoneRequest: Equatable, Sendable {
     let gymID: GymID
     let name: String
     let locationDescription: String?
-    let wallType: WallType
+    let wallKind: WallKind
+    let surfaceMaterial: SurfaceMaterial
+    let surfaceTexture: SurfaceTexture
+    let hasBoltHoles: Bool
     let sortOrder: Int
 }
 
@@ -122,6 +126,7 @@ nonisolated enum ReportableContentType: String, Codable, Sendable {
     case betaLink = "beta_link"
     case betaComment = "beta_comment"
     case routePhoto = "route_photo"
+    case wallZone = "wall_zone"
 }
 
 nonisolated enum ContentReportCategory: String, CaseIterable, Codable, Sendable {

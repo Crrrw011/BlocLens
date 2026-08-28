@@ -20,7 +20,7 @@ nonisolated struct LogbookStatistics: Equatable, Sendable {
         routesByID: [ClimbingRouteID: ClimbingRoute]
     ) -> LogbookStatistics {
         let completed = entries.filter { $0.status == .sent || $0.status == .flash }
-        let completedGrades = completed.compactMap { routesByID[$0.routeID]?.officialGrade }
+        let completedGrades = completed.compactMap { routesByID[$0.routeID]?.displayGrade }
             .filter { $0 != .unknown }
         let distribution = completedGrades.reduce(into: [VGrade: Int]()) { result, grade in
             result[grade, default: 0] += 1

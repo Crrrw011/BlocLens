@@ -8,6 +8,7 @@ nonisolated protocol RemoteContributionDataSource: Sendable {
     func fetchRoute(id: UUID) async throws -> RouteRecord
     func insertWallZone(_ write: WallZoneContributionWrite) async throws -> WallZoneRecord
     func fetchWallZone(id: UUID) async throws -> WallZoneRecord
+    func updateWallZone(id: UUID, write: WallZoneUpdateWrite) async throws -> WallZoneRecord
     func insertBetaLink(_ write: BetaContributionWrite) async throws -> BetaLinkRecord
     func fetchBetaLink(id: UUID) async throws -> BetaLinkRecord
     func insertPhoto(_ write: RoutePhotoContributionWrite) async throws -> RoutePhotoRecord
@@ -29,18 +30,19 @@ nonisolated struct RouteContributionWrite: Encodable, Sendable {
     let id: String
     let gymID: String
     let wallZoneID: String
-    let colour: String?
-    let label: String?
-    let gymGrade: Int?
+    let colour: String
+    let terrain: String
+    let styles: [String]
+    let subjectiveGrade: Int?
     let setDate: String?
     let createdBy: String
     let isOfficialSource: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, colour, label
+        case id, colour, terrain, styles
         case gymID = "gym_id"
         case wallZoneID = "wall_zone_id"
-        case gymGrade = "gym_grade"
+        case subjectiveGrade = "subjective_grade"
         case setDate = "set_date"
         case createdBy = "created_by"
         case isOfficialSource = "is_official_source"
@@ -52,7 +54,10 @@ nonisolated struct WallZoneContributionWrite: Encodable, Sendable {
     let gymID: String
     let name: String
     let locationDescription: String?
-    let wallType: String
+    let wallKind: String
+    let surfaceMaterial: String
+    let surfaceTexture: String
+    let hasBoltHoles: Bool
     let displayOrder: Int
     let createdBy: String
 
@@ -60,9 +65,32 @@ nonisolated struct WallZoneContributionWrite: Encodable, Sendable {
         case id, name
         case gymID = "gym_id"
         case locationDescription = "location_description"
-        case wallType = "wall_type"
+        case wallKind = "wall_kind"
+        case surfaceMaterial = "surface_material"
+        case surfaceTexture = "surface_texture"
+        case hasBoltHoles = "has_bolt_holes"
         case displayOrder = "display_order"
         case createdBy = "created_by"
+    }
+}
+
+nonisolated struct WallZoneUpdateWrite: Encodable, Sendable {
+    let name: String
+    let locationDescription: String?
+    let wallKind: String
+    let surfaceMaterial: String
+    let surfaceTexture: String
+    let hasBoltHoles: Bool
+    let displayOrder: Int
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case locationDescription = "location_description"
+        case wallKind = "wall_kind"
+        case surfaceMaterial = "surface_material"
+        case surfaceTexture = "surface_texture"
+        case hasBoltHoles = "has_bolt_holes"
+        case displayOrder = "display_order"
     }
 }
 
@@ -199,6 +227,17 @@ struct SupabaseContributionDataSource: RemoteContributionDataSource, Sendable {
 
     func insertWallZone(_ write: WallZoneContributionWrite) async throws -> WallZoneRecord {
         try await insert(write, into: "wall_zones")
+    }
+
+    func updateWallZone(id: UUID, write: WallZoneUpdateWrite) async throws -> WallZoneRecord {
+        let response: PostgrestResponse<WallZoneRecord> = try await client
+            .from("wall_zones")
+            .update(write)
+            .eq("id", value: id.uuidString)
+            .select()
+            .single()
+            .execute()
+        return response.value
     }
 
     func fetchWallZone(id: UUID) async throws -> WallZoneRecord {

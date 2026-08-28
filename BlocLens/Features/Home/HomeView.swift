@@ -135,12 +135,12 @@ struct HomeView: View {
 
     private func projectRow(_ item: HomeProjectItem) -> some View {
         HStack(alignment: .top, spacing: DesignSpacing.compact) {
-            RouteColourSwatch(colourOrTag: item.route.colourOrTag, size: 46)
+            RouteColourSwatch(colourOrTag: item.route.colour, size: 46)
             VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
                 HStack {
-                    Text(item.route.colourOrTag).font(DesignTypography.cardTitle)
+                    Text(item.route.colour).font(DesignTypography.cardTitle)
                     Spacer()
-                    Text(item.route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+                    Text(item.route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))
                         .font(DesignTypography.gradeEmphasis)
                 }
                 Text("\(item.gym.name) · \(item.wallZone.name)")
@@ -189,7 +189,7 @@ struct HomeView: View {
                 .foregroundStyle(DesignColour.brandPrimary)
                 .frame(width: 32)
             VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-                Text(item.route.colourOrTag).font(DesignTypography.cardTitle)
+                Text(item.route.colour).font(DesignTypography.cardTitle)
                 Text("\(item.gym.name) · \(item.wallZone.name)")
                     .font(DesignTypography.caption)
                     .foregroundStyle(DesignColour.textSecondary)

@@ -153,10 +153,10 @@ struct RouteDetailView: View {
                 .aspectRatio(16 / 10, contentMode: .fit)
                 .overlay {
                     VStack(spacing: DesignSpacing.small) {
-                        RouteColourSwatch(colourOrTag: route.colourOrTag, size: 64)
+                        RouteColourSwatch(colourOrTag: route.colour, size: 64)
                         Text(L10n.Route.photoPlaceholder)
                             .font(DesignTypography.cardTitle)
-                        Text(route.colourOrTag)
+                        Text(route.colour)
                             .font(DesignTypography.supporting)
                             .foregroundStyle(DesignColour.textSecondary)
                     }
@@ -174,12 +174,12 @@ struct RouteDetailView: View {
             }
 
             HStack(alignment: .center, spacing: DesignSpacing.compact) {
-                RouteColourSwatch(colourOrTag: route.colourOrTag, size: 52)
-                Text(route.colourOrTag).font(DesignTypography.largeScreenTitle)
+                RouteColourSwatch(colourOrTag: route.colour, size: 52)
+                Text("\(route.colour) \(L10n.terrain(route.terrain))").font(DesignTypography.largeScreenTitle)
                 Spacer()
             }
             HStack(spacing: DesignSpacing.small) {
-                GradeChip(grade: route.officialGrade, label: L10n.Route.gymGrade)
+                GradeChip(grade: route.displayGrade, label: L10n.Route.subjectiveGrade)
                 if let community = route.communityGradeSummary.displayGrade {
                     GradeChip(grade: community, label: L10n.Route.communityGradeTitle)
                 }
@@ -238,7 +238,7 @@ struct RouteDetailView: View {
             SectionHeader(title: L10n.Beta.title, supportingText: L10n.Beta.hiddenUntilReveal)
             if !betaRevealState.isRevealed {
                 ZStack {
-                    RouteColourSwatch(colourOrTag: route.colourOrTag, size: 112)
+                    RouteColourSwatch(colourOrTag: route.colour, size: 112)
                         .blur(radius: 20)
                         .scaleEffect(1.8)
                         .opacity(0.62)

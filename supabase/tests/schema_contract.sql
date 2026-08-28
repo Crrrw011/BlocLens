@@ -72,6 +72,57 @@ select is(
   'No wall-zone geometry columns exist'
 );
 
+-- 3b. Wall-zone surface fields exist and default to recommended values.
+select is(
+  (select count(*) from information_schema.columns
+   where table_schema = 'public' and table_name = 'wall_zones'
+     and column_name in ('surface_material', 'surface_texture', 'has_bolt_holes')),
+  3::bigint,
+  'Wall-zone surface fields exist'
+);
+select is((select surface_material from public.wall_zones limit 1), 'plywood', 'Default surface material is plywood');
+select is((select surface_texture from public.wall_zones limit 1), 'lightly_textured', 'Default surface texture is lightly textured');
+select is((select has_bolt_holes from public.wall_zones limit 1), true, 'Bolt holes default to present');
+
+-- 3c. The summary view exposes the new surface fields.
+select is(
+  (select count(*) from information_schema.columns
+   where table_schema = 'public' and table_name = 'wall_zone_summaries'
+     and column_name in ('surface_material', 'surface_texture', 'has_bolt_holes')),
+  3::bigint,
+  'Wall-zone summary view exposes surface fields'
+);
+
+-- 3d. Wall-zone kind replaces wall_type; routes carry terrain/style/subjective grade.
+select is(
+  (select count(*) from information_schema.columns
+   where table_schema = 'public' and table_name = 'wall_zones'
+     and column_name = 'wall_kind'),
+  1::bigint,
+  'Wall-zone wall_kind exists'
+);
+select is(
+  (select count(*) from information_schema.columns
+   where table_schema = 'public' and table_name = 'wall_zones'
+     and column_name = 'wall_type'),
+  0::bigint,
+  'Wall-zone wall_type is gone'
+);
+select is(
+  (select count(*) from information_schema.columns
+   where table_schema = 'public' and table_name = 'routes'
+     and column_name in ('terrain', 'styles', 'subjective_grade')),
+  3::bigint,
+  'Routes carry terrain, styles and subjective grade'
+);
+select is(
+  (select count(*) from information_schema.columns
+   where table_schema = 'public' and table_name = 'routes'
+     and column_name = 'label'),
+  0::bigint,
+  'Route label is gone'
+);
+
 -- 4. Development fixture cardinality.
 select is((select count(*) from public.gyms where data_source = 'development_fixture'), 3::bigint, 'Three development gyms seeded');
 select is((select count(*) from public.wall_zones), 9::bigint, 'Nine development wall zones seeded');

@@ -49,8 +49,10 @@ struct GymDetailView: View {
                 .padding(.vertical, DesignSpacing.small)
             }
 
-            Section(L10n.Gym.currentRoutesAndZones) {
+            Section {
                 zonesContent
+            } header: {
+                zonesSectionHeader
             }
 
             Section(L10n.Gym.latestReset) {
@@ -121,24 +123,33 @@ struct GymDetailView: View {
         }
         .navigationTitle(L10n.Gym.detailTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    if session.requireAuthentication(for: .account) {
-                        isAddWallZonePresented = true
-                    }
-                } label: {
-                    Label(L10n.Gym.addWallZone, systemImage: "plus")
-                }
-                .accessibilityIdentifier("add-wall-zone-button")
-            }
-        }
-        .sheet(isPresented: $isAddWallZonePresented) {
+        .sheet(isPresented: $isAddWallZonePresented, onDismiss: {
+            Task { await viewModel.load() }
+        }) {
             AddWallZoneView(environment: environment, session: session, gym: gym)
         }
         .task { await viewModel.load() }
         .onAppear {
             isFavourite = session.authenticationState.profile?.favouriteGymID == gym.id
+        }
+    }
+
+    private var zonesSectionHeader: some View {
+        HStack {
+            Text(L10n.Gym.currentRoutesAndZones)
+            Spacer()
+            Button {
+                if session.requireAuthentication(for: .account) {
+                    isAddWallZonePresented = true
+                }
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(DesignColour.brandPrimary)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(L10n.Gym.addWallZone)
+            .accessibilityIdentifier("add-wall-zone-button")
         }
     }
 

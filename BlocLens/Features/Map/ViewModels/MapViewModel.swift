@@ -120,7 +120,7 @@ final class LocalSearchViewModel: ObservableObject {
             }
 
             let routeResults = foundRoutes.compactMap { route -> LocalSearchResult? in
-                guard gradeBand.contains(route.officialGrade),
+                guard gradeBand.contains(route.displayGrade),
                       let zone = zonesByID[route.wallZoneID],
                       let gym = gymsByID[route.gymID] else { return nil }
                 return .route(route, wallZone: zone, gym: gym)

@@ -110,7 +110,7 @@ private struct SearchResultRow: View {
         case .gym(let gym): gym.name
         case .wallZone(let zone, _): zone.name
         case .route(let route, _, _):
-            "\(route.colourOrTag) · \(route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown))"
+            "\(route.colour) · \(route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))"
         }
     }
 

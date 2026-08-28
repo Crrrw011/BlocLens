@@ -90,7 +90,11 @@ nonisolated struct WallZoneRecord: Codable, Equatable, Sendable {
     let gymID: UUID
     let name: String
     let locationDescription: String?
-    let wallType: String
+    let wallKind: String?
+    let surfaceMaterial: String?
+    let surfaceTexture: String?
+    let hasBoltHoles: Bool?
+    let createdBy: UUID?
     let displayOrder: Int
     let availability: String
     let lastResetDate: Date?
@@ -101,7 +105,11 @@ nonisolated struct WallZoneRecord: Codable, Equatable, Sendable {
         case id, name, availability
         case gymID = "gym_id"
         case locationDescription = "location_description"
-        case wallType = "wall_type"
+        case wallKind = "wall_kind"
+        case surfaceMaterial = "surface_material"
+        case surfaceTexture = "surface_texture"
+        case hasBoltHoles = "has_bolt_holes"
+        case createdBy = "created_by"
         case displayOrder = "display_order"
         case lastResetDate = "last_reset_date"
         case currentRouteCount = "current_route_count"
@@ -109,14 +117,12 @@ nonisolated struct WallZoneRecord: Codable, Equatable, Sendable {
     }
 
     func domain() throws -> WallZone {
-        let domainWallType: WallType
-        switch wallType {
-        case "slab": domainWallType = .slab
-        case "vertical", "training_area": domainWallType = .vertical
-        case "overhang": domainWallType = .overhang
-        case "cave": domainWallType = .cave
-        case "mixed": domainWallType = .mixed
-        default: throw RemoteMappingError.unsupportedValue(field: "wall_zones.wall_type", value: wallType)
+        let domainWallKind: WallKind
+        switch wallKind {
+        case "spray_wall": domainWallKind = .sprayWall
+        case "comp_wall": domainWallKind = .compWall
+        case "regular_set_wall", nil: domainWallKind = .regularSetWall
+        default: throw RemoteMappingError.unsupportedValue(field: "wall_zones.wall_kind", value: wallKind ?? "")
         }
 
         let domainAvailability: WallZoneAvailability
@@ -131,12 +137,35 @@ nonisolated struct WallZoneRecord: Codable, Equatable, Sendable {
             )
         }
 
+        let domainMaterial: SurfaceMaterial
+        switch surfaceMaterial {
+        case "plywood", nil: domainMaterial = .plywood
+        case "fibreglass": domainMaterial = .fibreglass
+        case "concrete": domainMaterial = .concrete
+        case "composite": domainMaterial = .composite
+        case "other": domainMaterial = .other
+        default: domainMaterial = .other
+        }
+
+        let domainTexture: SurfaceTexture
+        switch surfaceTexture {
+        case "smooth": domainTexture = .smooth
+        case "lightly_textured", nil: domainTexture = .lightlyTextured
+        case "textured": domainTexture = .textured
+        case "rough": domainTexture = .rough
+        default: domainTexture = .lightlyTextured
+        }
+
         return WallZone(
             id: WallZoneID(rawValue: RemoteIdentifier.domainString(id)),
             gymID: GymID(rawValue: RemoteIdentifier.domainString(gymID)),
             name: name,
             locationDescription: locationDescription ?? "",
-            wallType: domainWallType,
+            wallKind: domainWallKind,
+            surfaceMaterial: domainMaterial,
+            surfaceTexture: domainTexture,
+            hasBoltHoles: hasBoltHoles ?? true,
+            createdBy: createdBy.map { UserID(rawValue: RemoteIdentifier.domainString($0)) },
             latestResetDate: lastResetDate,
             routeCount: max(0, currentRouteCount ?? 0),
             betaCount: max(0, betaCount ?? 0),

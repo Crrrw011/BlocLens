@@ -178,11 +178,11 @@ struct LogbookView: View {
 
     private func recordRow(_ item: LogbookRecordItem) -> some View {
         HStack(alignment: .top, spacing: DesignSpacing.compact) {
-            RouteColourSwatch(colourOrTag: item.route.colourOrTag, size: 40)
+            RouteColourSwatch(colourOrTag: item.route.colour, size: 40)
             VStack(alignment: .leading) {
-                Text(item.route.colourOrTag).font(.headline)
+                Text(item.route.colour).font(.headline)
                 HStack {
-                    Text(item.route.officialGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+                    Text(item.route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))
                     Text(item.entry.date.formatted(date: .abbreviated, time: .omitted))
                 }
                 .font(.caption)
