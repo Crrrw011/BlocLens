@@ -152,6 +152,22 @@ nonisolated struct ContentReportRecord: Codable, Equatable, Sendable {
     }
 }
 
+nonisolated struct FeedbackRecord: Codable, Equatable, Sendable {
+    let id: UUID
+    let category: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, category
+    }
+
+    func domain() throws -> FeedbackReceipt {
+        guard let category = FeedbackCategory(rawValue: category) else {
+            throw RemoteMappingError.unsupportedValue(field: "app_feedback.category", value: category)
+        }
+        return FeedbackReceipt(id: id, category: category)
+    }
+}
+
 nonisolated struct GymScopeRecord: Codable, Equatable, Sendable {
     let gymID: UUID
 

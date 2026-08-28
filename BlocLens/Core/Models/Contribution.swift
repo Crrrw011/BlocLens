@@ -163,3 +163,23 @@ nonisolated struct ContentReportReceipt: Identifiable, Equatable, Sendable {
     let category: ContentReportCategory
     let isSevere: Bool
 }
+
+nonisolated enum FeedbackCategory: String, CaseIterable, Codable, Sendable {
+    case issue
+    case suggestion
+    case safety
+    case dataCorrection = "data_correction"
+    case other
+}
+
+nonisolated struct SubmitFeedbackRequest: Equatable, Sendable {
+    let idempotencyKey: IdempotencyKey
+    let category: FeedbackCategory
+    let message: String
+    let currentPageID: String?
+}
+
+nonisolated struct FeedbackReceipt: Identifiable, Equatable, Sendable {
+    let id: UUID
+    let category: FeedbackCategory
+}

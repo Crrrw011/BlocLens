@@ -25,6 +25,8 @@ nonisolated protocol RemoteContributionDataSource: Sendable {
     func fetchComment(id: UUID) async throws -> BetaCommentRecord
     func insertReport(_ write: ContentReportWrite) async throws -> ContentReportRecord
     func fetchReport(id: UUID) async throws -> ContentReportRecord
+    func insertFeedback(_ write: FeedbackWrite) async throws -> FeedbackRecord
+    func fetchFeedback(id: UUID) async throws -> FeedbackRecord
 }
 
 nonisolated struct RouteContributionWrite: Encodable, Sendable {
@@ -220,6 +222,20 @@ nonisolated struct ContentReportWrite: Encodable, Sendable {
     }
 }
 
+nonisolated struct FeedbackWrite: Encodable, Sendable {
+    let id: String
+    let userID: String?
+    let category: String
+    let message: String
+    let currentPageID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, category, message
+        case userID = "user_id"
+        case currentPageID = "current_page_id"
+    }
+}
+
 struct SupabaseContributionDataSource: RemoteContributionDataSource, Sendable {
     let client: SupabaseClient
 
@@ -338,6 +354,12 @@ struct SupabaseContributionDataSource: RemoteContributionDataSource, Sendable {
     }
 
     func fetchReport(id: UUID) async throws -> ContentReportRecord { try await fetch(id, from: "content_reports") }
+
+    func insertFeedback(_ write: FeedbackWrite) async throws -> FeedbackRecord {
+        try await insert(write, into: "app_feedback")
+    }
+
+    func fetchFeedback(id: UUID) async throws -> FeedbackRecord { try await fetch(id, from: "app_feedback") }
 
     private func insert<Write: Encodable & Sendable, Record: Decodable & Sendable>(
         _ write: Write,

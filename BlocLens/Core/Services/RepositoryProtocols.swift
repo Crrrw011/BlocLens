@@ -115,6 +115,7 @@ nonisolated protocol ContributionRepository: Sendable {
     func comments(betaLinkID: BetaLinkID) async throws -> [BetaComment]
     func addComment(_ request: AddBetaCommentRequest) async throws -> BetaComment
     func reportContent(_ request: SubmitContentReportRequest) async throws -> ContentReportReceipt
+    func submitFeedback(_ request: SubmitFeedbackRequest) async throws -> FeedbackReceipt
 }
 
 nonisolated protocol RelationshipRepository: Sendable {
@@ -129,4 +130,6 @@ nonisolated protocol RelationshipRepository: Sendable {
 
 nonisolated protocol RoleRepository: Sendable {
     func sessionRoleContext() async throws -> SessionRoleContext
+    func notificationPreferences() async throws -> [NotificationPreference]
+    func setNotificationPreference(category: NotificationCategory, isEnabled: Bool) async throws
 }

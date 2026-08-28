@@ -191,10 +191,7 @@ private struct SettingsView: View {
     @ObservedObject var session: AppSession
     let environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
-    @State private var projectRemoval = true
-    @State private var gymResets = true
-    @State private var newBeta = true
-    @State private var followedContributors = false
+    @State private var preferences: [NotificationCategory: Bool] = [:]
     @State private var showsDeleteConfirmation = false
     @State private var isDeletingAccount = false
     @State private var showsDeleteError = false
@@ -233,20 +230,17 @@ private struct SettingsView: View {
             }
 
             Section(L10n.Settings.notifications) {
-                Toggle(L10n.Settings.projectRemoval, isOn: $projectRemoval)
-                Toggle(L10n.Settings.gymResets, isOn: $gymResets)
-                Toggle(L10n.Settings.newBetaProjects, isOn: $newBeta)
-                Toggle(L10n.Settings.followedContributors, isOn: $followedContributors)
-                Text(L10n.Settings.notificationMockNotice)
-                    .font(.caption)
-                    .foregroundStyle(DesignColour.secondaryText)
+                Toggle(L10n.Settings.projectRemoval, isOn: binding(.projectRemoval))
+                Toggle(L10n.Settings.gymResets, isOn: binding(.gymReset))
+                Toggle(L10n.Settings.newBetaProjects, isOn: binding(.newBetaForProject))
+                Toggle(L10n.Settings.followedContributors, isOn: binding(.followedContributorBeta))
             }
 
             Section {
                 NavigationLink(L10n.Settings.privacy) { PlaceholderInformationView(title: L10n.Settings.privacy) }
                 NavigationLink(L10n.Settings.safety) { PlaceholderInformationView(title: L10n.Settings.safety) }
                 NavigationLink(L10n.Settings.helpCentre) { PlaceholderInformationView(title: L10n.Settings.helpCentre) }
-                NavigationLink(L10n.Settings.sendFeedback) { PlaceholderInformationView(title: L10n.Settings.sendFeedback) }
+                NavigationLink(L10n.Settings.sendFeedback) { FeedbackView(environment: environment) }
             }
 
             Section {
@@ -301,12 +295,37 @@ private struct SettingsView: View {
             #endif
         }
         .navigationTitle(L10n.Settings.title)
+        .task { await loadNotificationPreferences() }
         .sheet(isPresented: $showsExportSheet) {
             LogbookExportView(environment: environment)
         }
         .sheet(isPresented: $showsPasswordSheet) {
             ChangePasswordView(session: session)
         }
+    }
+
+    @MainActor
+    private func loadNotificationPreferences() async {
+        guard session.authenticationState.isSignedIn else { return }
+        guard let stored = try? await environment.roleRepository.notificationPreferences() else {
+            return
+        }
+        preferences = Dictionary(uniqueKeysWithValues: stored.map { ($0.category, $0.isEnabled) })
+    }
+
+    private func binding(_ category: NotificationCategory) -> Binding<Bool> {
+        Binding(
+            get: { preferences[category] ?? true },
+            set: { newValue in
+                preferences[category] = newValue
+                guard session.authenticationState.isSignedIn else { return }
+                Task {
+                    try? await environment.roleRepository.setNotificationPreference(
+                        category: category, isEnabled: newValue
+                    )
+                }
+            }
+        )
     }
 
     private func signOut() async {

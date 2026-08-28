@@ -351,11 +351,16 @@ enum L10n {
         static let gymResets: LocalizedStringResource = "settings.notifications.gymResets"
         static let newBetaProjects: LocalizedStringResource = "settings.notifications.newBetaProjects"
         static let followedContributors: LocalizedStringResource = "settings.notifications.followedContributors"
-        static let notificationMockNotice: LocalizedStringResource = "settings.notifications.mockNotice"
         static let privacy: LocalizedStringResource = "settings.privacy"
         static let safety: LocalizedStringResource = "settings.safety"
         static let helpCentre: LocalizedStringResource = "settings.helpCentre"
         static let sendFeedback: LocalizedStringResource = "settings.sendFeedback"
+        static let feedbackCategory: LocalizedStringResource = "settings.feedback.category"
+        static let feedbackMessage: LocalizedStringResource = "settings.feedback.message"
+        static let feedbackMessagePrompt: LocalizedStringResource = "settings.feedback.messagePrompt"
+        static let feedbackSubmit: LocalizedStringResource = "settings.feedback.submit"
+        static let feedbackSuccess: LocalizedStringResource = "settings.feedback.success"
+        static let feedbackFooter: LocalizedStringResource = "settings.feedback.footer"
         static let development: LocalizedStringResource = "settings.development"
         static let resetOnboarding: LocalizedStringResource = "settings.resetOnboarding"
         static let resetBetaSafety: LocalizedStringResource = "settings.resetBetaSafety"
@@ -451,6 +456,16 @@ enum L10n {
         case .technical: "routeStyle.technical"
         case .powerful: "routeStyle.powerful"
         case .coordination: "routeStyle.coordination"
+        }
+    }
+
+    static func feedbackCategory(_ category: FeedbackCategory) -> LocalizedStringResource {
+        switch category {
+        case .issue: "feedbackCategory.issue"
+        case .suggestion: "feedbackCategory.suggestion"
+        case .safety: "feedbackCategory.safety"
+        case .dataCorrection: "feedbackCategory.dataCorrection"
+        case .other: "feedbackCategory.other"
         }
     }
 

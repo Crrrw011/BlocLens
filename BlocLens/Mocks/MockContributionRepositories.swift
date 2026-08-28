@@ -9,6 +9,7 @@ actor MockContributionRepository: ContributionRepository {
     private var resetsByKey: [IdempotencyKey: ResetConfirmationReceipt] = [:]
     private var commentsByKey: [IdempotencyKey: BetaComment] = [:]
     private var reportsByKey: [IdempotencyKey: ContentReportReceipt] = [:]
+    private var feedbackByKey: [IdempotencyKey: FeedbackReceipt] = [:]
     private let currentUserID: UserID
     private let managedGymIDs: Set<GymID>
 
@@ -257,6 +258,20 @@ actor MockContributionRepository: ContributionRepository {
         return receipt
     }
 
+    func submitFeedback(_ request: SubmitFeedbackRequest) throws -> FeedbackReceipt {
+        if let existing = feedbackByKey[request.idempotencyKey] { return existing }
+        let message = request.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !message.isEmpty, message.count <= 4_000 else {
+            throw RepositoryError.invalidInput
+        }
+        let receipt = FeedbackReceipt(
+            id: request.idempotencyKey.rawValue,
+            category: request.category
+        )
+        feedbackByKey[request.idempotencyKey] = receipt
+        return receipt
+    }
+
     private static func isHTTPS(_ url: URL) -> Bool {
         url.scheme?.lowercased() == "https" && url.host != nil
     }
@@ -341,12 +356,23 @@ actor MockRelationshipRepository: RelationshipRepository {
 
 actor MockRoleRepository: RoleRepository {
     private let context: SessionRoleContext
+    private var preferences: [NotificationCategory: Bool] = [:]
 
     init(context: SessionRoleContext = .guest) {
         self.context = context
     }
 
     func sessionRoleContext() -> SessionRoleContext { context }
+
+    func notificationPreferences() -> [NotificationPreference] {
+        NotificationCategory.allCases.map {
+            NotificationPreference(category: $0, isEnabled: preferences[$0] ?? true)
+        }
+    }
+
+    func setNotificationPreference(category: NotificationCategory, isEnabled: Bool) {
+        preferences[category] = isEnabled
+    }
 }
 
 nonisolated enum StableResetIdentifier {

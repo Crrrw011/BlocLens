@@ -286,6 +286,36 @@ struct ContributionRepositoryTests {
             #expect(error == .invalidInput)
         } catch { Issue.record("Unexpected error: \(error)") }
     }
+
+    @Test func submitFeedbackSucceedsAndIsIdempotent() async throws {
+        let repository = MockContributionRepository()
+        let key = IdempotencyKey()
+        let request = SubmitFeedbackRequest(
+            idempotencyKey: key, category: .suggestion,
+            message: "  Please add a dark mode toggle.  ", currentPageID: nil
+        )
+
+        let first = try await repository.submitFeedback(request)
+        let second = try await repository.submitFeedback(request)
+
+        #expect(first == second)
+        #expect(first.category == .suggestion)
+    }
+
+    @Test func submitFeedbackRejectsBlankMessage() async {
+        let repository = MockContributionRepository()
+        do {
+            _ = try await repository.submitFeedback(
+                SubmitFeedbackRequest(
+                    idempotencyKey: IdempotencyKey(), category: .issue,
+                    message: "   ", currentPageID: nil
+                )
+            )
+            Issue.record("Expected invalidInput")
+        } catch let error as RepositoryError {
+            #expect(error == .invalidInput)
+        } catch { Issue.record("Unexpected error: \(error)") }
+    }
 }
 
 @MainActor
@@ -373,5 +403,18 @@ struct RelationshipAndRoleRepositoryTests {
         #expect(!loaded.isModerator)
         #expect(!loaded.isAdministrator)
         #expect(loaded.managedGymIDs.isEmpty)
+    }
+
+    @Test func notificationPreferencesDefaultEnabledAndPersist() async throws {
+        let repository = MockRoleRepository()
+
+        let defaults = try await repository.notificationPreferences()
+        #expect(defaults.count == NotificationCategory.allCases.count)
+        #expect(defaults.allSatisfy { $0.isEnabled })
+
+        try await repository.setNotificationPreference(category: .gymReset, isEnabled: false)
+        let updated = try await repository.notificationPreferences()
+        let gymReset = try #require(updated.first { $0.category == .gymReset })
+        #expect(!gymReset.isEnabled)
     }
 }

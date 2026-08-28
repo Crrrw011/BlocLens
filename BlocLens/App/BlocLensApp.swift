@@ -5,6 +5,7 @@ struct BlocLensApp: App {
     private let environment: AppEnvironment
 
     init() {
+        CrashReportingService.configure()
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         let onboardingStore: any OnboardingStore

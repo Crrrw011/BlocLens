@@ -1,5 +1,17 @@
 import Foundation
 
+nonisolated enum NotificationCategory: String, CaseIterable, Codable, Equatable, Sendable {
+    case projectRemoval = "project_removal"
+    case gymReset = "gym_reset"
+    case newBetaForProject = "new_beta_for_project"
+    case followedContributorBeta = "followed_contributor_beta"
+}
+
+nonisolated struct NotificationPreference: Equatable, Sendable {
+    let category: NotificationCategory
+    let isEnabled: Bool
+}
+
 nonisolated struct UserRelationshipState: Equatable, Sendable {
     let isFollowing: Bool
     let isBlocked: Bool

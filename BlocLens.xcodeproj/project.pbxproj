@@ -133,6 +133,7 @@
 			name = BlocLens;
 			packageProductDependencies = (
 				D0C0FFEE0000000000000002 /* Supabase */,
+				D0C0FFEE0000000000000005 /* Sentry */,
 			);
 			productName = BlocLens;
 			productReference = B8A27300303D1CE7006E5A98 /* BlocLens.app */;
@@ -221,6 +222,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D0C0FFEE0000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				D0C0FFEE0000000000000004 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B8A27301303D1CE7006E5A98 /* Products */;
@@ -621,6 +623,14 @@
 				version = 2.51.0;
 			};
 		};
+		D0C0FFEE0000000000000004 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
+			requirement = {
+				kind = exactVersion;
+				version = 9.26.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -633,6 +643,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D0C0FFEE0000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		D0C0FFEE0000000000000005 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0C0FFEE0000000000000004 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

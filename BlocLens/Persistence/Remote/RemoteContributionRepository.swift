@@ -270,6 +270,28 @@ actor RemoteContributionRepository: ContributionRepository {
         return try domain(record)
     }
 
+    func submitFeedback(_ request: SubmitFeedbackRequest) async throws -> FeedbackReceipt {
+        let userID = dataSource.currentUserID()
+        let message = trimmed(request.message)
+        guard let message, !message.isEmpty, message.count <= 4_000 else {
+            throw RepositoryError.invalidInput
+        }
+        let pageID = trimmed(request.currentPageID)
+        let write = FeedbackWrite(
+            id: request.idempotencyKey.rawValue.uuidString,
+            userID: userID?.uuidString,
+            category: request.category.rawValue,
+            message: message,
+            currentPageID: pageID
+        )
+        let record: FeedbackRecord = try await idempotentInsert(
+            id: request.idempotencyKey.rawValue,
+            insert: { try await self.dataSource.insertFeedback(write) },
+            fetch: { try await self.dataSource.fetchFeedback(id: $0) }
+        )
+        return try domain(record)
+    }
+
     private func requireUser() throws -> UUID {
         guard let id = dataSource.currentUserID() else { throw RepositoryError.unauthenticated }
         return id
@@ -336,6 +358,10 @@ actor RemoteContributionRepository: ContributionRepository {
         do { return try record.domain() } catch { throw RepositoryError.decodingFailure }
     }
     private func domain(_ record: ContentReportRecord) throws -> ContentReportReceipt {
+        do { return try record.domain() } catch { throw RepositoryError.decodingFailure }
+    }
+
+    private func domain(_ record: FeedbackRecord) throws -> FeedbackReceipt {
         do { return try record.domain() } catch { throw RepositoryError.decodingFailure }
     }
 

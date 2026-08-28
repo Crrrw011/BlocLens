@@ -231,6 +231,7 @@ final class AppSession: ObservableObject {
             resumedIntent = pendingIntent
             pendingIntent = nil
             isSignInGatePresented = false
+            CrashReportingService.syncUser(authenticationState.profile?.userID)
             Task { await refreshRoleContext() }
         }
     }
@@ -254,6 +255,7 @@ final class AppSession: ObservableObject {
             roleContext = .guest
             isRoleContextConfirmed = true
             sessionError = nil
+            CrashReportingService.syncUser(nil)
         } catch let error as RepositoryError {
             sessionError = error
         } catch {
@@ -269,6 +271,7 @@ final class AppSession: ObservableObject {
         roleContext = .guest
         isRoleContextConfirmed = true
         sessionError = nil
+        CrashReportingService.syncUser(nil)
     }
 
     func dismissContributionPrompt(_ identifier: String) {
