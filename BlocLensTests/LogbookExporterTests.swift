@@ -8,15 +8,19 @@ struct LogbookExporterTests {
             id: ClimbingRouteID(rawValue: id),
             gymID: GymID(rawValue: "gym"),
             wallZoneID: WallZoneID(rawValue: "zone"),
-            colourOrTag: "Blue",
-            officialGrade: .v4,
+            colour: "Blue",
+            terrain: .slab,
+            styles: [],
+            subjectiveGrade: .v4,
+            officialGrade: nil,
             communityGradeSummary: CommunityGradeSummary(voteCount: 0, medianGrade: nil),
             resetDate: nil,
             expectedArchiveDate: nil,
             isArchiveDateEstimated: false,
             lifecycle: .active,
             photoReference: nil,
-            betaCount: 0
+            betaCount: 0,
+            createdBy: nil
         )
     }
 

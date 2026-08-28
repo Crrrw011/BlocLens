@@ -236,7 +236,8 @@ nonisolated enum DevelopmentFixtures {
                     photoReference: index.isMultiple(of: 2)
                         ? RoutePhotoReference(referenceID: "fixture-photo-\(index)", accessibilityDescription: nil)
                         : nil,
-                    betaCount: betaCount(for: routeID)
+                    betaCount: betaCount(for: routeID),
+                    createdBy: nil
                 )
             }
         }

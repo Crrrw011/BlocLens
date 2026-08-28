@@ -44,9 +44,39 @@ actor MockContributionRepository: ContributionRepository {
             isArchiveDateEstimated: false,
             lifecycle: .active,
             photoReference: nil,
-            betaCount: 0
+            betaCount: 0,
+            createdBy: currentUserID
         )
         routesByKey[request.idempotencyKey] = route
+        return route
+    }
+
+    func updateRoute(_ routeID: ClimbingRouteID, request: AddRouteRequest) throws -> ClimbingRoute {
+        let colour = request.colour.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !colour.isEmpty,
+              DevelopmentFixtures.wallZones.contains(where: {
+                  $0.id == request.wallZoneID && $0.gymID == request.gymID
+              }) else {
+            throw RepositoryError.invalidInput
+        }
+        let route = ClimbingRoute(
+            id: routeID,
+            gymID: request.gymID,
+            wallZoneID: request.wallZoneID,
+            colour: colour,
+            terrain: request.terrain,
+            styles: request.styles,
+            subjectiveGrade: request.subjectiveGrade,
+            officialGrade: nil,
+            communityGradeSummary: CommunityGradeSummary(voteCount: 0, medianGrade: nil),
+            resetDate: request.setDate,
+            expectedArchiveDate: nil,
+            isArchiveDateEstimated: false,
+            lifecycle: .active,
+            photoReference: nil,
+            betaCount: 0,
+            createdBy: currentUserID
+        )
         return route
     }
 

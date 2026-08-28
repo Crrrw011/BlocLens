@@ -142,6 +142,7 @@ enum L10n {
         static let requiredFooter: LocalizedStringResource = "wallZone.add.requiredFooter"
         static let edit: LocalizedStringResource = "wallZone.edit"
         static let reportIssue: LocalizedStringResource = "wallZone.reportIssue"
+        static let zoneActionsTitle: LocalizedStringResource = "wallZone.zoneActionsTitle"
     }
 
     enum RouteList {
@@ -173,6 +174,8 @@ enum L10n {
         static let accuracyTitle: LocalizedStringResource = "route.accuracy.title"
         static let suggestCorrection: LocalizedStringResource = "route.suggestCorrection"
         static let reportRoute: LocalizedStringResource = "route.reportRoute"
+        static let actionsTitle: LocalizedStringResource = "route.actionsTitle"
+        static let edit: LocalizedStringResource = "route.edit"
         static let colourAccessibilityPrefix: LocalizedStringResource = "route.colour.accessibilityPrefix"
     }
 

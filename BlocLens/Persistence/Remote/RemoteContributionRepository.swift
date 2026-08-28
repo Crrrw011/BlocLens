@@ -37,6 +37,25 @@ actor RemoteContributionRepository: ContributionRepository {
         return try domainRoute(record)
     }
 
+    func updateRoute(_ routeID: ClimbingRouteID, request: AddRouteRequest) async throws -> ClimbingRoute {
+        let userID = try requireUser()
+        let routeUUID = try uuid(routeID, field: "routes.id")
+        let colour = trimmed(request.colour)
+        guard let colour, !colour.isEmpty else {
+            throw RepositoryError.invalidInput
+        }
+        let write = RouteUpdateWrite(
+            colour: colour,
+            terrain: request.terrain.rawValue,
+            styles: request.styles.map(\.rawValue),
+            subjectiveGrade: request.subjectiveGrade?.rawValue
+        )
+        let record: RouteRecord = try await mapped {
+            try await self.dataSource.updateRoute(id: routeUUID, write: write)
+        }
+        return try domainRoute(record)
+    }
+
     func createWallZone(_ request: AddWallZoneRequest) async throws -> WallZone {
         let userID = try requireUser()
         let gymID = try uuid(request.gymID, field: "wall_zones.gym_id")

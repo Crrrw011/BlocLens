@@ -1,9 +1,7 @@
 {
   "sourceLanguage" : "en-AU",
   "strings" : {
-    "" : {
-
-    },
+    "" : {},
     "%@ · %@" : {
       "localizations" : {
         "en-AU" : {
@@ -1700,9 +1698,7 @@
         }
       }
     },
-    "common.save" : {
-
-    },
+    "common.save" : {},
     "common.selected" : {
       "localizations" : {
         "en-AU" : {
@@ -4875,9 +4871,7 @@
         }
       }
     },
-    "profile.edit" : {
-
-    },
+    "profile.edit" : {},
     "profile.empty.message" : {
       "localizations" : {
         "en-AU" : {
@@ -5164,45 +5158,19 @@
         }
       }
     },
-    "profileEdit.armSpan" : {
-
-    },
-    "profileEdit.cm" : {
-
-    },
-    "profileEdit.gradeHint" : {
-
-    },
-    "profileEdit.gradeSystem" : {
-
-    },
-    "profileEdit.height" : {
-
-    },
-    "profileEdit.measurements" : {
-
-    },
-    "profileEdit.notSureYet" : {
-
-    },
-    "profileEdit.regularGrade" : {
-
-    },
-    "profileEdit.saveFailed" : {
-
-    },
-    "profileEdit.subtitle" : {
-
-    },
-    "profileEdit.title" : {
-
-    },
-    "profileEdit.vScale" : {
-
-    },
-    "profileEdit.yds" : {
-
-    },
+    "profileEdit.armSpan" : {},
+    "profileEdit.cm" : {},
+    "profileEdit.gradeHint" : {},
+    "profileEdit.gradeSystem" : {},
+    "profileEdit.height" : {},
+    "profileEdit.measurements" : {},
+    "profileEdit.notSureYet" : {},
+    "profileEdit.regularGrade" : {},
+    "profileEdit.saveFailed" : {},
+    "profileEdit.subtitle" : {},
+    "profileEdit.title" : {},
+    "profileEdit.vScale" : {},
+    "profileEdit.yds" : {},
     "route.accuracy.title" : {
       "localizations" : {
         "en-AU" : {
@@ -8059,6 +8027,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "报告问题"
+          }
+        }
+      }
+    },
+    "wallZone.zoneActionsTitle" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wall Zone Actions"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "벽 구역 작업"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "墙区操作"
+          }
+        }
+      }
+    },
+    "route.actionsTitle" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route Actions"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루트 작업"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "线路操作"
+          }
+        }
+      }
+    },
+    "route.edit" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit Route"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "루트 편집"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑线路"
           }
         }
       }

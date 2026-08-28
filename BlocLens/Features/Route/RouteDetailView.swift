@@ -16,6 +16,8 @@ struct RouteDetailView: View {
     @State private var helpfulLinkIDs: Set<BetaLinkID> = []
     @State private var saveFeedbackTrigger = 0
     @State private var helpfulFeedbackTrigger = 0
+    @State private var showsRouteActions = false
+    @State private var isEditRoutePresented = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
@@ -29,6 +31,11 @@ struct RouteDetailView: View {
         self.session = session
         _betaRevealState = State(initialValue: initialBetaRevealed ? .revealed : .hidden)
         _viewModel = StateObject(wrappedValue: RouteDetailViewModel(route: route, environment: environment))
+    }
+
+    private var isRouteCreator: Bool {
+        guard let current = environment.currentUserID() else { return false }
+        return route.createdBy == current
     }
 
     var body: some View {
@@ -50,6 +57,27 @@ struct RouteDetailView: View {
         }
         .navigationTitle(L10n.Route.detailTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isRouteCreator {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showsRouteActions = true
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .accessibilityIdentifier("route-more-button")
+                }
+            }
+        }
+        .confirmationDialog(L10n.Route.actionsTitle, isPresented: $showsRouteActions, titleVisibility: .hidden) {
+            Button(L10n.Route.edit) {
+                isEditRoutePresented = true
+            }
+            Button(L10n.Common.cancel, role: .cancel) {}
+        }
+        .sheet(isPresented: $isEditRoutePresented) {
+            EditRouteView(environment: environment, session: session, route: route)
+        }
         .task { await viewModel.load(viewerProfile: session.authenticationState.profile) }
         .onChange(of: session.resumedIntent) { _, intent in
             guard let intent else { return }

@@ -97,7 +97,8 @@ struct RemoteRepositoryTests {
         let facility = GymFacilityRecord(gymID: gymID, facility: "showers", isAvailable: true)
         let zone = WallZoneRecord(
             id: zoneID, gymID: gymID, name: "Main Wall", locationDescription: "Central",
-            wallType: "vertical", displayOrder: 0, availability: "active", lastResetDate: nil,
+            wallKind: "regular_set_wall", surfaceMaterial: "plywood", surfaceTexture: "lightly_textured",
+            hasBoltHoles: true, createdBy: nil, displayOrder: 0, availability: "active", lastResetDate: nil,
             currentRouteCount: 3, betaCount: 2
         )
         let band = GymHardSoftBandRecord(gradeBand: "Overall", eligibleRouteCount: 3, medianGradeDelta: 0.5, assessment: "hard")
@@ -159,9 +160,9 @@ struct RemoteRepositoryTests {
         let zoneID = try makeUUID(2)
         let routeID = try makeUUID(3)
         let record = RouteRecord(
-            id: routeID, gymID: gymID, wallZoneID: zoneID, colour: "Blue", label: nil,
+            id: routeID, gymID: gymID, wallZoneID: zoneID, colour: "Blue", terrain: "slab", styles: [], subjectiveGrade: nil,
             gymGrade: 2, lifecycle: "active", setDate: nil, estimatedArchiveDate: nil,
-            isArchiveDateEstimated: false, archivedAt: nil, betaCount: 4
+            isArchiveDateEstimated: false, archivedAt: nil, betaCount: 4, createdBy: nil
         )
         let grade = CommunityGradeRecord(routeID: routeID, voteCount: 3, isDisplayEligible: true, medianVGrade: 3)
         let dataSource = FakeRouteDataSource(routes: [record], grades: [routeID: grade])
@@ -178,9 +179,9 @@ struct RemoteRepositoryTests {
         let zoneID = try makeUUID(2)
         let routeID = try makeUUID(3)
         let record = RouteRecord(
-            id: routeID, gymID: gymID, wallZoneID: zoneID, colour: "Red", label: nil,
+            id: routeID, gymID: gymID, wallZoneID: zoneID, colour: "Red", terrain: "slab", styles: [], subjectiveGrade: nil,
             gymGrade: 0, lifecycle: "active", setDate: nil, estimatedArchiveDate: nil,
-            isArchiveDateEstimated: false, archivedAt: nil, betaCount: 0
+            isArchiveDateEstimated: false, archivedAt: nil, betaCount: 0, createdBy: nil
         )
         let grade = CommunityGradeRecord(routeID: routeID, voteCount: 2, isDisplayEligible: false, medianVGrade: nil)
         let dataSource = FakeRouteDataSource(routes: [record], grades: [routeID: grade])
@@ -196,9 +197,9 @@ struct RemoteRepositoryTests {
         let zoneID = try makeUUID(2)
         let routeID = try makeUUID(3)
         let record = RouteRecord(
-            id: routeID, gymID: gymID, wallZoneID: zoneID, colour: "Orange", label: nil,
+            id: routeID, gymID: gymID, wallZoneID: zoneID, colour: "Orange", terrain: "slab", styles: [], subjectiveGrade: nil,
             gymGrade: 8, lifecycle: "archived", setDate: nil, estimatedArchiveDate: nil,
-            isArchiveDateEstimated: false, archivedAt: Date(), betaCount: 1
+            isArchiveDateEstimated: false, archivedAt: Date(), betaCount: 1, createdBy: nil
         )
         let grade = CommunityGradeRecord(routeID: routeID, voteCount: 0, isDisplayEligible: false, medianVGrade: nil)
         let dataSource = FakeRouteDataSource(routes: [record], grades: [routeID: grade])
@@ -224,9 +225,9 @@ struct RemoteRepositoryTests {
         let zoneID = try makeUUID(2)
         let routeID = try makeUUID(3)
         let record = RouteRecord(
-            id: routeID, gymID: gymID, wallZoneID: zoneID, colour: "Blue", label: nil,
+            id: routeID, gymID: gymID, wallZoneID: zoneID, colour: "Blue", terrain: "slab", styles: [], subjectiveGrade: nil,
             gymGrade: 2, lifecycle: "active", setDate: nil, estimatedArchiveDate: nil,
-            isArchiveDateEstimated: false, archivedAt: nil, betaCount: 0
+            isArchiveDateEstimated: false, archivedAt: nil, betaCount: 0, createdBy: nil
         )
         let dataSource = FakeRouteDataSource(routes: [record], grades: [:])
 
@@ -234,7 +235,7 @@ struct RemoteRepositoryTests {
             for: DuplicateRouteQuery(
                 gymID: GymID(rawValue: gymID.uuidString.lowercased()),
                 wallZoneID: WallZoneID(rawValue: zoneID.uuidString.lowercased()),
-                colourOrTag: "Blue",
+                colour: "Blue",
                 resetDate: nil
             )
         )

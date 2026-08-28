@@ -13,7 +13,7 @@ struct AddContributionView: View {
     @State private var lockedGymName = ""
     @State private var colour = ""
     @State private var terrain: RouteTerrain = .slab
-    @State private var selectedStyles: Set<RouteStyle> = []
+    @State private var style: RouteStyle = .staticMovement
     @State private var grade = VGrade.unknown
     @State private var publicURL = ""
     @State private var originalPostURL = ""
@@ -92,13 +92,12 @@ struct AddContributionView: View {
                     helperLabel(L10n.Add.terrainField, helper: L10n.Add.terrainHelper)
                 }
 
-                VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-                    helperLabel(L10n.Add.styleField, helper: L10n.Add.styleHelper)
-                    ForEach(RouteStyle.allCases, id: \.self) { style in
-                        Toggle(isOn: styleBinding(style)) {
-                            Text(L10n.routeStyle(style))
-                        }
+                Picker(selection: $style) {
+                    ForEach(RouteStyle.allCases, id: \.self) { value in
+                        Text(L10n.routeStyle(value)).tag(value)
                     }
+                } label: {
+                    helperLabel(L10n.Add.styleField, helper: L10n.Add.styleHelper)
                 }
 
                 Picker(selection: $grade) {
@@ -237,7 +236,7 @@ struct AddContributionView: View {
                     AddRouteRequest(
                         idempotencyKey: IdempotencyKey(), gymID: gymID, wallZoneID: zoneID,
                         colour: colour, terrain: terrain,
-                        styles: RouteStyle.allCases.filter(selectedStyles.contains),
+                        styles: [style],
                         subjectiveGrade: grade == .unknown ? nil : grade, setDate: nil
                     )
                 )
@@ -270,15 +269,6 @@ struct AddContributionView: View {
             get: { selectedTags.contains(tag) },
             set: { selected in
                 if selected { selectedTags.insert(tag) } else { selectedTags.remove(tag) }
-            }
-        )
-    }
-
-    private func styleBinding(_ style: RouteStyle) -> Binding<Bool> {
-        Binding(
-            get: { selectedStyles.contains(style) },
-            set: { selected in
-                if selected { selectedStyles.insert(style) } else { selectedStyles.remove(style) }
             }
         )
     }

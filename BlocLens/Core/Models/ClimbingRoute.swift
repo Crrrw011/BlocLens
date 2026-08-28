@@ -44,6 +44,7 @@ nonisolated struct ClimbingRoute: Identifiable, Codable, Equatable, Hashable, Se
     let lifecycle: RouteLifecycle
     let photoReference: RoutePhotoReference?
     let betaCount: Int
+    let createdBy: UserID?
 
     var displayGrade: VGrade? {
         communityGradeSummary.displayGrade ?? subjectiveGrade ?? officialGrade

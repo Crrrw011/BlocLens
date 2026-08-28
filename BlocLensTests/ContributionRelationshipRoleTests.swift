@@ -12,14 +12,16 @@ struct ContributionRepositoryTests {
         let key = IdempotencyKey()
         let request = AddRouteRequest(
             idempotencyKey: key, gymID: route.gymID, wallZoneID: route.wallZoneID,
-            colour: "Teal", label: nil, officialGrade: .v4, setDate: nil
+            colour: "Teal", terrain: .slab, styles: [.technical],
+            subjectiveGrade: .v4, setDate: nil
         )
 
         let first = try await repository.addRoute(request)
         let second = try await repository.addRoute(request)
 
         #expect(first == second)
-        #expect(first.colourOrTag == "Teal")
+        #expect(first.colour == "Teal")
+        #expect(first.terrain == .slab)
     }
 
     @Test func addRouteRejectsMissingIdentity() async {
@@ -28,8 +30,8 @@ struct ContributionRepositoryTests {
             _ = try await repository.addRoute(
                 AddRouteRequest(
                     idempotencyKey: IdempotencyKey(), gymID: route.gymID,
-                    wallZoneID: route.wallZoneID, colour: " ", label: nil,
-                    officialGrade: nil, setDate: nil
+                    wallZoneID: route.wallZoneID, colour: " ", terrain: .slab,
+                    styles: [], subjectiveGrade: nil, setDate: nil
                 )
             )
             Issue.record("Expected invalidInput")
@@ -44,7 +46,9 @@ struct ContributionRepositoryTests {
         let gym = DevelopmentFixtures.gyms[0]
         let request = AddWallZoneRequest(
             idempotencyKey: key, gymID: gym.id, name: "  North Slab  ",
-            locationDescription: "Left side", wallType: .slab, sortOrder: 4
+            locationDescription: "Left side", wallKind: .regularSetWall,
+            surfaceMaterial: .plywood, surfaceTexture: .textured,
+            hasBoltHoles: false, sortOrder: 4
         )
 
         let first = try await repository.createWallZone(request)
@@ -53,7 +57,10 @@ struct ContributionRepositoryTests {
         #expect(first == second)
         #expect(first.name == "North Slab")
         #expect(first.locationDescription == "Left side")
-        #expect(first.wallType == .slab)
+        #expect(first.wallKind == .regularSetWall)
+        #expect(first.surfaceMaterial == .plywood)
+        #expect(first.surfaceTexture == .textured)
+        #expect(first.hasBoltHoles == false)
         #expect(first.sortOrder == 4)
         #expect(first.gymID == gym.id)
     }
@@ -65,7 +72,9 @@ struct ContributionRepositoryTests {
             _ = try await repository.createWallZone(
                 AddWallZoneRequest(
                     idempotencyKey: IdempotencyKey(), gymID: gym.id, name: "   ",
-                    locationDescription: nil, wallType: .vertical, sortOrder: 0
+                    locationDescription: nil, wallKind: .sprayWall,
+                    surfaceMaterial: .plywood, surfaceTexture: .smooth,
+                    hasBoltHoles: true, sortOrder: 0
                 )
             )
             Issue.record("Expected invalidInput")
@@ -80,7 +89,9 @@ struct ContributionRepositoryTests {
             _ = try await repository.createWallZone(
                 AddWallZoneRequest(
                     idempotencyKey: IdempotencyKey(), gymID: GymID(rawValue: "missing-gym"),
-                    name: "Cave", locationDescription: nil, wallType: .cave, sortOrder: 0
+                    name: "Cave", locationDescription: nil, wallKind: .compWall,
+                    surfaceMaterial: .plywood, surfaceTexture: .lightlyTextured,
+                    hasBoltHoles: true, sortOrder: 0
                 )
             )
             Issue.record("Expected invalidInput")

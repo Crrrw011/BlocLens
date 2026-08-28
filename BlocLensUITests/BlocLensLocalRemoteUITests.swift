@@ -19,8 +19,8 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
     func testProtectedAddIntentResumesAfterLocalSignIn() throws {
         let app = try launchLocal()
         try ensureSignedOut(app)
-        app.tabBars.buttons["Add"].tap()
-        app.buttons["Add a new route"].tap()
+        openDefaultAddRouteZone(in: app)
+        app.buttons["add-route-in-zone-button"].tap()
         try completeSignInGate(app, email: "fixture-climber-1@bloclens.invalid")
         XCTAssertTrue(app.navigationBars["Add a new route"].waitForExistence(timeout: 8))
     }
@@ -30,8 +30,8 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
         let app = try launchLocal()
         try signIn(app, email: "fixture-climber-1@bloclens.invalid")
         let colour = "D4R Cobalt \(UUID().uuidString.prefix(6))"
-        app.tabBars.buttons["Add"].tap()
-        app.buttons["Add a new route"].tap()
+        openDefaultAddRouteZone(in: app)
+        app.buttons["add-route-in-zone-button"].tap()
         let field = app.textFields["add-route-colour-field"]
         XCTAssertTrue(field.waitForExistence(timeout: 8))
         field.tap()

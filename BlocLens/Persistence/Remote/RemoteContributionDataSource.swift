@@ -6,6 +6,7 @@ nonisolated protocol RemoteContributionDataSource: Sendable {
     func isGymOfficial(gymID: UUID) async throws -> Bool
     func insertRoute(_ write: RouteContributionWrite) async throws -> RouteRecord
     func fetchRoute(id: UUID) async throws -> RouteRecord
+    func updateRoute(id: UUID, write: RouteUpdateWrite) async throws -> RouteRecord
     func insertWallZone(_ write: WallZoneContributionWrite) async throws -> WallZoneRecord
     func fetchWallZone(id: UUID) async throws -> WallZoneRecord
     func updateWallZone(id: UUID, write: WallZoneUpdateWrite) async throws -> WallZoneRecord
@@ -46,6 +47,18 @@ nonisolated struct RouteContributionWrite: Encodable, Sendable {
         case setDate = "set_date"
         case createdBy = "created_by"
         case isOfficialSource = "is_official_source"
+    }
+}
+
+nonisolated struct RouteUpdateWrite: Encodable, Sendable {
+    let colour: String
+    let terrain: String
+    let styles: [String]
+    let subjectiveGrade: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case colour, terrain, styles
+        case subjectiveGrade = "subjective_grade"
     }
 }
 
@@ -221,6 +234,17 @@ struct SupabaseContributionDataSource: RemoteContributionDataSource, Sendable {
 
     func insertRoute(_ write: RouteContributionWrite) async throws -> RouteRecord {
         try await insert(write, into: "routes")
+    }
+
+    func updateRoute(id: UUID, write: RouteUpdateWrite) async throws -> RouteRecord {
+        let response: PostgrestResponse<RouteRecord> = try await client
+            .from("routes")
+            .update(write)
+            .eq("id", value: id.uuidString)
+            .select()
+            .single()
+            .execute()
+        return response.value
     }
 
     func fetchRoute(id: UUID) async throws -> RouteRecord { try await fetch(id, from: "routes") }

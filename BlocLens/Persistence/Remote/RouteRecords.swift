@@ -15,6 +15,7 @@ nonisolated struct RouteRecord: Codable, Equatable, Sendable {
     let isArchiveDateEstimated: Bool
     let archivedAt: Date?
     let betaCount: Int?
+    let createdBy: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id, colour, terrain, styles, lifecycle
@@ -27,6 +28,7 @@ nonisolated struct RouteRecord: Codable, Equatable, Sendable {
         case isArchiveDateEstimated = "is_archive_date_estimated"
         case archivedAt = "archived_at"
         case betaCount = "beta_count"
+        case createdBy = "created_by"
     }
 
     func domain(
@@ -89,7 +91,8 @@ nonisolated struct RouteRecord: Codable, Equatable, Sendable {
             isArchiveDateEstimated: isArchiveDateEstimated,
             lifecycle: domainLifecycle,
             photoReference: photoReference,
-            betaCount: max(0, betaCount ?? 0)
+            betaCount: max(0, betaCount ?? 0),
+            createdBy: createdBy.map { UserID(rawValue: RemoteIdentifier.domainString($0)) }
         )
     }
 }

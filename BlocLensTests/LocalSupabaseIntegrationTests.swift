@@ -363,7 +363,8 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
                     idempotencyKey: IdempotencyKey(),
                     gymID: GymID(rawValue: "10000000-0000-4000-8000-000000000001"),
                     wallZoneID: WallZoneID(rawValue: "20000000-0000-4000-8000-000000000001"),
-                    colour: "Integration Blue", label: nil, officialGrade: nil, setDate: nil
+                    colour: "Integration Blue", terrain: .slab, styles: [],
+                    subjectiveGrade: nil, setDate: nil
                 )
             )
             XCTFail("Expected unauthenticated")
@@ -379,14 +380,16 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
             idempotencyKey: key,
             gymID: GymID(rawValue: "10000000-0000-4000-8000-000000000001"),
             wallZoneID: WallZoneID(rawValue: "20000000-0000-4000-8000-000000000001"),
-            colour: "Integration Teal", label: nil, officialGrade: .v4, setDate: Date()
+            colour: "Integration Teal", terrain: .slab, styles: [.technical],
+            subjectiveGrade: .v4, setDate: Date()
         )
 
         let first = try await makeContributionRepository().addRoute(request)
         let second = try await makeContributionRepository().addRoute(request)
 
         XCTAssertEqual(first.id, second.id)
-        XCTAssertEqual(first.colourOrTag, "Integration Teal")
+        XCTAssertEqual(first.colour, "Integration Teal")
+        XCTAssertEqual(first.terrain, .slab)
     }
 
     func testCreateWallZoneContribution() async throws {
@@ -397,7 +400,10 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
             gymID: GymID(rawValue: "10000000-0000-4000-8000-000000000001"),
             name: "Integration Slab",
             locationDescription: "Left wall",
-            wallType: .slab,
+            wallKind: .regularSetWall,
+            surfaceMaterial: .plywood,
+            surfaceTexture: .textured,
+            hasBoltHoles: false,
             sortOrder: 7
         )
 
