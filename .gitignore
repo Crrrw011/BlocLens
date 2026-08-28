@@ -1,4 +1,5 @@
 .DS_Store
+opencode.json
 .build/
 DerivedData/
 **/xcuserdata/
