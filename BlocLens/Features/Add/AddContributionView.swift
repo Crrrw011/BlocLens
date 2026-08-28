@@ -3,6 +3,7 @@ import SwiftUI
 struct AddContributionView: View {
     let action: AddAction
     let environment: AppEnvironment
+    var preselectedWallZone: WallZone?
 
     @Environment(\.dismiss) private var dismiss
     @State private var gyms: [Gym] = []
@@ -191,8 +192,14 @@ struct AddContributionView: View {
             gyms = values.0
             wallZones = values.1
             routes = values.2
-            selectedGymID = gyms.first?.id
-            selectedWallZoneID = wallZones.first { $0.gymID == selectedGymID }?.id
+            if let zone = preselectedWallZone {
+                let available = wallZones.contains { $0.id == zone.id }
+                selectedGymID = zone.gymID
+                selectedWallZoneID = available ? zone.id : nil
+            } else {
+                selectedGymID = gyms.first?.id
+                selectedWallZoneID = wallZones.first { $0.gymID == selectedGymID }?.id
+            }
             selectedRouteID = routes.first { $0.lifecycle == .active }?.id
         } catch {
             errorMessage = "Contribution options could not be loaded. Try again."

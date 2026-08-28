@@ -38,6 +38,57 @@ struct ContributionRepositoryTests {
         } catch { Issue.record("Unexpected error: \(error)") }
     }
 
+    @Test func createWallZoneSucceedsAndIsIdempotent() async throws {
+        let repository = MockContributionRepository()
+        let key = IdempotencyKey()
+        let gym = DevelopmentFixtures.gyms[0]
+        let request = AddWallZoneRequest(
+            idempotencyKey: key, gymID: gym.id, name: "  North Slab  ",
+            locationDescription: "Left side", wallType: .slab, sortOrder: 4
+        )
+
+        let first = try await repository.createWallZone(request)
+        let second = try await repository.createWallZone(request)
+
+        #expect(first == second)
+        #expect(first.name == "North Slab")
+        #expect(first.locationDescription == "Left side")
+        #expect(first.wallType == .slab)
+        #expect(first.sortOrder == 4)
+        #expect(first.gymID == gym.id)
+    }
+
+    @Test func createWallZoneRejectsBlankName() async {
+        let repository = MockContributionRepository()
+        let gym = DevelopmentFixtures.gyms[0]
+        do {
+            _ = try await repository.createWallZone(
+                AddWallZoneRequest(
+                    idempotencyKey: IdempotencyKey(), gymID: gym.id, name: "   ",
+                    locationDescription: nil, wallType: .vertical, sortOrder: 0
+                )
+            )
+            Issue.record("Expected invalidInput")
+        } catch let error as RepositoryError {
+            #expect(error == .invalidInput)
+        } catch { Issue.record("Unexpected error: \(error)") }
+    }
+
+    @Test func createWallZoneRejectsUnknownGym() async {
+        let repository = MockContributionRepository()
+        do {
+            _ = try await repository.createWallZone(
+                AddWallZoneRequest(
+                    idempotencyKey: IdempotencyKey(), gymID: GymID(rawValue: "missing-gym"),
+                    name: "Cave", locationDescription: nil, wallType: .cave, sortOrder: 0
+                )
+            )
+            Issue.record("Expected invalidInput")
+        } catch let error as RepositoryError {
+            #expect(error == .invalidInput)
+        } catch { Issue.record("Unexpected error: \(error)") }
+    }
+
     @Test func shareBetaLinkStoresExternalMetadataOnly() async throws {
         let repository = MockContributionRepository()
         let request = ShareBetaLinkRequest(

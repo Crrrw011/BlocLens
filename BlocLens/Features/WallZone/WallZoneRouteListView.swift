@@ -7,6 +7,7 @@ struct WallZoneRouteListView: View {
 
     @StateObject private var viewModel: WallZoneRouteListViewModel
     @State private var showsArchived = false
+    @State private var isAddRoutePresented = false
 
     init(wallZone: WallZone, environment: AppEnvironment, session: AppSession) {
         self.wallZone = wallZone
@@ -30,6 +31,21 @@ struct WallZoneRouteListView: View {
         }
         .navigationTitle(wallZone.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    if session.requireAuthentication(for: .add(.addNewRoute)) {
+                        isAddRoutePresented = true
+                    }
+                } label: {
+                    Label(L10n.Gym.addRouteInZone, systemImage: "plus")
+                }
+                .accessibilityIdentifier("add-route-in-zone-button")
+            }
+        }
+        .sheet(isPresented: $isAddRoutePresented) {
+            AddContributionView(action: .addNewRoute, environment: environment, preselectedWallZone: wallZone)
+        }
         .searchable(text: $viewModel.options.query, prompt: Text(L10n.Search.routePrompt))
         .onSubmit(of: .search) { Task { await viewModel.load() } }
         .onChange(of: viewModel.options.query) { _, _ in Task { await viewModel.load() } }

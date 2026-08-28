@@ -105,6 +105,7 @@ nonisolated protocol LogbookRepository: Sendable {
 
 nonisolated protocol ContributionRepository: Sendable {
     func addRoute(_ request: AddRouteRequest) async throws -> ClimbingRoute
+    func createWallZone(_ request: AddWallZoneRequest) async throws -> WallZone
     func shareBetaLink(_ request: ShareBetaLinkRequest) async throws -> BetaLink
     func addRoutePhoto(_ request: AddRoutePhotoRequest) async throws -> RoutePhotoMetadata
     func submitCorrection(_ request: SubmitRouteCorrectionRequest) async throws -> RouteCorrectionReceipt

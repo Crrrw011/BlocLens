@@ -7,6 +7,7 @@ struct GymDetailView: View {
 
     @StateObject private var viewModel: GymDetailViewModel
     @State private var isFavourite = false
+    @State private var isAddWallZonePresented = false
 
     init(gym: Gym, environment: AppEnvironment, session: AppSession) {
         self.gym = gym
@@ -120,6 +121,21 @@ struct GymDetailView: View {
         }
         .navigationTitle(L10n.Gym.detailTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    if session.requireAuthentication(for: .account) {
+                        isAddWallZonePresented = true
+                    }
+                } label: {
+                    Label(L10n.Gym.addWallZone, systemImage: "plus")
+                }
+                .accessibilityIdentifier("add-wall-zone-button")
+            }
+        }
+        .sheet(isPresented: $isAddWallZonePresented) {
+            AddWallZoneView(environment: environment, session: session, gym: gym)
+        }
         .task { await viewModel.load() }
         .onAppear {
             isFavourite = session.authenticationState.profile?.favouriteGymID == gym.id

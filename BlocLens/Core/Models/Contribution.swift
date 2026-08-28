@@ -18,6 +18,15 @@ nonisolated struct AddRouteRequest: Equatable, Sendable {
     let setDate: Date?
 }
 
+nonisolated struct AddWallZoneRequest: Equatable, Sendable {
+    let idempotencyKey: IdempotencyKey
+    let gymID: GymID
+    let name: String
+    let locationDescription: String?
+    let wallType: WallType
+    let sortOrder: Int
+}
+
 nonisolated struct ShareBetaLinkRequest: Equatable, Sendable {
     let idempotencyKey: IdempotencyKey
     let routeID: ClimbingRouteID

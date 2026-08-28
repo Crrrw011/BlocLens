@@ -389,6 +389,26 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         XCTAssertEqual(first.colourOrTag, "Integration Teal")
     }
 
+    func testCreateWallZoneContribution() async throws {
+        _ = try await signUpAndCompleteSetup()
+        let key = IdempotencyKey()
+        let request = AddWallZoneRequest(
+            idempotencyKey: key,
+            gymID: GymID(rawValue: "10000000-0000-4000-8000-000000000001"),
+            name: "Integration Slab",
+            locationDescription: "Left wall",
+            wallType: .slab,
+            sortOrder: 7
+        )
+
+        let first = try await makeContributionRepository().createWallZone(request)
+        let second = try await makeContributionRepository().createWallZone(request)
+
+        XCTAssertEqual(first.id, second.id)
+        XCTAssertEqual(first.name, "Integration Slab")
+        XCTAssertEqual(first.gymID, GymID(rawValue: "10000000-0000-4000-8000-000000000001"))
+    }
+
     func testShareExternalBetaLinkContribution() async throws {
         _ = try await signUpAndCompleteSetup()
         let unique = UUID().uuidString.lowercased()

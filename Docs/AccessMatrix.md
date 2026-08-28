@@ -42,7 +42,8 @@
 | Manage own public profile | Gate | Allow | Allow | Allow | Allow | Username required; height and arm span are optional public matching fields when supplied. |
 | Manage notification categories | Gate | Allow | Allow | Allow | Allow | Each of the four MVP categories has an independent control. |
 | Manage gym operating data | No | Submit correction | Submit correction | Own gym | Web portal | Verified Gym can edit hours, facilities and contact details for its own gym. |
-| Create, rename or reorder wall zones | No | No | No | Own gym | Web portal | Only Verified Gym and Administrator roles can manage zone structure. |
+| Rename or reorder wall zones | No | No | No | Own gym | Web portal | Altering existing zone structure remains limited to Verified Gym and Administrator roles. |
+| Create a wall zone | No | Allow | Allow | Own gym | Web portal | Signed-in users add a named zone to a gym they can see; it takes effect immediately. |
 | Publish official reset | No | Confirm reset | Confirm reset | Own gym | Web portal | Official reset takes effect immediately; otherwise three distinct users confirm. |
 | Maintain official gym routes | No | Contribute public route | Contribute public route | Own gym | Web portal | Verified Gym content displays official status where applicable. |
 | Edit community grade | No | Own vote only | Own vote only | Own vote only | No direct edit | Verified Gym and Administrator roles cannot rewrite the community median or hard/soft calculations. Invalid votes may be handled through governed moderation, not grade editing. |

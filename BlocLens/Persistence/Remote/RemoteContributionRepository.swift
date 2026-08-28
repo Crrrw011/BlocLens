@@ -37,6 +37,30 @@ actor RemoteContributionRepository: ContributionRepository {
         return try domainRoute(record)
     }
 
+    func createWallZone(_ request: AddWallZoneRequest) async throws -> WallZone {
+        let userID = try requireUser()
+        let gymID = try uuid(request.gymID, field: "wall_zones.gym_id")
+        let name = trimmed(request.name)
+        guard let name, !name.isEmpty else { throw RepositoryError.invalidInput }
+        let location = trimmed(request.locationDescription)
+        let zoneID = request.idempotencyKey.rawValue
+        let write = WallZoneContributionWrite(
+            id: zoneID.uuidString,
+            gymID: gymID.uuidString,
+            name: name,
+            locationDescription: location,
+            wallType: request.wallType.rawValue,
+            displayOrder: max(0, request.sortOrder),
+            createdBy: userID.uuidString
+        )
+        let record: WallZoneRecord = try await idempotentInsert(
+            id: zoneID,
+            insert: { try await self.dataSource.insertWallZone(write) },
+            fetch: { try await self.dataSource.fetchWallZone(id: $0) }
+        )
+        return try domainZone(record)
+    }
+
     func shareBetaLink(_ request: ShareBetaLinkRequest) async throws -> BetaLink {
         let userID = try requireUser()
         guard isHTTPS(request.publicURL), isHTTPS(request.originalPostURL),
@@ -254,6 +278,9 @@ actor RemoteContributionRepository: ContributionRepository {
     }
 
     private func domain(_ record: BetaLinkRecord) throws -> BetaLink {
+        do { return try record.domain() } catch { throw RepositoryError.decodingFailure }
+    }
+    private func domainZone(_ record: WallZoneRecord) throws -> WallZone {
         do { return try record.domain() } catch { throw RepositoryError.decodingFailure }
     }
     private func domain(_ record: RoutePhotoRecord) throws -> RoutePhotoMetadata {

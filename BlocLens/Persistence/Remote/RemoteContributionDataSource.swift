@@ -6,6 +6,8 @@ nonisolated protocol RemoteContributionDataSource: Sendable {
     func isGymOfficial(gymID: UUID) async throws -> Bool
     func insertRoute(_ write: RouteContributionWrite) async throws -> RouteRecord
     func fetchRoute(id: UUID) async throws -> RouteRecord
+    func insertWallZone(_ write: WallZoneContributionWrite) async throws -> WallZoneRecord
+    func fetchWallZone(id: UUID) async throws -> WallZoneRecord
     func insertBetaLink(_ write: BetaContributionWrite) async throws -> BetaLinkRecord
     func fetchBetaLink(id: UUID) async throws -> BetaLinkRecord
     func insertPhoto(_ write: RoutePhotoContributionWrite) async throws -> RoutePhotoRecord
@@ -45,6 +47,25 @@ nonisolated struct RouteContributionWrite: Encodable, Sendable {
     }
 }
 
+nonisolated struct WallZoneContributionWrite: Encodable, Sendable {
+    let id: String
+    let gymID: String
+    let name: String
+    let locationDescription: String?
+    let wallType: String
+    let displayOrder: Int
+    let createdBy: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case gymID = "gym_id"
+        case locationDescription = "location_description"
+        case wallType = "wall_type"
+        case displayOrder = "display_order"
+        case createdBy = "created_by"
+    }
+}
+
 nonisolated struct BetaContributionWrite: Encodable, Sendable {
     let id: String
     let routeID: String
@@ -58,7 +79,6 @@ nonisolated struct BetaContributionWrite: Encodable, Sendable {
     let submitterArmSpanCM: Double?
     let embedCapability: String
     let isOfficialSource: Bool
-
     enum CodingKeys: String, CodingKey {
         case id, platform, tags
         case routeID = "route_id"
@@ -176,6 +196,20 @@ struct SupabaseContributionDataSource: RemoteContributionDataSource, Sendable {
     }
 
     func fetchRoute(id: UUID) async throws -> RouteRecord { try await fetch(id, from: "routes") }
+
+    func insertWallZone(_ write: WallZoneContributionWrite) async throws -> WallZoneRecord {
+        try await insert(write, into: "wall_zones")
+    }
+
+    func fetchWallZone(id: UUID) async throws -> WallZoneRecord {
+        let response: PostgrestResponse<WallZoneRecord> = try await client
+            .from("wall_zone_summaries")
+            .select()
+            .eq("id", value: id.uuidString)
+            .single()
+            .execute()
+        return response.value
+    }
 
     func insertBetaLink(_ write: BetaContributionWrite) async throws -> BetaLinkRecord {
         try await insert(write, into: "beta_links")

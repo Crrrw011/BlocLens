@@ -2,6 +2,7 @@ import Foundation
 
 actor MockContributionRepository: ContributionRepository {
     private var routesByKey: [IdempotencyKey: ClimbingRoute] = [:]
+    private var zonesByKey: [IdempotencyKey: WallZone] = [:]
     private var betaByKey: [IdempotencyKey: BetaLink] = [:]
     private var photosByKey: [IdempotencyKey: RoutePhotoMetadata] = [:]
     private var correctionsByKey: [IdempotencyKey: RouteCorrectionReceipt] = [:]
@@ -46,6 +47,29 @@ actor MockContributionRepository: ContributionRepository {
         )
         routesByKey[request.idempotencyKey] = route
         return route
+    }
+
+    func createWallZone(_ request: AddWallZoneRequest) throws -> WallZone {
+        if let existing = zonesByKey[request.idempotencyKey] { return existing }
+        let name = request.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let location = request.locationDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, DevelopmentFixtures.gyms.contains(where: { $0.id == request.gymID }) else {
+            throw RepositoryError.invalidInput
+        }
+        let zone = WallZone(
+            id: WallZoneID(rawValue: request.idempotencyKey.rawValue.uuidString.lowercased()),
+            gymID: request.gymID,
+            name: name,
+            locationDescription: location ?? "",
+            wallType: request.wallType,
+            latestResetDate: nil,
+            routeCount: 0,
+            betaCount: 0,
+            availability: .active,
+            sortOrder: max(0, request.sortOrder)
+        )
+        zonesByKey[request.idempotencyKey] = zone
+        return zone
     }
 
     func shareBetaLink(_ request: ShareBetaLinkRequest) throws -> BetaLink {

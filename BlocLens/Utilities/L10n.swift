@@ -116,11 +116,21 @@ enum L10n {
         static let contactFixtureMessage: LocalizedStringResource = "gym.contactFixtureMessage"
         static let contributionTitle: LocalizedStringResource = "gym.contribution.title"
         static let contributionMessage: LocalizedStringResource = "gym.contribution.message"
+        static let addWallZone: LocalizedStringResource = "gym.addWallZone"
+        static let addRouteInZone: LocalizedStringResource = "gym.addRouteInZone"
     }
 
     enum WallZone {
         static let emptyTitle: LocalizedStringResource = "wallZone.empty.title"
         static let emptyMessage: LocalizedStringResource = "wallZone.empty.message"
+        static let addTitle: LocalizedStringResource = "wallZone.add.title"
+        static let nameField: LocalizedStringResource = "wallZone.add.name"
+        static let namePrompt: LocalizedStringResource = "wallZone.add.namePrompt"
+        static let locationField: LocalizedStringResource = "wallZone.add.location"
+        static let locationPrompt: LocalizedStringResource = "wallZone.add.locationPrompt"
+        static let wallTypeField: LocalizedStringResource = "wallZone.add.wallType"
+        static let sortOrderField: LocalizedStringResource = "wallZone.add.sortOrder"
+        static let requiredFooter: LocalizedStringResource = "wallZone.add.requiredFooter"
     }
 
     enum RouteList {
