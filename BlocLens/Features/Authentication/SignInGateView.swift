@@ -180,6 +180,8 @@ struct SignInGateView: View {
                 .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
                 .accessibilityIdentifier("auth-username-field")
 
+            ageConfirmationRow
+
             if case .error = session.authenticationState {
                 Text(verbatim: Self.usernameUnavailable)
                     .font(.caption)
@@ -187,17 +189,26 @@ struct SignInGateView: View {
             }
 
             Button {
-                Task { await session.updateUsername(username.trimmingCharacters(in: .whitespacesAndNewlines)) }
+                Task { await completeProfileSetup() }
             } label: {
                 Text(verbatim: Self.continueTitle)
             }
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !isOver16)
             .accessibilityIdentifier("auth-profile-continue-button")
 
             Button(L10n.Common.notNow) { session.cancelSignIn() }
                 .buttonStyle(CompactActionButtonStyle())
         }
+    }
+
+    private func completeProfileSetup() async {
+        guard isOver16 else {
+            await session.confirmAge(isOver16: false)
+            return
+        }
+        await session.confirmAge(isOver16: true)
+        await session.updateUsername(username.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     private var ageGateMessage: some View {

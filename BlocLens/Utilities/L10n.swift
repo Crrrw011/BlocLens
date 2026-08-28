@@ -288,6 +288,7 @@ enum L10n {
         static let resetOnboarding: LocalizedStringResource = "settings.resetOnboarding"
         static let resetBetaSafety: LocalizedStringResource = "settings.resetBetaSafety"
         static let mockSignOut: LocalizedStringResource = "settings.mockSignOut"
+        static let signOut: LocalizedStringResource = "settings.signOut"
         static let placeholderMessage: LocalizedStringResource = "settings.placeholderMessage"
     }
 

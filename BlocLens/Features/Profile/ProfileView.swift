@@ -207,6 +207,13 @@ private struct SettingsView: View {
                 NavigationLink(L10n.Settings.sendFeedback) { PlaceholderInformationView(title: L10n.Settings.sendFeedback) }
             }
 
+            Section {
+                Button(L10n.Settings.signOut, role: .destructive) {
+                    Task { await session.signOut() }
+                }
+                .accessibilityIdentifier("settings-sign-out")
+            }
+
             #if DEBUG
             Section(L10n.Settings.development) {
                 Button(L10n.Settings.resetOnboarding) { session.resetOnboarding() }
