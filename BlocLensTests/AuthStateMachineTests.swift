@@ -8,7 +8,7 @@ struct AuthStateMachineTests {
     private func makeProfile(username: String, ageConfirmed: Date?) -> UserProfileRecord {
         UserProfileRecord(
             id: UUID(), username: username, avatarPath: nil, heightCM: nil, armSpanCM: nil,
-            regularGrade: nil, favouriteGymID: nil, isTrustedContributor: false,
+            regularGrade: nil, gradeSystem: nil, ydsGrade: nil, favouriteGymID: nil, isTrustedContributor: false,
             helpfulReceivedCount: 0, ageConfirmed16PlusAt: ageConfirmed,
             createdAt: Date(), updatedAt: Date()
         )
@@ -366,4 +366,15 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
     }
 
     func updateAgeConfirmation(userID: UUID) async throws {}
+
+    func updateProfileDetails(_ details: ProfileDetailsUpdate, userID: UUID) async throws {}
+
+    func sendEmailOTP(email: String) async throws {}
+
+    func verifyEmailOTP(email: String, token: String) async throws -> RemoteAuthSignUpResult {
+        hasSessionFlag = true
+        return RemoteAuthSignUpResult(userID: userIDValue ?? UUID(), hasSession: true)
+    }
+
+    func updatePassword(_ password: String) async throws {}
 }

@@ -6,6 +6,8 @@ nonisolated struct UserProfile: Codable, Equatable, Sendable {
     let heightCentimetres: Double?
     let armSpanCentimetres: Double?
     let regularGrade: VGrade?
+    let gradeSystem: GradeSystem?
+    let ydsGrade: YDSGrade?
     let favouriteGymID: GymID?
     let isTrustedContributor: Bool
     let helpfulVotes: Int

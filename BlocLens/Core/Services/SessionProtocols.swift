@@ -12,6 +12,10 @@ nonisolated protocol AuthenticationRepository: Sendable {
     func signInWithGoogle() async -> AuthenticationState
     func signInWithMockAccount() async -> AuthenticationState
     func deleteAccount() async throws -> AuthenticationState
+    func updateProfileDetails(_ details: ProfileDetailsUpdate) async -> AuthenticationState
+    func sendEmailOTP(email: String) async -> AuthenticationState
+    func verifyEmailOTP(email: String, token: String) async -> AuthenticationState
+    func updatePassword(_ password: String) async throws
 }
 
 nonisolated protocol OnboardingStore: Sendable {

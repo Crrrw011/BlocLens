@@ -6,10 +6,20 @@ struct SignInGateView: View {
 
     @State private var email = ""
     @State private var password = ""
+    @State private var otpCode = ""
     @State private var username = ""
     @State private var isOver16 = false
-    @State private var isCreatingAccount = false
+    @State private var authScreen: AuthScreen = .main
+    @State private var isPasswordMode = false
+    @State private var isCreateAccountFlow = false
+    @State private var hasSentCode = false
     @State private var appleCoordinator = AppleSignInCoordinator()
+
+    private enum AuthScreen {
+        case main
+        case emailVerify
+        case emailVerifyCode
+    }
 
     private static let emailPlaceholder = "Email"
     private static let passwordPlaceholder = "Password"
@@ -23,6 +33,12 @@ struct SignInGateView: View {
     private static let signInInstead = "Sign in instead"
     private static let continueTitle = "Continue"
     private static let continueAsGuestTitle = "Continue as Guest"
+    private static let backTitle = "Back"
+    private static let otpTitle = "Enter the code"
+    private static let otpBody = "We sent a code to your email."
+    private static let resendCode = "Resend code"
+    private static let passwordTitle = "Use password"
+    private static let useEmailCode = "Use email code"
     private static let ageConfirmation = "I am 16 or older"
     private static let ageGateTitle = "You must be 16 or older to create an account"
     private static let ageGateBody = "You can continue browsing gyms and routes as a guest."
@@ -35,13 +51,7 @@ struct SignInGateView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignSpacing.large) {
-                    Image(systemName: "person.crop.circle.badge.checkmark")
-                        .font(.system(size: 54))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(DesignColour.brandPrimary)
-                        .frame(width: 88, height: 88)
-                        .background(DesignColour.brandTint, in: Circle())
-
+                    headerIcon
                     Text(L10n.Authentication.gateTitle)
                         .font(DesignTypography.largeScreenTitle)
                     Text(reason)
@@ -73,6 +83,20 @@ struct SignInGateView: View {
         }
         .interactiveDismissDisabled()
         .presentationDetents([.medium, .large])
+        .onChange(of: session.authenticationState) { _, newState in
+            if case .error = newState {
+                // A failed verify attempt may surface an error; keep the current screen.
+            }
+        }
+    }
+
+    private var headerIcon: some View {
+        Image(systemName: "person.crop.circle.badge.checkmark")
+            .font(.system(size: 54))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(DesignColour.brandPrimary)
+            .frame(width: 88, height: 88)
+            .background(DesignColour.brandTint, in: Circle())
     }
 
     @ViewBuilder
@@ -85,95 +109,50 @@ struct SignInGateView: View {
         case .emailConfirmationRequired:
             emailConfirmationMessage
         default:
-            signInForm
+            authContent
         }
     }
 
-    private var signInForm: some View {
+    @ViewBuilder
+    private var authContent: some View {
+        switch authScreen {
+        case .main:
+            mainAuthForm
+        case .emailVerify:
+            emailVerifyForm
+        case .emailVerifyCode:
+            emailVerifyCodeForm
+        }
+    }
+
+    private var mainAuthForm: some View {
         VStack(spacing: DesignSpacing.small) {
+            appleButton
+            googleButton
+
             Button {
-                Task { await performAppleSignIn() }
+                hasSentCode = false
+                isPasswordMode = false
+                isCreateAccountFlow = true
+                authScreen = .emailVerify
             } label: {
-                Label {
-                    Text(verbatim: Self.appleTitle)
-                } icon: {
-                    Image(systemName: "apple.logo")
-                }
+                Text(verbatim: Self.createAccountLink)
             }
             .buttonStyle(PrimaryButtonStyle())
-            .accessibilityIdentifier("apple-sign-in-button")
+            .accessibilityIdentifier("auth-create-account-link")
 
             Button {
-                Task { await session.signInWithGoogle() }
+                hasSentCode = false
+                isPasswordMode = false
+                isCreateAccountFlow = false
+                authScreen = .emailVerify
             } label: {
-                HStack(spacing: DesignSpacing.small) {
-                    googleLogo
-                    Text(verbatim: Self.googleTitle)
-                }
+                Text(verbatim: Self.signInInstead)
+                    .font(DesignTypography.supporting)
+                    .foregroundStyle(DesignColour.brandPrimary)
             }
-            .buttonStyle(SecondaryButtonStyle())
-            .accessibilityIdentifier("google-sign-in-button")
-
-            if isCreatingAccount {
-                ageConfirmationRow
-            }
-
-            TextField(Self.emailPlaceholder, text: $email)
-                .textContentType(.emailAddress)
-                .keyboardType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(DesignSpacing.small)
-                .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
-                .accessibilityIdentifier("auth-email-field")
-
-            SecureField(Self.passwordPlaceholder, text: $password)
-                .textContentType(.password)
-                .padding(DesignSpacing.small)
-                .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
-                .accessibilityIdentifier("auth-password-field")
-
-            if case .error = session.authenticationState {
-                Text(verbatim: Self.signInFailed)
-                    .font(.caption)
-                    .foregroundStyle(DesignColour.error)
-            }
-
-            if isCreatingAccount {
-                Button {
-                    Task { await createAccount() }
-                } label: {
-                    Text(verbatim: Self.createAccountTitle)
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(email.isEmpty || password.isEmpty || !isOver16)
-                .accessibilityIdentifier("auth-create-account-button")
-
-                Button {
-                    isCreatingAccount = false
-                } label: {
-                    Text(verbatim: Self.signInInstead)
-                }
-                .buttonStyle(CompactActionButtonStyle())
-                .accessibilityIdentifier("auth-sign-in-instead-button")
-            } else {
-                Button {
-                    Task { await session.signIn(email: email, password: password) }
-                } label: {
-                    Text(verbatim: Self.signInTitle)
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(email.isEmpty || password.isEmpty)
-                .accessibilityIdentifier("auth-email-sign-in-button")
-
-                Button {
-                    isCreatingAccount = true
-                } label: {
-                    Text(verbatim: Self.createAccountLink)
-                }
-                .buttonStyle(CompactActionButtonStyle())
-                .accessibilityIdentifier("auth-create-account-link")
-            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("auth-sign-in-instead-button")
 
             #if DEBUG
             Button(L10n.Authentication.mockAccount) {
@@ -185,18 +164,184 @@ struct SignInGateView: View {
         }
     }
 
+    private var appleButton: some View {
+        Button {
+            Task { await performAppleSignIn() }
+        } label: {
+            Label {
+                Text(verbatim: Self.appleTitle)
+            } icon: {
+                Image(systemName: "apple.logo")
+            }
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .accessibilityIdentifier("apple-sign-in-button")
+    }
+
+    private var googleButton: some View {
+        Button {
+            Task { await session.signInWithGoogle() }
+        } label: {
+            HStack(spacing: DesignSpacing.small) {
+                Image(systemName: "g.circle.fill")
+                    .font(.body)
+                    .foregroundStyle(.blue)
+                Text(verbatim: Self.googleTitle)
+            }
+        }
+        .buttonStyle(SecondaryButtonStyle())
+        .accessibilityIdentifier("google-sign-in-button")
+    }
+
+    private var emailVerifyForm: some View {
+        VStack(spacing: DesignSpacing.medium) {
+            if isPasswordMode {
+                TextField(Self.emailPlaceholder, text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(DesignSpacing.small)
+                    .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityIdentifier("auth-email-field")
+
+                SecureField(Self.passwordPlaceholder, text: $password)
+                    .textContentType(.password)
+                    .padding(DesignSpacing.small)
+                    .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityIdentifier("auth-password-field")
+
+                if case .error = session.authenticationState {
+                    Text(verbatim: Self.signInFailed)
+                        .font(.caption)
+                        .foregroundStyle(DesignColour.error)
+                }
+
+                Button {
+                    Task { await session.signIn(email: email, password: password) }
+                } label: {
+                    Text(verbatim: Self.signInTitle)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(email.isEmpty || password.isEmpty)
+                .accessibilityIdentifier("auth-email-sign-in-button")
+
+                Button {
+                    isPasswordMode = false
+                } label: {
+                    Text(verbatim: Self.useEmailCode)
+                        .font(DesignTypography.supporting)
+                        .foregroundStyle(DesignColour.brandPrimary)
+                }
+                .buttonStyle(.plain)
+            } else {
+                TextField(Self.emailPlaceholder, text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(DesignSpacing.small)
+                    .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityIdentifier("auth-email-field")
+
+                if case .error = session.authenticationState {
+                    Text(verbatim: Self.signInFailed)
+                        .font(.caption)
+                        .foregroundStyle(DesignColour.error)
+                }
+
+                Button {
+                    Task { await sendCode() }
+                } label: {
+                    Text(verbatim: isCreateAccountFlow ? Self.createAccountTitle : Self.signInTitle)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("auth-create-account-button")
+
+                Button {
+                    isPasswordMode = true
+                } label: {
+                    Text(verbatim: Self.passwordTitle)
+                        .font(DesignTypography.supporting)
+                        .foregroundStyle(DesignColour.secondaryText)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button {
+                authScreen = .main
+            } label: {
+                Text(verbatim: Self.backTitle)
+                    .font(DesignTypography.supporting)
+                    .foregroundStyle(DesignColour.secondaryText)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var emailVerifyCodeForm: some View {
+        VStack(spacing: DesignSpacing.medium) {
+            Text(verbatim: Self.otpTitle)
+                .font(DesignTypography.cardTitle)
+            Text(verbatim: Self.otpBody)
+                .font(DesignTypography.body)
+                .foregroundStyle(DesignColour.textSecondary)
+
+            TextField(Self.otpTitle, text: $otpCode)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
+                .font(DesignTypography.gradeEmphasis)
+                .padding(DesignSpacing.small)
+                .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityIdentifier("auth-otp-code-field")
+
+            if case .error = session.authenticationState {
+                Text(verbatim: Self.signInFailed)
+                    .font(.caption)
+                    .foregroundStyle(DesignColour.error)
+            }
+
+            Button {
+                Task { await verifyCode() }
+            } label: {
+                Text(verbatim: Self.continueTitle)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(otpCode.count < 8)
+            .accessibilityIdentifier("auth-otp-verify-button")
+
+            Button {
+                Task { await sendCode() }
+            } label: {
+                Text(verbatim: Self.resendCode)
+                    .font(DesignTypography.supporting)
+                    .foregroundStyle(DesignColour.brandPrimary)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func sendCode() async {
+        hasSentCode = false
+        await session.sendEmailOTP(email: email)
+        if session.authenticationState.isSignedIn {
+            return
+        }
+        // A real error surfaces as .error; here we just advance to the code screen.
+        authScreen = .emailVerifyCode
+    }
+
+    private func verifyCode() async {
+        await session.verifyEmailOTP(email: email, token: otpCode)
+    }
+
     private var ageConfirmationRow: some View {
         Toggle(isOn: $isOver16) {
             Text(verbatim: Self.ageConfirmation)
                 .font(DesignTypography.body)
         }
         .accessibilityIdentifier("auth-age-confirmation")
-    }
-
-    private var googleLogo: some View {
-        Image(systemName: "g.circle.fill")
-            .font(.body)
-            .foregroundStyle(.blue)
     }
 
     private var profileSetupForm: some View {
@@ -240,6 +385,9 @@ struct SignInGateView: View {
         }
         await session.confirmAge(isOver16: true)
         await session.updateUsername(username.trimmingCharacters(in: .whitespacesAndNewlines))
+        if session.authenticationState.isSignedIn {
+            session.flagProfileSetupForPresentation()
+        }
     }
 
     private var ageGateMessage: some View {
@@ -277,17 +425,6 @@ struct SignInGateView: View {
                 Text(verbatim: Self.continueAsGuestTitle)
             }
             .buttonStyle(PrimaryButtonStyle())
-        }
-    }
-
-    private func createAccount() async {
-        guard isOver16 else {
-            await session.confirmAge(isOver16: false)
-            return
-        }
-        await session.signUp(email: email, password: password)
-        if session.authenticationState.isProfileSetup {
-            await session.confirmAge(isOver16: true)
         }
     }
 

@@ -95,6 +95,8 @@ nonisolated struct UserProfileRecord: Codable, Equatable, Sendable {
     let heightCM: Double?
     let armSpanCM: Double?
     let regularGrade: Int?
+    let gradeSystem: String?
+    let ydsGrade: String?
     let favouriteGymID: UUID?
     let isTrustedContributor: Bool
     let helpfulReceivedCount: Int
@@ -108,6 +110,8 @@ nonisolated struct UserProfileRecord: Codable, Equatable, Sendable {
         case heightCM = "height_cm"
         case armSpanCM = "arm_span_cm"
         case regularGrade = "regular_grade"
+        case gradeSystem = "grade_system"
+        case ydsGrade = "yds_grade"
         case favouriteGymID = "favourite_gym_id"
         case isTrustedContributor = "is_trusted_contributor"
         case helpfulReceivedCount = "helpful_received_count"
@@ -117,12 +121,16 @@ nonisolated struct UserProfileRecord: Codable, Equatable, Sendable {
     }
 
     func domain() throws -> UserProfile {
-        UserProfile(
+        let gradeSystem = gradeSystem.flatMap { GradeSystem(rawValue: $0) }
+        let ydsGrade = ydsGrade.flatMap { YDSGrade(rawValue: $0) }
+        return UserProfile(
             userID: UserID(rawValue: RemoteIdentifier.domainString(id)),
             username: username,
             heightCentimetres: heightCM,
             armSpanCentimetres: armSpanCM,
             regularGrade: try RemoteGrade.domain(regularGrade, field: "profiles.regular_grade"),
+            gradeSystem: gradeSystem,
+            ydsGrade: ydsGrade,
             favouriteGymID: favouriteGymID.map {
                 GymID(rawValue: RemoteIdentifier.domainString($0))
             },

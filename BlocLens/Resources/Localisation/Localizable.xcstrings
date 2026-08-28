@@ -1700,6 +1700,9 @@
         }
       }
     },
+    "common.save" : {
+
+    },
     "common.selected" : {
       "localizations" : {
         "en-AU" : {
@@ -4586,6 +4589,138 @@
         }
       }
     },
+    "password.confirm.placeholder" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm new password"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 비밀번호 확인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认新密码"
+          }
+        }
+      }
+    },
+    "password.mismatch.error" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passwords do not match or are too short."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비밀번호가 일치하지 않거나 너무 짧습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密码不一致或过短。"
+          }
+        }
+      }
+    },
+    "password.new.placeholder" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New password"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 비밀번호"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新密码"
+          }
+        }
+      }
+    },
+    "password.new.title" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New password"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 비밀번호"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新密码"
+          }
+        }
+      }
+    },
+    "password.requirement" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use at least 8 characters. You can change this any time."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최소 8자 이상 사용하세요. 언제든지 변경할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "至少 8 个字符，可随时修改。"
+          }
+        }
+      }
+    },
+    "password.title" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비밀번호"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密码"
+          }
+        }
+      }
+    },
     "profile.armSpan" : {
       "localizations" : {
         "en-AU" : {
@@ -4695,6 +4830,9 @@
           }
         }
       }
+    },
+    "profile.edit" : {
+
     },
     "profile.empty.message" : {
       "localizations" : {
@@ -4981,6 +5119,45 @@
           }
         }
       }
+    },
+    "profileEdit.armSpan" : {
+
+    },
+    "profileEdit.cm" : {
+
+    },
+    "profileEdit.gradeHint" : {
+
+    },
+    "profileEdit.gradeSystem" : {
+
+    },
+    "profileEdit.height" : {
+
+    },
+    "profileEdit.measurements" : {
+
+    },
+    "profileEdit.notSureYet" : {
+
+    },
+    "profileEdit.regularGrade" : {
+
+    },
+    "profileEdit.saveFailed" : {
+
+    },
+    "profileEdit.subtitle" : {
+
+    },
+    "profileEdit.title" : {
+
+    },
+    "profileEdit.vScale" : {
+
+    },
+    "profileEdit.yds" : {
+
     },
     "route.accuracy.title" : {
       "localizations" : {
@@ -5748,6 +5925,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "外观"
+          }
+        }
+      }
+    },
+    "settings.changePassword" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change password"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비밀번호 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修改密码"
           }
         }
       }

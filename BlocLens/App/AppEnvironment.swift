@@ -117,6 +117,7 @@ final class AppSession: ObservableObject {
     @Published private(set) var roleContext: SessionRoleContext = .guest
     @Published private(set) var isRoleContextConfirmed = true
     @Published private(set) var sessionError: RepositoryError?
+    @Published var shouldPresentProfileSetup = false
 
     private let authenticationRepository: any AuthenticationRepository
     private let onboardingStore: any OnboardingStore
@@ -193,6 +194,28 @@ final class AppSession: ObservableObject {
     func updateUsername(_ username: String) async {
         authenticationState = await authenticationRepository.updateUsername(username)
         completeSignInIfPossible()
+    }
+
+    func updateProfileDetails(_ details: ProfileDetailsUpdate) async {
+        authenticationState = await authenticationRepository.updateProfileDetails(details)
+    }
+
+    func sendEmailOTP(email: String) async {
+        authenticationState = await authenticationRepository.sendEmailOTP(email: email)
+    }
+
+    func verifyEmailOTP(email: String, token: String) async {
+        authenticationState = .authenticating
+        authenticationState = await authenticationRepository.verifyEmailOTP(email: email, token: token)
+        completeSignInIfPossible()
+    }
+
+    func updatePassword(_ password: String) async throws {
+        try await authenticationRepository.updatePassword(password)
+    }
+
+    func flagProfileSetupForPresentation() {
+        shouldPresentProfileSetup = true
     }
 
     func confirmAge(isOver16: Bool) async {

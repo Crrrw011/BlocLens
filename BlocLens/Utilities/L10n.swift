@@ -13,6 +13,7 @@ enum L10n {
         static let ok: LocalizedStringResource = "common.ok"
         static let tryAgain: LocalizedStringResource = "common.tryAgain"
         static let continueButton: LocalizedStringResource = "common.continue"
+        static let save: LocalizedStringResource = "common.save"
         static let selected: LocalizedStringResource = "common.selected"
         static let notSelected: LocalizedStringResource = "common.notSelected"
         static let all: LocalizedStringResource = "common.all"
@@ -247,6 +248,7 @@ enum L10n {
         static let signedOutMessage: LocalizedStringResource = "profile.signedOut.message"
         static let avatarPlaceholder: LocalizedStringResource = "profile.avatarPlaceholder"
         static let mockAccountLabel: LocalizedStringResource = "profile.mockAccountLabel"
+        static let edit: LocalizedStringResource = "profile.edit"
         static let climbingProfile: LocalizedStringResource = "profile.climbingProfile"
         static let height: LocalizedStringResource = "profile.height"
         static let armSpan: LocalizedStringResource = "profile.armSpan"
@@ -258,6 +260,31 @@ enum L10n {
         static let helpfulProgressSuffix: LocalizedStringResource = "profile.helpfulProgressSuffix"
         static let support: LocalizedStringResource = "profile.support"
         static let notProvided: LocalizedStringResource = "profile.notProvided"
+    }
+
+    enum ProfileEdit {
+        static let title: LocalizedStringResource = "profileEdit.title"
+        static let subtitle: LocalizedStringResource = "profileEdit.subtitle"
+        static let measurements: LocalizedStringResource = "profileEdit.measurements"
+        static let height: LocalizedStringResource = "profileEdit.height"
+        static let armSpan: LocalizedStringResource = "profileEdit.armSpan"
+        static let cm: LocalizedStringResource = "profileEdit.cm"
+        static let regularGrade: LocalizedStringResource = "profileEdit.regularGrade"
+        static let gradeSystem: LocalizedStringResource = "profileEdit.gradeSystem"
+        static let vScale: LocalizedStringResource = "profileEdit.vScale"
+        static let yds: LocalizedStringResource = "profileEdit.yds"
+        static let notSureYet: LocalizedStringResource = "profileEdit.notSureYet"
+        static let gradeHint: LocalizedStringResource = "profileEdit.gradeHint"
+        static let saveFailed: LocalizedStringResource = "profileEdit.saveFailed"
+    }
+
+    enum Password {
+        static let title: LocalizedStringResource = "password.title"
+        static let newTitle: LocalizedStringResource = "password.new.title"
+        static let newPlaceholder: LocalizedStringResource = "password.new.placeholder"
+        static let confirmPlaceholder: LocalizedStringResource = "password.confirm.placeholder"
+        static let requirement: LocalizedStringResource = "password.requirement"
+        static let mismatchError: LocalizedStringResource = "password.mismatch.error"
     }
 
     enum Onboarding {
@@ -312,6 +339,7 @@ enum L10n {
         static let mockSignOut: LocalizedStringResource = "settings.mockSignOut"
         static let signOut: LocalizedStringResource = "settings.signOut"
         static let exportLogbook: LocalizedStringResource = "settings.exportLogbook"
+        static let changePassword: LocalizedStringResource = "settings.changePassword"
         static let deleteAccount: LocalizedStringResource = "settings.deleteAccount"
         static let deleteAccountConfirmationTitle: LocalizedStringResource = "settings.deleteAccount.confirmationTitle"
         static let deleteAccountConfirmationMessage: LocalizedStringResource = "settings.deleteAccount.confirmationMessage"

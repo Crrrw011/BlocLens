@@ -80,6 +80,11 @@ where id between '90000000-0000-4000-8000-000000000001'::uuid
              and '90000000-0000-4000-8000-000000000007'::uuid;
 
 update public.profiles
+set grade_system = 'V',
+    regular_grade = 4
+where id = '90000000-0000-4000-8000-000000000001';
+
+update public.profiles
 set is_trusted_contributor = true,
     trusted_contributor_awarded_at = '2026-08-20T00:00:00Z',
     helpful_received_count = 67

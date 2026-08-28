@@ -60,4 +60,22 @@ actor MockAuthenticationRepository: AuthenticationRepository {
         authenticationState = .guest
         return authenticationState
     }
+
+    func updateProfileDetails(_ details: ProfileDetailsUpdate) -> AuthenticationState {
+        authenticationState = .signedIn(profile)
+        return authenticationState
+    }
+
+    func sendEmailOTP(email: String) -> AuthenticationState {
+        .authenticating
+    }
+
+    func verifyEmailOTP(email: String, token: String) -> AuthenticationState {
+        authenticationState = .signedIn(profile)
+        return authenticationState
+    }
+
+    func updatePassword(_ password: String) throws {
+        // Mock keeps no password store; the call is accepted as a no-op.
+    }
 }

@@ -146,6 +146,63 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
         return currentState
     }
 
+    func updateProfileDetails(_ details: ProfileDetailsUpdate) async -> AuthenticationState {
+        do {
+            guard let userID = dataSource.currentUserID() else {
+                currentState = .error(.unauthenticated)
+                return currentState
+            }
+            try await dataSource.updateProfileDetails(details, userID: userID)
+            currentState = try await resolvedCurrentSession()
+        } catch let error as RepositoryError {
+            currentState = .error(error)
+        } catch {
+            currentState = .error(RemoteErrorMapping.map(error))
+        }
+        return currentState
+    }
+
+    func sendEmailOTP(email: String) async -> AuthenticationState {
+        do {
+            try await dataSource.sendEmailOTP(email: email)
+            return .authenticating
+        } catch let error as RepositoryError {
+            currentState = .error(error)
+            return currentState
+        } catch {
+            currentState = .error(RemoteErrorMapping.map(error))
+            return currentState
+        }
+    }
+
+    func verifyEmailOTP(email: String, token: String) async -> AuthenticationState {
+        do {
+            let result = try await dataSource.verifyEmailOTP(email: email, token: token)
+            guard result.hasSession,
+                  dataSource.hasSession(),
+                  dataSource.currentUserID() == result.userID else {
+                currentState = .emailConfirmationRequired
+                return currentState
+            }
+            currentState = try await resolvedCurrentSession()
+        } catch let error as RepositoryError {
+            currentState = .error(error)
+        } catch {
+            currentState = .error(RemoteErrorMapping.map(error))
+        }
+        return currentState
+    }
+
+    func updatePassword(_ password: String) async throws {
+        do {
+            try await dataSource.updatePassword(password)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw RemoteErrorMapping.map(error)
+        }
+    }
+
     private func resolvedCurrentSession() async throws -> AuthenticationState {
         guard dataSource.hasSession() else { return .guest }
         guard let record = try await dataSource.fetchProfile() else {

@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     let environment: AppEnvironment
     @ObservedObject var session: AppSession
+    @State private var editingProfile = false
 
     var body: some View {
         NavigationStack {
@@ -59,11 +60,24 @@ struct ProfileView: View {
                 }
             }
 
-            Section(L10n.Profile.climbingProfile) {
+            Section {
                 profileRow(L10n.Profile.height, value: measurement(profile.heightCentimetres))
                 profileRow(L10n.Profile.armSpan, value: measurement(profile.armSpanCentimetres))
-                profileRow(L10n.Profile.regularGrade, value: profile.regularGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+                profileRow(L10n.Profile.regularGrade, value: regularGradeDisplay(profile))
                 profileRow(L10n.Profile.favouriteGym, value: favouriteGymName(profile.favouriteGymID))
+            } header: {
+                HStack {
+                    Text(L10n.Profile.climbingProfile)
+                    Spacer()
+                    Button(L10n.Profile.edit) {
+                        editingProfile = true
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .accessibilityIdentifier("profile-edit-button")
+                }
+            }
+            .sheet(isPresented: $editingProfile) {
+                ProfileEditView(session: session)
             }
 
             Section(L10n.Profile.contributorStatus) {
@@ -121,6 +135,9 @@ struct ProfileView: View {
             publicSupportLinks
         }
         .accessibilityIdentifier("profile-signed-in")
+        .sheet(isPresented: $session.shouldPresentProfileSetup) {
+            ProfileEditView(session: session).interactiveDismissDisabled()
+        }
     }
 
     private var publicSupportLinks: some View {
@@ -147,6 +164,20 @@ struct ProfileView: View {
         return formatter.string(from: Measurement(value: value, unit: UnitLength.centimeters))
     }
 
+    private func regularGradeDisplay(_ profile: UserProfile) -> String {
+        guard profile.gradeSystem != nil else {
+            return String(localized: L10n.ProfileEdit.notSureYet)
+        }
+        switch profile.gradeSystem {
+        case .vScale:
+            return profile.regularGrade?.displayName ?? String(localized: L10n.ProfileEdit.notSureYet)
+        case .yds:
+            return profile.ydsGrade?.displayName ?? String(localized: L10n.ProfileEdit.notSureYet)
+        case .none:
+            return String(localized: L10n.ProfileEdit.notSureYet)
+        }
+    }
+
     private func favouriteGymName(_ id: GymID?) -> String {
         guard let id,
               let gym = DevelopmentFixtures.gyms.first(where: { $0.id == id }) else {
@@ -168,6 +199,7 @@ private struct SettingsView: View {
     @State private var isDeletingAccount = false
     @State private var showsDeleteError = false
     @State private var showsExportSheet = false
+    @State private var showsPasswordSheet = false
 
     var body: some View {
         Form {
@@ -191,6 +223,13 @@ private struct SettingsView: View {
                     .navigationTitle(L10n.Settings.language)
                 }
                 .accessibilityIdentifier("settings-language-link")
+            }
+
+            Section {
+                Button(L10n.Settings.changePassword) {
+                    showsPasswordSheet = true
+                }
+                .accessibilityIdentifier("settings-change-password")
             }
 
             Section(L10n.Settings.notifications) {
@@ -264,6 +303,9 @@ private struct SettingsView: View {
         .navigationTitle(L10n.Settings.title)
         .sheet(isPresented: $showsExportSheet) {
             LogbookExportView(environment: environment)
+        }
+        .sheet(isPresented: $showsPasswordSheet) {
+            ChangePasswordView(session: session)
         }
     }
 

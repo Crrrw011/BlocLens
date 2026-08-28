@@ -9,6 +9,8 @@ nonisolated enum DevelopmentFixtures {
         heightCentimetres: 170,
         armSpanCentimetres: 171,
         regularGrade: .v4,
+        gradeSystem: .vScale,
+        ydsGrade: nil,
         favouriteGymID: "urban-climb-west-end",
         isTrustedContributor: false,
         helpfulVotes: 23
