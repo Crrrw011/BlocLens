@@ -85,13 +85,13 @@ struct AuthStateMachineTests {
         #expect(state == .error(.unauthenticated))
     }
 
-    @Test func signUpWithoutServerSessionReturnsUnauthenticated() async throws {
+    @Test func signUpWithoutServerSessionRequiresEmailConfirmation() async throws {
         let fake = FakeAuthDataSource(signUpHasSession: false)
         let repository = SupabaseAuthenticationRepository(dataSource: fake)
 
         let state = await repository.signUp(email: "alice@example.com", password: "password123")
 
-        #expect(state == .error(.unauthenticated))
+        #expect(state == .emailConfirmationRequired)
         #expect(!fake.hasSession())
     }
 
@@ -293,6 +293,7 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
     var appleSignInError: Error?
     var googleSignInError: Error?
     var signOutError: Error?
+    var deleteAccountError: Error?
     var signUpHasSession: Bool
     var profileAfterUsernameUpdate: UserProfileRecord?
     var receivedAppleNonce: String?
@@ -345,6 +346,12 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
 
     func signOut() async throws {
         if let signOutError { throw signOutError }
+        hasSessionFlag = false
+        userIDValue = nil
+    }
+
+    func deleteAccount() async throws {
+        if let deleteAccountError { throw deleteAccountError }
         hasSessionFlag = false
         userIDValue = nil
     }

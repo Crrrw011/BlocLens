@@ -213,6 +213,28 @@ enum L10n {
         static let noMatchingRecords: LocalizedStringResource = "logbook.noMatchingRecords"
     }
 
+    enum LogbookExport {
+        static let title: LocalizedStringResource = "logbookExport.title"
+        static let format: LocalizedStringResource = "logbookExport.format"
+        static let dateRange: LocalizedStringResource = "logbookExport.dateRange"
+        static let useStartDate: LocalizedStringResource = "logbookExport.useStartDate"
+        static let useEndDate: LocalizedStringResource = "logbookExport.useEndDate"
+        static let startDate: LocalizedStringResource = "logbookExport.startDate"
+        static let endDate: LocalizedStringResource = "logbookExport.endDate"
+        static let exportButton: LocalizedStringResource = "logbookExport.exportButton"
+        static let footer: LocalizedStringResource = "logbookExport.footer"
+        static let errorMessage: LocalizedStringResource = "logbookExport.errorMessage"
+        static let csv: LocalizedStringResource = "logbookExport.csv"
+        static let pdf: LocalizedStringResource = "logbookExport.pdf"
+
+        static func formatName(_ format: LogbookExportFormat) -> LocalizedStringResource {
+            switch format {
+            case .csv: csv
+            case .pdf: pdf
+            }
+        }
+    }
+
     enum Grade {
         static let unknown: LocalizedStringResource = "grade.unknown"
     }
@@ -289,6 +311,13 @@ enum L10n {
         static let resetBetaSafety: LocalizedStringResource = "settings.resetBetaSafety"
         static let mockSignOut: LocalizedStringResource = "settings.mockSignOut"
         static let signOut: LocalizedStringResource = "settings.signOut"
+        static let exportLogbook: LocalizedStringResource = "settings.exportLogbook"
+        static let deleteAccount: LocalizedStringResource = "settings.deleteAccount"
+        static let deleteAccountConfirmationTitle: LocalizedStringResource = "settings.deleteAccount.confirmationTitle"
+        static let deleteAccountConfirmationMessage: LocalizedStringResource = "settings.deleteAccount.confirmationMessage"
+        static let deleteAccountConfirm: LocalizedStringResource = "settings.deleteAccount.confirm"
+        static let deleteAccountErrorTitle: LocalizedStringResource = "settings.deleteAccount.errorTitle"
+        static let deleteAccountFailedMessage: LocalizedStringResource = "settings.deleteAccount.failedMessage"
         static let placeholderMessage: LocalizedStringResource = "settings.placeholderMessage"
     }
 

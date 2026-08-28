@@ -9,6 +9,7 @@ nonisolated protocol RemoteAuthDataSource: Sendable {
     func signInWithApple(idToken: String, nonce: String) async throws
     func signInWithGoogle() async throws
     func signOut() async throws
+    func deleteAccount() async throws
     func fetchProfile() async throws -> UserProfileRecord?
     func updateUsername(_ username: String, userID: UUID) async throws
     func updateAgeConfirmation(userID: UUID) async throws
@@ -67,6 +68,10 @@ struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
 
     func signOut() async throws {
         try await client.auth.signOut()
+    }
+
+    func deleteAccount() async throws {
+        try await client.functions.invoke("delete-account")
     }
 
     func fetchProfile() async throws -> UserProfileRecord? {

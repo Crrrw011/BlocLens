@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SignInGateView: View {
     @ObservedObject var session: AppSession
+    @Environment(\.dismiss) private var dismiss
 
     @State private var email = ""
     @State private var password = ""
@@ -25,6 +26,8 @@ struct SignInGateView: View {
     private static let ageConfirmation = "I am 16 or older"
     private static let ageGateTitle = "You must be 16 or older to create an account"
     private static let ageGateBody = "You can continue browsing gyms and routes as a guest."
+    private static let emailConfirmationTitle = "Confirm your email"
+    private static let emailConfirmationBody = "We sent a confirmation link to your email. Tap it to finish creating your account, then sign in."
     private static let appleTitle = "Sign in with Apple"
     private static let googleTitle = "Sign in with Google"
 
@@ -54,6 +57,19 @@ struct SignInGateView: View {
             .background(DesignColour.backgroundPrimary)
             .navigationTitle(L10n.Authentication.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        session.cancelSignIn()
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .foregroundStyle(DesignColour.secondaryText)
+                    }
+                    .accessibilityLabel(L10n.Common.cancel)
+                    .accessibilityIdentifier("sign-in-close-button")
+                }
+            }
         }
         .interactiveDismissDisabled()
         .presentationDetents([.medium, .large])
@@ -66,6 +82,8 @@ struct SignInGateView: View {
             profileSetupForm
         case .ageGated:
             ageGateMessage
+        case .emailConfirmationRequired:
+            emailConfirmationMessage
         default:
             signInForm
         }
@@ -76,7 +94,11 @@ struct SignInGateView: View {
             Button {
                 Task { await performAppleSignIn() }
             } label: {
-                Text(verbatim: Self.appleTitle)
+                Label {
+                    Text(verbatim: Self.appleTitle)
+                } icon: {
+                    Image(systemName: "apple.logo")
+                }
             }
             .buttonStyle(PrimaryButtonStyle())
             .accessibilityIdentifier("apple-sign-in-button")
@@ -84,7 +106,10 @@ struct SignInGateView: View {
             Button {
                 Task { await session.signInWithGoogle() }
             } label: {
-                Text(verbatim: Self.googleTitle)
+                HStack(spacing: DesignSpacing.small) {
+                    googleLogo
+                    Text(verbatim: Self.googleTitle)
+                }
             }
             .buttonStyle(SecondaryButtonStyle())
             .accessibilityIdentifier("google-sign-in-button")
@@ -168,6 +193,12 @@ struct SignInGateView: View {
         .accessibilityIdentifier("auth-age-confirmation")
     }
 
+    private var googleLogo: some View {
+        Image(systemName: "g.circle.fill")
+            .font(.body)
+            .foregroundStyle(.blue)
+    }
+
     private var profileSetupForm: some View {
         VStack(spacing: DesignSpacing.small) {
             Text(verbatim: Self.chooseUsernameTitle)
@@ -218,6 +249,27 @@ struct SignInGateView: View {
             Text(verbatim: Self.ageGateBody)
                 .font(DesignTypography.body)
                 .foregroundStyle(DesignColour.textSecondary)
+
+            Button {
+                session.cancelSignIn()
+            } label: {
+                Text(verbatim: Self.continueAsGuestTitle)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+        }
+    }
+
+    private var emailConfirmationMessage: some View {
+        VStack(spacing: DesignSpacing.medium) {
+            Image(systemName: "envelope.badge")
+                .font(.system(size: 40))
+                .foregroundStyle(DesignColour.brandPrimary)
+            Text(verbatim: Self.emailConfirmationTitle)
+                .font(DesignTypography.cardTitle)
+            Text(verbatim: Self.emailConfirmationBody)
+                .font(DesignTypography.body)
+                .foregroundStyle(DesignColour.textSecondary)
+                .multilineTextAlignment(.center)
 
             Button {
                 session.cancelSignIn()

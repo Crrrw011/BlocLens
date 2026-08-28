@@ -59,7 +59,7 @@ Blocked users' beta, comments and profile content must be excluded by a server-s
 
 ## Account deletion direction
 
-Account deletion from the app requires a controlled server-side entry point (Supabase Edge Function or equivalent). The `service_role` key must exist only in server-side secrets; the iPhone app must never contain a service-role key, database password or JWT secret. A client-callable service-role SQL function is not an acceptable workaround. Re-authentication, permanent-deletion confirmation, private-data deletion/anonymisation policy, legal review and integration tests remain before this ships.
+Account deletion from the app uses a controlled server-side entry point: the `delete-account` Supabase Edge Function. The `service_role` key exists only in the function's `SERVICE_ROLE_KEY` secret; the iPhone app never contains a service-role key, database password or JWT secret. The function is `verify_jwt`-enabled and never accepts a target user id from the client — it resolves the caller from the verified JWT and deletes only that user. Deleting the auth user triggers the database cascade: private data (profile, Logbook, follows, blocks, votes, Helpful) is removed via `ON DELETE CASCADE`, and public contributions (routes, beta links, comments, photos, resets) are anonymised via `ON DELETE SET NULL`. The app presents a destructive confirmation before calling the function and drops to the guest state on success.
 
 ## Search index discrepancy — resolved in 6D-2A
 
@@ -216,3 +216,9 @@ Migration `20260827001650_secure_block_aware_reads.sql` separates anonymous and 
 `get_my_blocked_profiles()` is the narrow owner-only exception used by the Block management screen. It returns safe profile fields only for rows where `blocker_id = auth.uid()`; it does not reveal who blocked the caller. This lets a user unblock an account without reopening ordinary public-profile, beta or comment reads. Unblock never restores Follow.
 
 The local seed now includes deterministic email/password identities for ordinary, Trusted Contributor, Verified Gym, Moderator and Administrator test roles. They use reserved `.invalid` addresses and a local-only test password. No service-role credential enters the app or UI tests. Mock remains the default and Release remains Mock-only. Cloud behaviour and complete D-4 localisation remain separate follow-up scopes.
+
+## D-5A account deletion and Logbook export
+
+Account deletion ships through the `delete-account` Edge Function (see "Account deletion direction" above). `AuthenticationRepository` gained `deleteAccount()`, which `SupabaseAuthenticationRepository` implements via `client.functions.invoke("delete-account")` and the Mock repository implements as a local state reset. `AppSession.deleteAccount()` drops the session to guest and clears the pending intent and role context. The Settings screen presents a destructive confirmation dialog whose message states that private data is permanently deleted and public contributions are anonymised; a failed deletion surfaces an error alert rather than a false guest state.
+
+Logbook export lives in `LogbookExporter`, a pure, testable component. It filters `LogbookRecordItem`s by an optional start and end date, then produces either CSV (RFC-style quoting for commas, quotes and newlines) or PDF (via `UIGraphicsPDFRenderer`) using `UIKit` — no third-party dependency. The Settings screen opens `LogbookExportView`, where the user picks a format and an optional date range, and the resulting file is written to a temporary URL and shared through `UIActivityViewController` so the user chooses where to save it; BlocLens retains no copy. Re-authentication before deletion remains a post-MVP decision: the MVP uses the confirmation dialog only.

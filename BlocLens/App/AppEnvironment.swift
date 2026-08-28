@@ -238,6 +238,16 @@ final class AppSession: ObservableObject {
         }
     }
 
+    func deleteAccount() async throws {
+        authenticationState = try await authenticationRepository.deleteAccount()
+        pendingIntent = nil
+        resumedIntent = nil
+        isSignInGatePresented = false
+        roleContext = .guest
+        isRoleContextConfirmed = true
+        sessionError = nil
+    }
+
     func dismissContributionPrompt(_ identifier: String) {
         dismissedContributionPrompts.insert(identifier)
     }

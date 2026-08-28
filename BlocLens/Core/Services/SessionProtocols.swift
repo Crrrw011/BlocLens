@@ -11,6 +11,7 @@ nonisolated protocol AuthenticationRepository: Sendable {
     func signInWithApple(idToken: String, nonce: String) async -> AuthenticationState
     func signInWithGoogle() async -> AuthenticationState
     func signInWithMockAccount() async -> AuthenticationState
+    func deleteAccount() async throws -> AuthenticationState
 }
 
 nonisolated protocol OnboardingStore: Sendable {

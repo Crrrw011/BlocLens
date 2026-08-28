@@ -55,4 +55,9 @@ actor MockAuthenticationRepository: AuthenticationRepository {
         authenticationState = .signedIn(profile)
         return authenticationState
     }
+
+    func deleteAccount() throws -> AuthenticationState {
+        authenticationState = .guest
+        return authenticationState
+    }
 }

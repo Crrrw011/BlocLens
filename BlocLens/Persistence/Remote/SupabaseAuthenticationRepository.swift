@@ -40,7 +40,10 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
             guard result.hasSession,
                   dataSource.hasSession(),
                   dataSource.currentUserID() == result.userID else {
-                throw RepositoryError.unauthenticated
+                // The account was created but the session was not issued, which
+                // means email confirmation is required before the user can sign in.
+                currentState = .emailConfirmationRequired
+                return currentState
             }
             currentState = try await resolvedCurrentSession()
         } catch let error as RepositoryError {
@@ -129,6 +132,18 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
 
     func signInWithMockAccount() async -> AuthenticationState {
         .guest
+    }
+
+    func deleteAccount() async throws -> AuthenticationState {
+        do {
+            try await dataSource.deleteAccount()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw RemoteErrorMapping.map(error)
+        }
+        currentState = .guest
+        return currentState
     }
 
     private func resolvedCurrentSession() async throws -> AuthenticationState {

@@ -55,9 +55,6 @@ struct ProfileView: View {
                         .accessibilityLabel(L10n.Profile.avatarPlaceholder)
                     VStack(alignment: .leading) {
                         Text(profile.username).font(.title2.bold())
-                        Text(L10n.Profile.mockAccountLabel)
-                            .font(.caption)
-                            .foregroundStyle(DesignColour.secondaryText)
                     }
                 }
             }
@@ -116,7 +113,7 @@ struct ProfileView: View {
 
             Section {
                 NavigationLink(L10n.Settings.title) {
-                    SettingsView(session: session)
+                    SettingsView(session: session, environment: environment)
                 }
                 .accessibilityIdentifier("profile-settings-link")
             }
@@ -161,10 +158,16 @@ struct ProfileView: View {
 
 private struct SettingsView: View {
     @ObservedObject var session: AppSession
+    let environment: AppEnvironment
+    @Environment(\.dismiss) private var dismiss
     @State private var projectRemoval = true
     @State private var gymResets = true
     @State private var newBeta = true
     @State private var followedContributors = false
+    @State private var showsDeleteConfirmation = false
+    @State private var isDeletingAccount = false
+    @State private var showsDeleteError = false
+    @State private var showsExportSheet = false
 
     var body: some View {
         Form {
@@ -208,10 +211,43 @@ private struct SettingsView: View {
             }
 
             Section {
+                Button(L10n.Settings.exportLogbook) {
+                    showsExportSheet = true
+                }
+                .accessibilityIdentifier("settings-export-logbook")
+            }
+
+            Section {
                 Button(L10n.Settings.signOut, role: .destructive) {
-                    Task { await session.signOut() }
+                    Task { await signOut() }
                 }
                 .accessibilityIdentifier("settings-sign-out")
+
+                Button(L10n.Settings.deleteAccount, role: .destructive) {
+                    showsDeleteConfirmation = true
+                }
+                .disabled(isDeletingAccount)
+                .accessibilityIdentifier("settings-delete-account")
+            }
+            .confirmationDialog(
+                L10n.Settings.deleteAccountConfirmationTitle,
+                isPresented: $showsDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button(L10n.Settings.deleteAccountConfirm, role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+                Button(L10n.Common.cancel, role: .cancel) {}
+            } message: {
+                Text(L10n.Settings.deleteAccountConfirmationMessage)
+            }
+            .alert(
+                L10n.Settings.deleteAccountErrorTitle,
+                isPresented: $showsDeleteError
+            ) {
+                Button(L10n.Common.ok, role: .cancel) {}
+            } message: {
+                Text(L10n.Settings.deleteAccountFailedMessage)
             }
 
             #if DEBUG
@@ -226,6 +262,28 @@ private struct SettingsView: View {
             #endif
         }
         .navigationTitle(L10n.Settings.title)
+        .sheet(isPresented: $showsExportSheet) {
+            LogbookExportView(environment: environment)
+        }
+    }
+
+    private func signOut() async {
+        await session.signOut()
+        if session.authenticationState == .guest {
+            dismiss()
+        }
+    }
+
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        showsDeleteError = false
+        defer { isDeletingAccount = false }
+        do {
+            try await session.deleteAccount()
+            dismiss()
+        } catch {
+            showsDeleteError = true
+        }
     }
 
     private func languageRow(_ preference: LanguagePreference, title: LocalizedStringResource) -> some View {

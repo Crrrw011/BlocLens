@@ -17,6 +17,7 @@ nonisolated enum AuthenticationState: Equatable, Sendable {
     case profileSetup(UserProfile)
     case ageGated
     case signedIn(UserProfile)
+    case emailConfirmationRequired
     case error(RepositoryError)
 
     var profile: UserProfile? {
@@ -32,6 +33,11 @@ nonisolated enum AuthenticationState: Equatable, Sendable {
 
     var isProfileSetup: Bool {
         if case .profileSetup = self { return true }
+        return false
+    }
+
+    var isEmailConfirmationRequired: Bool {
+        if case .emailConfirmationRequired = self { return true }
         return false
     }
 }
