@@ -11,8 +11,8 @@ struct StatusChip: View {
         } icon: {
             if let systemImage { Image(systemName: systemImage) }
         }
-        .font(.caption.weight(.semibold))
-        .padding(.horizontal, DesignSpacing.compact)
+        .font(BlocTypography.status)
+        .padding(.horizontal, BlocSpacing.compact)
         .frame(minHeight: 28)
         .foregroundStyle(colour)
         .background(colour.opacity(0.12), in: Capsule())
@@ -26,15 +26,15 @@ struct GradeChip: View {
     let label: LocalizedStringResource
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-            Text(label).font(.caption2).foregroundStyle(DesignColour.secondaryText)
+        VStack(alignment: .leading, spacing: BlocSpacing.xSmall) {
+            Text(label).font(BlocTypography.caption).foregroundStyle(DesignColour.textSecondary)
             Text(grade?.displayName ?? String(localized: L10n.Grade.unknown))
-                .font(DesignTypography.gradeEmphasis)
+                .font(BlocTypography.grade)
         }
-        .padding(.horizontal, DesignSpacing.compact)
-        .padding(.vertical, DesignSpacing.small)
-        .background(DesignColour.surfaceElevated, in: RoundedRectangle(cornerRadius: DesignRadius.control))
-        .overlay { RoundedRectangle(cornerRadius: DesignRadius.control).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+        .padding(.horizontal, BlocSpacing.compact)
+        .padding(.vertical, BlocSpacing.small)
+        .background(DesignColour.surfaceElevated, in: RoundedRectangle(cornerRadius: BlocRadius.control, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: BlocRadius.control, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
         .accessibilityElement(children: .combine)
     }
 }
