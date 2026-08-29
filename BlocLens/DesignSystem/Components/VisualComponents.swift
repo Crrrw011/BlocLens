@@ -142,9 +142,7 @@ struct RouteColourSwatch: View {
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(routeColour)
-                .overlay { Circle().stroke(DesignColour.separator, lineWidth: 1) }
+            shapeView.overlay { shapeStroke }
             Text(String(colourOrTag.prefix(1)).uppercased())
                 .font(.caption.bold())
                 .foregroundStyle(textColour)
@@ -157,26 +155,39 @@ struct RouteColourSwatch: View {
         )
     }
 
-    private var normalised: String { colourOrTag.lowercased() }
+    private var normalised: String { colourOrTag.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) }
 
-    private var routeColour: Color {
-        if normalised.contains("white") { return Color(uiColor: .systemBackground) }
-        if normalised.contains("yellow") { return .yellow }
-        if normalised.contains("blue") { return .blue }
-        if normalised.contains("green") { return .green }
-        if normalised.contains("orange") { return .orange }
-        if normalised.contains("red") { return .red }
-        if normalised.contains("purple") { return .purple }
-        if normalised.contains("pink") { return .pink }
-        if normalised.contains("black") { return Color(uiColor: .label) }
-        return DesignColour.surfaceElevated
+    private var token: BlocColor.HoldColor {
+        if let exact = BlocColor.routePalette.first(where: { $0.name.lowercased() == normalised }) { return exact }
+        if let partial = BlocColor.routePalette.first(where: { normalised.contains($0.name.lowercased()) }) { return partial }
+        return BlocColor.grey
     }
 
-    private var textColour: Color {
-        if normalised.contains("white") || normalised.contains("yellow") || normalised.contains("orange") {
-            return .black
+    private var routeColour: Color { token.color }
+    private var textColour: Color { token.textColor }
+
+    @ViewBuilder
+    private var shapeView: some View {
+        switch token.shape {
+        case .circle:
+            Circle().fill(routeColour)
+        case .square:
+            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(routeColour)
+        case .diamond:
+            RoundedRectangle(cornerRadius: 4, style: .continuous).fill(routeColour).rotationEffect(.degrees(45)).padding(4)
         }
-        return .white
+    }
+
+    @ViewBuilder
+    private var shapeStroke: some View {
+        switch token.shape {
+        case .circle:
+            Circle().stroke(DesignColour.separator, lineWidth: 1)
+        case .square:
+            RoundedRectangle(cornerRadius: 6, style: .continuous).stroke(DesignColour.separator, lineWidth: 1)
+        case .diamond:
+            RoundedRectangle(cornerRadius: 4, style: .continuous).stroke(DesignColour.separator, lineWidth: 1).rotationEffect(.degrees(45)).padding(4)
+        }
     }
 }
 
