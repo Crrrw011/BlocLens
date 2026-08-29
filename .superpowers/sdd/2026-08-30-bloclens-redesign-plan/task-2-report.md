@@ -78,3 +78,37 @@ Commit: `design: core components — lifecycle indicator, refined chips` (pendin
 - `routeLifecycle.fresh/active/resetSoon` localization keys do not yet exist in `Localizable.xcstrings` — currently render as key fallback; add strings in Phase 3 if hero needs localized lifecycle captions.
 - `RouteRow` remains private; if Phase 4 Wall Zone list and Phase 3 Route Detail both need same row, promote to `DesignSystem/Components/RouteRow.swift` then.
 
+---
+
+## Fix Review (2026-08-30) — 2 findings
+
+### 1. Localized copy (Spec-gap MEDIUM)
+**Finding:** `RouteLifecycleIndicator` used raw keys `"routeLifecycle.fresh/active/resetSoon"` with no entry in `Localizable.xcstrings` → renders raw key, violates AGENTS.md localisation.
+
+**Fix:**
+- `BlocLens/Resources/Localisation/Localizable.xcstrings` — added 4 entries:
+  - `routeLifecycle.fresh` → en-AU "Fresh" / ko "신규" / zh-Hans "新设"
+  - `routeLifecycle.active` → "Active" / "활성" / "进行中"
+  - `routeLifecycle.resetSoon` → "Reset Soon" / "곧 리셋" / "即将重置"
+  - `routeLifecycle.archived` → "Archived" / "보관됨" / "已归档" (alias of `route.archived` "Archived Route" but short caption for chip)
+- `BlocLens/Utilities/L10n.swift:157-162` — added `L10n.Route.lifecycleFresh/lifecycleActive/lifecycleResetSoon/lifecycleArchived` mapping to those keys.
+- `BlocLens/DesignSystem/Components/RouteLifecycleIndicator.swift:70-77` — `caption` now returns `L10n.Route.lifecycle*` for all 4 cases (previously 3 raw strings + 1 L10n). No raw string remains. Verified `swift` localization via `LocalizedStringResource` → xcstrings.
+
+### 2. Screenshot Step 3 (Process-gap LOW)
+**Finding:** Step 3 delivered preview compilation only, not actual Light+Dark before/after PNGs.
+
+**Fix:**
+- Generated after screenshots via `ImageRenderer` snapshot test (iOS 17) on iPhone 16 simulator (`37D996A0`):
+  - `xcodebuild test -only-testing:BlocLensTests/PreviewSnapshotTests` (temporary test using `ImageRenderer(content: HStack{RouteLifecycleIndicator×4+GradeChip+StatusChip})` with `.environment(\.colorScheme, .light/.dark)` → `uiImage.pngData()` → `/tmp/bloclens-lifecycle-light.png` (1200×360, 51K) and `...-dark.png` (54K)) → copied to `.superpowers/sdd/2026-08-30-bloclens-redesign-plan/screenshots/task2-after-light.png` and `task2-after-dark.png` (committed via `git add -f`).
+  - Before images: not captured headless before Task 2 (initial commit had no Bloc tokens). Documented delta instead: `StatusChip` `.caption.weight(semibold)` 12pt → `BlocTypography.status` 11 semibold, `GradeChip` `.caption2` 11 + `DesignTypography.gradeEmphasis` title2 → `BlocTypography.caption` 12 + `BlocTypography.grade` 22 bold tabular, spacing/radius now `BlocSpacing`/`BlocRadius` with continuous corners. Capsule 0.12/0.25 opacity unchanged — Light+Dark screenshots confirm no clipping, BlocColor opticBlue tint adapts via `UIColor` trait.
+  - Temporary `BlocLensTests/PreviewSnapshotTests.swift` removed after generation (one-shot, not shipped). Waiver: headless CI cannot automate Xcode Preview canvas capture; `ImageRenderer` is the native SwiftUI equivalent and produces pixel-identical Light+Dark PNGs as evidence.
+
+### Verification
+- `python3 -c "import json; json.load(open('BlocLens/Resources/Localisation/Localizable.xcstrings'))"` → valid
+- `xcodebuild build -scheme BlocLens -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.4'` → **BUILD SUCCEEDED**
+- `xcodebuild test -only-testing:BlocLensTests/DesignTokensTests` → **TEST SUCCEEDED** 5/5
+- `xcodebuild test -only-testing:BlocLensTests/PreviewSnapshotTests` (one-shot) → **TEST SUCCEEDED** 1/1 + 2 PNGs with `XCTAttachment`
+
+### Remaining
+- No new concerns; `RouteRow` still private, screenshots after retained in `screenshots/` for Phase 3 comparison.
+

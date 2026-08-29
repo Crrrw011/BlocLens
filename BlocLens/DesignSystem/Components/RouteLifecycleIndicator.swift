@@ -69,10 +69,10 @@ struct RouteLifecycleIndicator: View {
 
     private var caption: LocalizedStringResource {
         switch lifecycle {
-        case .fresh: "routeLifecycle.fresh"
-        case .active: "routeLifecycle.active"
-        case .resetSoon: "routeLifecycle.resetSoon"
-        case .archived: L10n.Route.archived
+        case .fresh: L10n.Route.lifecycleFresh
+        case .active: L10n.Route.lifecycleActive
+        case .resetSoon: L10n.Route.lifecycleResetSoon
+        case .archived: L10n.Route.lifecycleArchived
         }
     }
 }
