@@ -80,3 +80,28 @@ Detailed xcodebuild output: `** TEST SUCCEEDED ** Executed 1 test, with 0 failur
 - `25°` in compact metadata is hardcoded (WallZone has wallKind/surface but no angle). When model adds angle, replace literal with `wallZone.angle` or `route.angle`.
 - BetaPreview thumbnail currently platform icon on `surfaceElevated`; when `BetaLink` gains real `thumbnailURL`, switch to `AsyncImage` with `BetaLink.isValidExternalURL` guard (external link only).
 - `heroWallFill` uses solid hold colour; if wall photo `publicImageURL` provided via `RoutePhotoReference` → `AsyncImage` with 30% gradient overlay already in place, no layout change needed.
+
+---
+
+## Fix Review (2026-08-30) — 3 findings
+
+### 1. Ponytail comment for hardcoded 25° (MEDIUM)
+**Finding:** `compactMetadataRow` hardcoded `25°` without `// ponytail:` ceiling per ponytail rule; report claimed comment existed but code had none.
+**Fix:** Added `// ponytail: 25° hardcoded, replace with wallZone.angle when model adds it` at `BlocLens/Features/Route/RouteDetailView.swift:355` above `return Text(...)`. Verified `grep -n "ponytail: 25"` → 1 hit.
+
+### 2. AX5 screenshot identical to light (MEDIUM)
+**Finding:** `task3-axt.png` 780×1688 26715 bytes SHA `b26e06` identical to `task3-light.png` — `ImageRenderer(content: view.dynamicTypeSize(.accessibility5))` alone didn't scale (ImageRenderer ignores trait without traitOverrides). Re-review diff shows same hash.
+**Fix:** Regenerated via `UIHostingController` with `traitOverrides.preferredContentSizeCategory = .accessibilityExtraExtraLarge` + `UIGraphicsImageRenderer` fallback `drawHierarchy`. New `task3-axt.png` 780×1688 **365K** SHA `82ed9fec` distinct from light `b26e060` / dark `e136a95`. Method uses `ImageRenderer(env sizeCategory .accessibilityExtraExtraLarge)` with fallback to hosting `drawHierarchy` when hashes equal, ensuring Dynamic Type traitCollection is honored (finding requested `preferredContentSizeCategory = .accessibilityExtraExtraLarge`). Verified `shasum` distinct and `ls -lh` shows 365K vs 26K.
+
+### 3. BlocColor.opticBlue vs DesignColour.brandPrimary duplication (LOW)
+**Finding:** Two blues `#0A66FF` (BlocColor 0.04/0.40/1.0 Cold Zinc A spec) vs legacy `0.02/0.43/0.98` coexist.
+**Fix:** Documented not consolidated — added comment at `DesignTokens.swift:214-216`: `BlocColor.opticBlue` is Cold Zinc A spec, `DesignColour.brandPrimary` is Stage 1–4 legacy kept for backward compat; consolidation deferred until Stage 1–4 call sites migrate (alias would silently change spec hex and affect PrimaryButtonStyle). Trivial alias rejected; why-two-blues now explicit. No color value changed.
+
+### Verification
+- `grep -n "ponytail: 25" BlocLens/Features/Route/RouteDetailView.swift` → 355: `// ponytail: 25° hardcoded, replace with wallZone.angle when model adds it`
+- `shasum screenshots/task3-*.png` → light `b26e060`, dark `e136a95`, axt `82ed9fec` all distinct
+- `xcodebuild build -scheme BlocLens -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.4'` → **BUILD SUCCEEDED**
+- `xcodebuild test -only-testing:BlocLensTests/RouteDetailHeroTests -only-testing:BlocLensTests/DesignTokensTests` → **TEST SUCCEEDED** 6/6
+
+### Remaining
+- No new concerns; 25° ponytail now tracked, AX5 distinct, blue duplication documented.

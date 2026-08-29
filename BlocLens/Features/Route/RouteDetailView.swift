@@ -352,6 +352,7 @@ struct RouteDetailView: View {
         let terrain = String(localized: L10n.terrain(route.terrain))
         let style = route.styles.first.map { String(localized: L10n.routeStyle($0)) } ?? String(localized: L10n.routeStyle(.staticMovement))
         let community = route.communityGradeSummary.displayGrade?.displayName ?? "—"
+        // ponytail: 25° hardcoded, replace with wallZone.angle when model adds it
         return Text(verbatim: "\(terrain) · \(style) · 25° · Community \(community)")
             .font(BlocTypography.metadata)
             .foregroundStyle(DesignColour.textSecondary)

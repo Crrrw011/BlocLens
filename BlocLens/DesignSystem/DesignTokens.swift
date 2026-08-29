@@ -214,6 +214,9 @@ extension View {
 // MARK: - Bloc Tokens — Cold Zinc A (Phase 1)
 
 /// Optic Blue single accent + 12 hold colours with shape + lifecycle semantics.
+// Note: BlocColor.opticBlue (#0A66FF 0.04/0.40/1.0) is Cold Zinc A spec. DesignColour.brandPrimary
+// (0.02/0.43/0.98) is legacy Stage 1–4 blue kept for backward compat — new hero code uses BlocColor.
+// Consolidation deferred until Stage 1–4 call sites migrate; trivial alias would diverge spec hex.
 enum BlocColor {
     static let opticBlue = Color(red: 0.04, green: 0.40, blue: 1.0)
     static let opticBlueTint = Color(uiColor: UIColor { traits in
