@@ -77,32 +77,42 @@ final class LocalSearchViewModel: ObservableObject {
     @Published var gradeBand: GradeBand = .all
     @Published var includesArchived = false
     @Published private(set) var results: [LocalSearchResult] = []
+    @Published private(set) var googlePlaces: [GooglePlaceResult] = []
     @Published private(set) var isLoading = false
     @Published private(set) var error: RepositoryError?
 
     private let gymRepository: any GymRepository
     private let routeRepository: any RouteRepository
+    private let googlePlacesClient: any GooglePlacesClient
 
-    init(gymRepository: any GymRepository, routeRepository: any RouteRepository) {
+    init(
+        gymRepository: any GymRepository,
+        routeRepository: any RouteRepository,
+        googlePlacesClient: any GooglePlacesClient
+    ) {
         self.gymRepository = gymRepository
         self.routeRepository = routeRepository
+        self.googlePlacesClient = googlePlacesClient
     }
 
     func search() async {
         let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !term.isEmpty || gradeBand != .all else {
             results = []
+            googlePlaces = []
             return
         }
         isLoading = true
         error = nil
         defer { isLoading = false }
 
+        async let gymRequest = gymRepository.allGyms()
+        async let zoneRequest = gymRepository.allWallZones()
+        async let routeRequest = routeRepository.searchRoutes(query: term, includesArchived: includesArchived)
+        async let placesRequest = searchPlaces(term)
+
         do {
-            async let gymRequest = gymRepository.allGyms()
-            async let zoneRequest = gymRepository.allWallZones()
-            async let routeRequest = routeRepository.searchRoutes(query: term, includesArchived: includesArchived)
-            let (gyms, zones, foundRoutes) = try await (gymRequest, zoneRequest, routeRequest)
+            let (gyms, zones, foundRoutes, places) = try await (gymRequest, zoneRequest, routeRequest, placesRequest)
             let gymsByID = Dictionary(uniqueKeysWithValues: gyms.map { ($0.id, $0) })
             let zonesByID = Dictionary(uniqueKeysWithValues: zones.map { ($0.id, $0) })
 
@@ -126,12 +136,24 @@ final class LocalSearchViewModel: ObservableObject {
                 return .route(route, wallZone: zone, gym: gym)
             }
             results = gymResults + zoneResults + routeResults
+            googlePlaces = places
         } catch let repositoryError as RepositoryError {
             results = []
+            googlePlaces = []
             error = repositoryError
         } catch {
             results = []
+            googlePlaces = []
             self.error = .fixtureFailure
+        }
+    }
+
+    private func searchPlaces(_ term: String) async throws -> [GooglePlaceResult] {
+        guard !term.isEmpty else { return [] }
+        do {
+            return try await googlePlacesClient.searchText(term)
+        } catch {
+            return []
         }
     }
 
@@ -140,6 +162,7 @@ final class LocalSearchViewModel: ObservableObject {
         gradeBand = .all
         includesArchived = false
         results = []
+        googlePlaces = []
         error = nil
     }
 }

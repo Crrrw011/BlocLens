@@ -2,18 +2,21 @@ import SwiftUI
 
 struct LocalSearchView: View {
     let environment: AppEnvironment
+    @ObservedObject var session: AppSession
     let selectResult: (LocalSearchResult) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: LocalSearchViewModel
 
-    init(environment: AppEnvironment, selectResult: @escaping (LocalSearchResult) -> Void) {
+    init(environment: AppEnvironment, session: AppSession, selectResult: @escaping (LocalSearchResult) -> Void) {
         self.environment = environment
+        self.session = session
         self.selectResult = selectResult
         _viewModel = StateObject(
             wrappedValue: LocalSearchViewModel(
                 gymRepository: environment.gymRepository,
-                routeRepository: environment.routeRepository
+                routeRepository: environment.routeRepository,
+                googlePlacesClient: environment.googlePlacesClient
             )
         )
     }
@@ -64,22 +67,67 @@ struct LocalSearchView: View {
             ErrorStateView(message: L10n.State.fixtureErrorMessage) {
                 Task { await viewModel.search() }
             }
-        } else if viewModel.results.isEmpty {
+        } else if viewModel.results.isEmpty && viewModel.googlePlaces.isEmpty {
             EmptyStateView(
                 title: L10n.Search.emptyTitle,
                 message: L10n.Search.emptyMessage,
                 systemImage: "magnifyingglass"
             )
         } else {
-            List(viewModel.results) { result in
-                Button {
-                    selectResult(result)
-                } label: {
-                    SearchResultRow(result: result)
+            List {
+                if !viewModel.googlePlaces.isEmpty {
+                    Section(L10n.Search.googlePlacesSection) {
+                        ForEach(viewModel.googlePlaces, id: \.placeID) { place in
+                            GooglePlaceRow(place: place) {
+                                submitPlace(place)
+                            }
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
+
+                Section(L10n.Search.localResults) {
+                    ForEach(viewModel.results) { result in
+                        Button {
+                            selectResult(result)
+                        } label: {
+                            SearchResultRow(result: result)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
+    }
+
+    private func submitPlace(_ place: GooglePlaceResult) {
+        if !session.requireAuthentication(for: .account) {
+            return
+        }
+        Task {
+            do {
+                _ = try await environment.contributionRepository.submitGym(
+                    SubmitGymRequest(
+                        idempotencyKey: IdempotencyKey(),
+                        googlePlaceID: place.placeID,
+                        name: place.name,
+                        streetAddress: place.streetAddress,
+                        suburb: parseSuburb(from: place.streetAddress) ?? place.name,
+                        state: "",
+                        postcode: nil,
+                        latitude: place.latitude,
+                        longitude: place.longitude
+                    )
+                )
+            } catch {
+                // Submission failed silently in the MVP; no user-facing error yet.
+            }
+        }
+    }
+
+    private func parseSuburb(from address: String?) -> String? {
+        guard let address else { return nil }
+        let components = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        return components.first
     }
 }
 
@@ -119,6 +167,27 @@ private struct SearchResultRow: View {
         case .gym(let gym): gym.suburb
         case .wallZone(_, let gym): gym.name
         case .route(_, let zone, let gym): "\(gym.name) · \(zone.name)"
+        }
+    }
+}
+
+private struct GooglePlaceRow: View {
+    let place: GooglePlaceResult
+    let submit: () -> Void
+
+    var body: some View {
+        HStack {
+            Image(systemName: "building.2")
+                .foregroundStyle(DesignColour.opticBlue)
+            VStack(alignment: .leading) {
+                Text(place.name).foregroundStyle(DesignColour.primaryText)
+                if let address = place.streetAddress {
+                    Text(address).font(.caption).foregroundStyle(DesignColour.secondaryText)
+                }
+            }
+            Spacer()
+            Button(L10n.Search.submitGym) { submit() }
+                .buttonStyle(CompactActionButtonStyle())
         }
     }
 }

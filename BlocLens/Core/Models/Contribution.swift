@@ -183,3 +183,20 @@ nonisolated struct FeedbackReceipt: Identifiable, Equatable, Sendable {
     let id: UUID
     let category: FeedbackCategory
 }
+
+nonisolated struct SubmitGymRequest: Equatable, Sendable {
+    let idempotencyKey: IdempotencyKey
+    let googlePlaceID: String
+    let name: String
+    let streetAddress: String?
+    let suburb: String
+    let state: String
+    let postcode: String?
+    let latitude: Double
+    let longitude: Double
+}
+
+nonisolated struct GymSubmissionReceipt: Identifiable, Equatable, Sendable {
+    let id: UUID
+    let status: String
+}

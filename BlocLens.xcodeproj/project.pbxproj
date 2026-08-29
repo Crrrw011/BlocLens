@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B828007B3041D79300562893 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D0C0FFEE0000000000000005 /* Sentry */; };
 		B8A2769F303DE546006E5A98 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D0C0FFEE0000000000000002 /* Supabase */; };
 		B8A276A0303DE546006E5A98 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D0C0FFEE0000000000000003 /* Supabase */; };
 /* End PBXBuildFile section */
@@ -70,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B828007B3041D79300562893 /* Sentry in Frameworks */,
 				B8A2769F303DE546006E5A98 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

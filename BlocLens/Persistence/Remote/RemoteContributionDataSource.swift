@@ -27,6 +27,8 @@ nonisolated protocol RemoteContributionDataSource: Sendable {
     func fetchReport(id: UUID) async throws -> ContentReportRecord
     func insertFeedback(_ write: FeedbackWrite) async throws -> FeedbackRecord
     func fetchFeedback(id: UUID) async throws -> FeedbackRecord
+    func insertGymSubmission(_ write: GymSubmissionWrite) async throws -> GymSubmissionRecord
+    func fetchGymSubmission(id: UUID) async throws -> GymSubmissionRecord
 }
 
 nonisolated struct RouteContributionWrite: Encodable, Sendable {
@@ -236,6 +238,27 @@ nonisolated struct FeedbackWrite: Encodable, Sendable {
     }
 }
 
+nonisolated struct GymSubmissionWrite: Encodable, Sendable {
+    let id: String
+    let googlePlaceID: String
+    let name: String
+    let streetAddress: String?
+    let suburb: String
+    let state: String
+    let postcode: String?
+    let latitude: Double
+    let longitude: Double
+    let submittedBy: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, latitude, longitude
+        case googlePlaceID = "google_place_id"
+        case streetAddress = "street_address"
+        case suburb, state, postcode
+        case submittedBy = "submitted_by"
+    }
+}
+
 struct SupabaseContributionDataSource: RemoteContributionDataSource, Sendable {
     let client: SupabaseClient
 
@@ -360,6 +383,12 @@ struct SupabaseContributionDataSource: RemoteContributionDataSource, Sendable {
     }
 
     func fetchFeedback(id: UUID) async throws -> FeedbackRecord { try await fetch(id, from: "app_feedback") }
+
+    func insertGymSubmission(_ write: GymSubmissionWrite) async throws -> GymSubmissionRecord {
+        try await insert(write, into: "gym_submissions")
+    }
+
+    func fetchGymSubmission(id: UUID) async throws -> GymSubmissionRecord { try await fetch(id, from: "gym_submissions") }
 
     private func insert<Write: Encodable & Sendable, Record: Decodable & Sendable>(
         _ write: Write,

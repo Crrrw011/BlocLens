@@ -89,6 +89,9 @@ enum L10n {
         static let clear: LocalizedStringResource = "search.clear"
         static let emptyTitle: LocalizedStringResource = "search.empty.title"
         static let emptyMessage: LocalizedStringResource = "search.empty.message"
+        static let googlePlacesSection: LocalizedStringResource = "search.googlePlaces.section"
+        static let localResults: LocalizedStringResource = "search.localResults"
+        static let submitGym: LocalizedStringResource = "search.submitGym"
     }
 
     enum Filter {

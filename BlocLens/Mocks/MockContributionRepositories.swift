@@ -10,6 +10,7 @@ actor MockContributionRepository: ContributionRepository {
     private var commentsByKey: [IdempotencyKey: BetaComment] = [:]
     private var reportsByKey: [IdempotencyKey: ContentReportReceipt] = [:]
     private var feedbackByKey: [IdempotencyKey: FeedbackReceipt] = [:]
+    private var gymSubmissionsByKey: [IdempotencyKey: GymSubmissionReceipt] = [:]
     private let currentUserID: UserID
     private let managedGymIDs: Set<GymID>
 
@@ -269,6 +270,20 @@ actor MockContributionRepository: ContributionRepository {
             category: request.category
         )
         feedbackByKey[request.idempotencyKey] = receipt
+        return receipt
+    }
+
+    func submitGym(_ request: SubmitGymRequest) throws -> GymSubmissionReceipt {
+        if let existing = gymSubmissionsByKey[request.idempotencyKey] { return existing }
+        let name = request.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !request.googlePlaceID.isEmpty else {
+            throw RepositoryError.invalidInput
+        }
+        let receipt = GymSubmissionReceipt(
+            id: request.idempotencyKey.rawValue,
+            status: "submitted"
+        )
+        gymSubmissionsByKey[request.idempotencyKey] = receipt
         return receipt
     }
 

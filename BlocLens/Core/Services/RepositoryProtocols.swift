@@ -116,6 +116,7 @@ nonisolated protocol ContributionRepository: Sendable {
     func addComment(_ request: AddBetaCommentRequest) async throws -> BetaComment
     func reportContent(_ request: SubmitContentReportRequest) async throws -> ContentReportReceipt
     func submitFeedback(_ request: SubmitFeedbackRequest) async throws -> FeedbackReceipt
+    func submitGym(_ request: SubmitGymRequest) async throws -> GymSubmissionReceipt
 }
 
 nonisolated protocol RelationshipRepository: Sendable {

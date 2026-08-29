@@ -4,6 +4,8 @@
 <dict>
 	<key>SentryDSN</key>
 	<string>https://2745c57474d4bf4b235d0597bf0581dc@o4511989019770880.ingest.us.sentry.io/4511989024489472</string>
+	<key>GooglePlacesAPIKey</key>
+	<string>AIzaSyD8FiSK3wO-JF352IuRqLyht0nrINzbayA</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

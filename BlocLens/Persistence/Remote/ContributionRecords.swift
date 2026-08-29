@@ -168,6 +168,19 @@ nonisolated struct FeedbackRecord: Codable, Equatable, Sendable {
     }
 }
 
+nonisolated struct GymSubmissionRecord: Codable, Equatable, Sendable {
+    let id: UUID
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, status
+    }
+
+    func domain() throws -> GymSubmissionReceipt {
+        return GymSubmissionReceipt(id: id, status: status)
+    }
+}
+
 nonisolated struct GymScopeRecord: Codable, Equatable, Sendable {
     let gymID: UUID
 

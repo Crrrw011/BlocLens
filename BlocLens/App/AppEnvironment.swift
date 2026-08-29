@@ -13,6 +13,7 @@ struct AppEnvironment: Sendable {
     let authenticationRepository: any AuthenticationRepository
     let onboardingStore: any OnboardingStore
     let languagePreferenceStore: any LanguagePreferenceStore
+    let googlePlacesClient: any GooglePlacesClient
     let currentUserID: @Sendable () -> UserID?
     let dataAvailability: DataAvailability
 
@@ -42,6 +43,7 @@ struct AppEnvironment: Sendable {
             authenticationRepository: MockAuthenticationRepository(initialState: authenticationState),
             onboardingStore: onboardingStore ?? InMemoryOnboardingStore(isComplete: isOnboardingComplete),
             languagePreferenceStore: languagePreferenceStore,
+            googlePlacesClient: NoopGooglePlacesClient(),
             currentUserID: { DevelopmentFixtures.currentUserID },
             dataAvailability: scenario == .offlineWithCache ? .offlineCached : .online
         )
@@ -83,6 +85,7 @@ struct AppEnvironment: Sendable {
             ),
             onboardingStore: InMemoryOnboardingStore(isComplete: true),
             languagePreferenceStore: InMemoryLanguagePreferenceStore(),
+            googlePlacesClient: GooglePlacesClientFactory.makeFromBundle(),
             currentUserID: {
                 client.auth.currentUser.map {
                     UserID(rawValue: RemoteIdentifier.domainString($0.id))

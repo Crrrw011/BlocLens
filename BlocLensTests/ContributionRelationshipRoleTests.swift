@@ -316,6 +316,39 @@ struct ContributionRepositoryTests {
             #expect(error == .invalidInput)
         } catch { Issue.record("Unexpected error: \(error)") }
     }
+
+    @Test func submitGymSucceedsAndIsIdempotent() async throws {
+        let repository = MockContributionRepository()
+        let key = IdempotencyKey()
+        let request = SubmitGymRequest(
+            idempotencyKey: key, googlePlaceID: "place-123",
+            name: "  Urban Climb Newtown  ", streetAddress: "12 King St, Newtown NSW 2042",
+            suburb: "Newtown", state: "NSW", postcode: "2042",
+            latitude: -33.9, longitude: 151.18
+        )
+
+        let first = try await repository.submitGym(request)
+        let second = try await repository.submitGym(request)
+
+        #expect(first == second)
+        #expect(first.status == "submitted")
+    }
+
+    @Test func submitGymRejectsMissingPlaceID() async {
+        let repository = MockContributionRepository()
+        do {
+            _ = try await repository.submitGym(
+                SubmitGymRequest(
+                    idempotencyKey: IdempotencyKey(), googlePlaceID: "",
+                    name: "Gym", streetAddress: nil, suburb: "Newtown", state: "NSW",
+                    postcode: nil, latitude: -33.9, longitude: 151.18
+                )
+            )
+            Issue.record("Expected invalidInput")
+        } catch let error as RepositoryError {
+            #expect(error == .invalidInput)
+        } catch { Issue.record("Unexpected error: \(error)") }
+    }
 }
 
 @MainActor

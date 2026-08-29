@@ -45,7 +45,7 @@ struct MapView: View {
         }
         .task { await viewModel.load() }
         .sheet(isPresented: $showsSearch) {
-            LocalSearchView(environment: environment) { result in
+            LocalSearchView(environment: environment, session: session) { result in
                 showsSearch = false
                 switch result {
                 case .gym(let gym):
