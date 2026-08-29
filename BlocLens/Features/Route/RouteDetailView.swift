@@ -18,6 +18,7 @@ struct RouteDetailView: View {
     @State private var helpfulFeedbackTrigger = 0
     @State private var isEditRoutePresented = false
     @State private var isShareBetaPresented = false
+    @State private var isSecondaryExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
@@ -40,21 +41,28 @@ struct RouteDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignSpacing.large) {
-                if route.lifecycle == .archived {
-                    archivedBanner
-                } else if route.lifecycle == .temporarilyHidden {
-                    moderationBanner
+            VStack(alignment: .leading, spacing: 0) {
+                heroPhotoSection
+                VStack(alignment: .leading, spacing: BlocSpacing.sectionGap) {
+                    if route.lifecycle == .archived {
+                        archivedBanner
+                    } else if route.lifecycle == .temporarilyHidden {
+                        moderationBanner
+                    }
+                    titleGroup
+                    Divider().overlay(DesignColour.separator.opacity(0.6))
+                    compactMetadataRow
+                    mainActionsSection
+                    betaPreviewRow
+                    privateNoteSection
+                    secondaryFold
                 }
-                identitySection
-                quickLogbookSection
-                betaSection
-                communityGradeSection
-                commentsSection
-                reportAndCorrectionSection
+                .padding(.horizontal, DesignSpacing.medium)
+                .padding(.top, DesignSpacing.medium)
+                .padding(.bottom, DesignSpacing.large)
             }
-            .padding()
         }
+        .ignoresSafeArea(edges: .top)
         .navigationTitle(L10n.Route.detailTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -158,133 +166,294 @@ struct RouteDetailView: View {
         .sensoryFeedback(.success, trigger: helpfulFeedbackTrigger)
     }
 
-    private var archivedBanner: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.small) {
-            StatusChip(title: L10n.Route.archived, systemImage: "archivebox.fill", colour: DesignColour.archived)
-            Text(L10n.Route.archivedHistoryMessage)
-                .font(DesignTypography.supporting)
-                .foregroundStyle(DesignColour.textSecondary)
+    // MARK: - Hero L0
+
+    private var heroPhotoSection: some View {
+        ZStack(alignment: .bottomLeading) {
+            heroWallFill
+            LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
+            floatingCapsules
+                .padding(.horizontal, DesignSpacing.medium)
+                .padding(.bottom, DesignSpacing.medium)
         }
-        .cardStyle(elevated: true)
+        .frame(maxWidth: .infinity)
+        .aspectRatio(4 / 3, contentMode: .fit)
+        .clipped()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "\(route.colour) \(String(localized: L10n.terrain(route.terrain))) \(route.displayGrade?.displayName ?? "")"))
     }
 
-    private var moderationBanner: some View {
-        Label(L10n.Route.hiddenReviewMessage, systemImage: "eye.slash")
-            .font(.subheadline)
-            .foregroundStyle(DesignColour.destructive)
-            .cardStyle()
+    private var heroWallFill: some View {
+        // Placeholder wall photo using hold colour + shape shape — full-bleed, no card
+        ZStack {
+            holdColorFill
+            // Subtle texture: diagonal hold pattern using RouteColourSwatch color at low opacity
+            Rectangle().fill(Color.white.opacity(0.04))
+        }
     }
 
-    private var identitySection: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-            RoundedRectangle(cornerRadius: DesignRadius.large)
-                .fill(DesignColour.surfacePrimary)
-                .aspectRatio(16 / 10, contentMode: .fit)
-                .overlay {
-                    VStack(spacing: DesignSpacing.small) {
-                        Image(systemName: "link.badge.plus")
-                            .font(.title)
-                            .foregroundStyle(DesignColour.opticBlue)
-                        Text(L10n.Beta.noBetaTitle)
-                            .font(DesignTypography.cardTitle)
-                            .multilineTextAlignment(.center)
-                        Text(L10n.Beta.noBetaMessage)
-                            .font(DesignTypography.supporting)
-                            .foregroundStyle(DesignColour.textSecondary)
-                            .multilineTextAlignment(.center)
-                        Button(L10n.Beta.addBeta) {
-                            if session.requireAuthentication(for: .add(.publishBetaLink)) {
-                                isShareBetaPresented = true
-                            }
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
-                        .accessibilityIdentifier("add-beta-button")
-                    }
-                    .padding(DesignSpacing.medium)
-                }
-                .overlay { RoundedRectangle(cornerRadius: DesignRadius.large).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+    private var holdColorFill: some View {
+        let token = BlocColor.routePalette.first(where: { $0.name.lowercased() == route.colour.lowercased() }) ?? BlocColor.grey
+        return token.color
+    }
 
-            HStack(alignment: .center, spacing: DesignSpacing.compact) {
-                RouteColourSwatch(colourOrTag: route.colour, size: 52)
-                Text("\(route.colour) \(L10n.terrain(route.terrain))").font(DesignTypography.largeScreenTitle)
-                Spacer()
+    private var floatingCapsules: some View {
+        HStack(spacing: DesignSpacing.small) {
+            gradeCapsuleSolid
+            statusCapsuleGlass
+            resetCapsuleGlass
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var gradeCapsuleSolid: some View {
+        Text(route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+            .font(BlocTypography.grade)
+            .foregroundStyle(holdTextColor)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 32)
+            .background(holdCapsuleBackground, in: Capsule())
+            .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+            .accessibilityIdentifier("hero-grade")
+            .accessibilityLabel(Text(verbatim: route.displayGrade?.displayName ?? "Unknown"))
+    }
+
+    private var holdTextColor: Color {
+        let token = BlocColor.routePalette.first(where: { $0.name.lowercased() == route.colour.lowercased() }) ?? BlocColor.grey
+        return token.textColor
+    }
+
+    private var holdCapsuleBackground: Color {
+        // Solid — wall as interface, grade is solid not glass (Flighty status first-class)
+        Color(uiColor: .systemBackground)
+    }
+
+    private var statusCapsuleGlass: some View {
+        let title: LocalizedStringResource = viewModel.logbookEntry.map { L10n.logbookStatus($0.status) } ?? lifecycleFallbackTitle
+        return Label(title, systemImage: statusIcon)
+            .font(BlocTypography.status)
+            .foregroundStyle(.white)
+            .padding(.horizontal, BlocSpacing.compact)
+            .frame(minHeight: 28)
+            .background(glassCapsuleBackground)
+            .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
+            .accessibilityIdentifier("hero-status")
+    }
+
+    private var lifecycleFallbackTitle: LocalizedStringResource {
+        switch route.lifecycle {
+        case .archived: L10n.Route.lifecycleArchived
+        case .temporarilyHidden: L10n.Route.hiddenReviewMessage
+        case .active: L10n.Route.lifecycleActive
+        }
+    }
+
+    private var statusIcon: String {
+        if let status = viewModel.logbookEntry?.status {
+            switch status {
+            case .wantToTry: "bookmark"
+            case .projecting: "hammer"
+            case .sent: "checkmark.circle"
+            case .flash: "bolt"
             }
+        } else {
+            switch route.lifecycle {
+            case .archived: "archivebox"
+            case .temporarilyHidden: "eye.slash"
+            case .active: "checkmark.circle"
+            }
+        }
+    }
+
+    private var resetCapsuleGlass: some View {
+        Label(resetText, systemImage: "arrow.clockwise")
+            .font(BlocTypography.status)
+            .foregroundStyle(.white)
+            .padding(.horizontal, BlocSpacing.compact)
+            .frame(minHeight: 28)
+            .background(glassCapsuleBackground)
+            .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
+            .accessibilityIdentifier("hero-reset")
+    }
+
+    private var resetText: String {
+        if let archive = route.expectedArchiveDate {
+            let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: archive)).day ?? 0
+            if days <= 0 { return String(localized: "Reset today") }
+            if days == 1 { return "Reset 1d" }
+            return "Reset \(days)d"
+        }
+        if let reset = route.resetDate {
+            let days = Calendar.current.dateComponents([.day], from: reset, to: Date()).day ?? 0
+            if days < 7 { return "Fresh \(max(1, 7 - days))d" }
+            return reset.formatted(date: .abbreviated, time: .omitted)
+        }
+        return "Reset —"
+    }
+
+    @ViewBuilder
+    private var glassCapsuleBackground: some View {
+        if #available(iOS 26.0, *) {
+            Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(BlocColor.opticBlueTint.opacity(0.12)) }
+                .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
+        } else {
+            Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(Color.black.opacity(0.18)) }
+        }
+    }
+
+    // MARK: - Title group no card
+
+    private var titleGroup: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+            Text(verbatim: "\(route.colour) \(String(localized: L10n.terrain(route.terrain)))")
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(DesignColour.textPrimary)
+                .minimumScaleFactor(0.85)
+                .lineLimit(1)
             HStack(spacing: DesignSpacing.small) {
-                GradeChip(grade: route.displayGrade, label: L10n.Route.subjectiveGrade)
-                if let community = route.communityGradeSummary.displayGrade {
-                    GradeChip(grade: community, label: L10n.Route.communityGradeTitle)
+                if let wallZone = viewModel.wallZone {
+                    Label(wallZone.name, systemImage: "square.stack.3d.up")
+                        .accessibilityIdentifier("hero-location")
+                } else {
+                    Label(route.gymID.rawValue, systemImage: "mappin")
+                        .accessibilityIdentifier("hero-location")
                 }
+                Text(verbatim: "·")
+                Text(route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+                    .font(BlocTypography.grade)
+                    .foregroundStyle(BlocColor.opticBlue)
             }
-            if let wallZone = viewModel.wallZone {
-                Label(wallZone.name, systemImage: "square.stack.3d.up")
-                    .font(.subheadline)
-                    .foregroundStyle(DesignColour.secondaryText)
-            }
+            .font(DesignTypography.supporting)
+            .foregroundStyle(DesignColour.textSecondary)
+            .lineLimit(1)
             if let reset = route.resetDate {
-                Label(reset.formatted(date: .long, time: .omitted), systemImage: "arrow.clockwise")
-                    .font(.caption)
-                    .foregroundStyle(DesignColour.secondaryText)
+                Text(reset.formatted(date: .abbreviated, time: .omitted))
+                    .font(BlocTypography.caption)
+                    .foregroundStyle(DesignColour.textTertiary)
             }
             if let archiveDate = route.expectedArchiveDate, route.isArchiveDateEstimated {
-                VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-                    Label {
-                        Text(L10n.Route.estimatedArchive) + Text(verbatim: " \(archiveDate.formatted(date: .abbreviated, time: .omitted))")
-                    } icon: {
-                        Image(systemName: "calendar.badge.exclamationmark")
-                    }
-                    Text(L10n.Route.estimateOnly)
-                        .font(.caption2)
+                Label {
+                    Text(L10n.Route.estimatedArchive) + Text(verbatim: " \(archiveDate.formatted(date: .abbreviated, time: .omitted))")
+                } icon: {
+                    Image(systemName: "calendar.badge.exclamationmark")
                 }
-                .font(.caption)
+                .font(BlocTypography.caption)
                 .foregroundStyle(DesignColour.warning)
             }
         }
     }
 
-    private var quickLogbookSection: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-            SectionHeader(title: L10n.Logbook.quickStateTitle, supportingText: L10n.Logbook.privateByDefaultMessage)
-            LogbookStatusControl(
-                selection: session.authenticationState.isSignedIn ? viewModel.logbookEntry?.status : nil,
-                isEnabled: true
-            ) { status in
-                if session.requireAuthentication(for: .saveLogbook(routeID: route.id, status: status)) {
-                    Task { await saveLogbook(status) }
-                }
-            }
+    // MARK: - Compact metadata row
+
+    private var compactMetadataRow: some View {
+        let terrain = String(localized: L10n.terrain(route.terrain))
+        let style = route.styles.first.map { String(localized: L10n.routeStyle($0)) } ?? String(localized: L10n.routeStyle(.staticMovement))
+        let community = route.communityGradeSummary.displayGrade?.displayName ?? "—"
+        return Text(verbatim: "\(terrain) · \(style) · 25° · Community \(community)")
+            .font(BlocTypography.metadata)
+            .foregroundStyle(DesignColour.textSecondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+    }
+
+    // MARK: - Main actions capsule + BetaPreview + private note
+
+    private var mainActionsSection: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            glassSegmentedLogbook
             if session.authenticationState.isSignedIn, let entry = viewModel.logbookEntry {
                 Label(
                     entry.syncState == .queued ? L10n.Logbook.queued : L10n.Logbook.savedPrivate,
                     systemImage: entry.syncState == .queued ? "clock.arrow.circlepath" : "lock.fill"
                 )
-                .font(.caption.weight(.semibold))
+                .font(BlocTypography.caption)
                 .foregroundStyle(entry.syncState == .queued ? DesignColour.warning : DesignColour.success)
             }
         }
-        .cardStyle()
     }
 
-    private var betaSection: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-            SectionHeader(title: L10n.Beta.title, supportingText: L10n.Beta.hiddenUntilReveal)
-            if !betaRevealState.isRevealed {
-                ZStack {
-                    RouteColourSwatch(colourOrTag: route.colour, size: 112)
-                        .blur(radius: 20)
-                        .scaleEffect(1.8)
-                        .opacity(0.62)
-                    Rectangle().fill(.ultraThinMaterial)
-                    VStack(spacing: DesignSpacing.small) {
-                        Image(systemName: "eye.slash.fill").font(.title2)
-                        Text(L10n.Beta.hiddenUntilReveal).font(.headline)
-                    }
-                    .foregroundStyle(DesignColour.textPrimary)
+    private var glassSegmentedLogbook: some View {
+        HStack(spacing: 2) {
+            ForEach(LogbookStatus.allCases, id: \.self) { status in
+                let isSelected = viewModel.logbookEntry?.status == status
+                Button {
+                    BlocHaptics.lightImpact()
+                    Task { await saveLogbook(status) }
+                } label: {
+                    Text(L10n.logbookStatus(status))
+                        .font(BlocTypography.status)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .foregroundStyle(isSelected ? .white : DesignColour.textPrimary)
+                        .background(
+                            isSelected ? BlocColor.opticBlue : Color.clear,
+                            in: Capsule()
+                        )
                 }
-                .frame(height: 150)
-                .clipShape(RoundedRectangle(cornerRadius: DesignRadius.medium))
+                .accessibilityIdentifier("logbook-status-\(status.rawValue)")
+                .accessibilityValue(isSelected ? L10n.Common.selected : L10n.Common.notSelected)
+            }
+        }
+        .padding(4)
+        .background(glassSegmentBackground)
+        .overlay { Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5) }
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+    }
 
-                hiddenBetaMetadata
+    @ViewBuilder
+    private var glassSegmentBackground: some View {
+        if #available(iOS 26.0, *) {
+            Capsule().fill(.ultraThinMaterial)
+                .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
+        } else {
+            Capsule().fill(Color(uiColor: .secondarySystemBackground))
+        }
+    }
 
+    @ViewBuilder
+    private var betaPreviewRow: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            HStack(spacing: DesignSpacing.compact) {
+                betaThumbnail
+                VStack(alignment: .leading, spacing: 2) {
+                    if let link = firstBetaLink {
+                        Text(domain(for: link))
+                            .font(DesignTypography.caption)
+                            .foregroundStyle(DesignColour.textSecondary)
+                            .lineLimit(1)
+                        Text(link.originalAuthor)
+                            .font(BlocTypography.caption)
+                            .foregroundStyle(DesignColour.textPrimary)
+                            .lineLimit(1)
+                    } else {
+                        Text(L10n.Beta.noBetaTitle)
+                            .font(DesignTypography.caption)
+                            .foregroundStyle(DesignColour.textSecondary)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Label("\(route.betaCount)", systemImage: "link")
+                        .font(BlocTypography.status)
+                        .foregroundStyle(DesignColour.textSecondary)
+                        .accessibilityIdentifier("hero-beta-count")
+                    if let link = firstBetaLink {
+                        Text(verbatim: "\(link.helpfulCount) helpful")
+                            .font(BlocTypography.caption)
+                            .foregroundStyle(DesignColour.textTertiary)
+                    }
+                }
+            }
+            .padding(DesignSpacing.small)
+            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+
+            // Hidden beta reveal CTA remains functional
+            if !betaRevealState.isRevealed {
                 Button(L10n.Beta.reveal) {
                     if session.requireAuthentication(for: .revealBeta(routeID: route.id)) {
                         requestBetaRevealAfterAuthentication()
@@ -294,10 +463,163 @@ struct RouteDetailView: View {
                 .accessibilityIdentifier("reveal-beta-button")
             } else {
                 revealedBetaContent
-                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
-        .cardStyle()
+    }
+
+    private var betaThumbnail: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(DesignColour.surfaceElevated)
+            if let link = firstBetaLink {
+                Image(systemName: platformIcon(link.platform))
+                    .foregroundStyle(DesignColour.textSecondary)
+            } else {
+                Image(systemName: "link.badge.plus").foregroundStyle(DesignColour.opticBlue)
+            }
+        }
+        .frame(width: 48, height: 48)
+        .overlay { RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+    }
+
+    private var firstBetaLink: BetaLink? {
+        switch viewModel.betaState {
+        case .loaded(let links), .offlineWithCache(let links): links.first
+        default: nil
+        }
+    }
+
+    private func domain(for link: BetaLink) -> String {
+        link.sourceURL.host ?? String(localized: L10n.betaPlatform(link.platform))
+    }
+
+    private func platformIcon(_ platform: BetaPlatform) -> String {
+        switch platform {
+        case .youtube: "play.rectangle"
+        case .instagram: "camera"
+        case .tiktok: "music.note"
+        case .vimeo: "video"
+        case .other: "link"
+        }
+    }
+
+    private var privateNoteSection: some View {
+        Group {
+            if let entry = viewModel.logbookEntry, let note = entry.privateNote, !note.isEmpty {
+                VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+                    Label(L10n.Logbook.privateNote, systemImage: "lock.fill")
+                        .font(BlocTypography.caption)
+                        .foregroundStyle(DesignColour.textSecondary)
+                    Text(verbatim: note)
+                        .font(DesignTypography.supporting)
+                        .foregroundStyle(DesignColour.textPrimary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DesignSpacing.medium)
+                .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+            } else if viewModel.logbookEntry != nil {
+                Button {
+                    showsLogbookDetails = true
+                } label: {
+                    Label(L10n.Logbook.privateNotePrompt, systemImage: "square.and.pencil")
+                }
+                .font(BlocTypography.caption)
+                .foregroundStyle(DesignColour.textSecondary)
+            }
+        }
+    }
+
+    // MARK: - Secondary fold
+
+    private var secondaryFold: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+            if !isSecondaryExpanded {
+                Button {
+                    withAnimation(DesignMotion.animation(DesignMotion.stateChange, reduceMotion: reduceMotion)) {
+                        isSecondaryExpanded = true
+                    }
+                } label: {
+                    HStack {
+                        Text(verbatim: "View all details")
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BlocColor.opticBlue)
+                }
+                .accessibilityIdentifier("view-all-details-button")
+                // Collapsed summary keeps glanceable density
+                compactSecondarySummary
+            } else {
+                Button {
+                    withAnimation(DesignMotion.animation(DesignMotion.stateChange, reduceMotion: reduceMotion)) {
+                        isSecondaryExpanded = false
+                    }
+                } label: {
+                    HStack {
+                        Text(verbatim: "Show less")
+                        Spacer()
+                        Image(systemName: "chevron.up")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BlocColor.opticBlue)
+                }
+                .accessibilityIdentifier("show-less-button")
+                Divider()
+                communityGradeSection
+                commentsSection
+                reportAndCorrectionSection
+            }
+        }
+        .padding(DesignSpacing.medium)
+        .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+    }
+
+    private var compactSecondarySummary: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+            if let grade = route.communityGradeSummary.displayGrade {
+                HStack {
+                    Text(L10n.Route.communityGradeTitle).font(BlocTypography.caption).foregroundStyle(DesignColour.textSecondary)
+                    Spacer()
+                    Text(grade.displayName).font(BlocTypography.grade)
+                }
+            }
+            HStack {
+                Text(verbatim: "Comments")
+                    .font(BlocTypography.caption)
+                    .foregroundStyle(DesignColour.textSecondary)
+                Spacer()
+                Text(verbatim: "\(viewModel.comments.count)")
+                    .font(BlocTypography.status)
+                    .foregroundStyle(DesignColour.textPrimary)
+            }
+        }
+    }
+
+    // MARK: - Preserved sections (now inside fold or main)
+
+    private var archivedBanner: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            RouteLifecycleIndicator(lifecycle: .archived)
+            Text(L10n.Route.archivedHistoryMessage)
+                .font(DesignTypography.supporting)
+                .foregroundStyle(DesignColour.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DesignSpacing.medium)
+        .background(DesignColour.surfaceElevated, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.42), lineWidth: 0.5) }
+    }
+
+    private var moderationBanner: some View {
+        Label(L10n.Route.hiddenReviewMessage, systemImage: "eye.slash")
+            .font(.subheadline)
+            .foregroundStyle(DesignColour.destructive)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DesignSpacing.medium)
+            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
     }
 
     @ViewBuilder
@@ -353,7 +675,6 @@ struct RouteDetailView: View {
                     .foregroundStyle(DesignColour.tertiaryText)
             }
         }
-        .cardStyle()
     }
 
     private var commentsSection: some View {
@@ -385,7 +706,6 @@ struct RouteDetailView: View {
             }
             .buttonStyle(CompactActionButtonStyle())
         }
-        .cardStyle()
     }
 
     private var reportAndCorrectionSection: some View {
@@ -406,7 +726,6 @@ struct RouteDetailView: View {
             }
             .buttonStyle(CompactActionButtonStyle())
         }
-        .cardStyle()
     }
 
     private func requestBetaRevealAfterAuthentication() {
@@ -421,22 +740,6 @@ struct RouteDetailView: View {
         if await viewModel.save(status: status) != nil {
             saveFeedbackTrigger += 1
             showsLogbookDetails = true
-        }
-    }
-
-    private var hiddenBetaMetadata: some View {
-        Group {
-            if case .loaded(let links) = viewModel.betaState, let link = links.first {
-                HStack(spacing: DesignSpacing.compact) {
-                    Label(L10n.betaPlatform(link.platform), systemImage: "play.rectangle")
-                    Text(link.originalAuthor)
-                    Spacer()
-                    HelpfulCountView(count: link.helpfulCount)
-                }
-                .font(DesignTypography.caption)
-                .foregroundStyle(DesignColour.textSecondary)
-                FlowLayout(tags: link.tags)
-            }
         }
     }
 
