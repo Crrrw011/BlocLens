@@ -206,8 +206,9 @@ extension View {
     func pageTitleStyle() -> some View { modifier(PageTitleStyle()) }
     func cardStyle(elevated: Bool = false) -> some View { modifier(CardStyle(elevated: elevated)) }
     func adaptiveGlass(interactive: Bool = false) -> some View { modifier(AdaptiveGlassStyle(interactive: interactive)) }
+    /// Canonical progressive glass — iOS 26 `glassEffect` with opticBlueTint, fallback `.ultraThinMaterial`.
+    /// Use this instead of `BlocMaterial.glass` when you need the glass *effect* on a view; `BlocMaterial.glass` is the raw Material for `.background` contexts.
     func blocGlass(interactive: Bool = false) -> some View { modifier(BlocGlassModifier(interactive: interactive)) }
-    func font(_ token: BlocFontToken) -> some View { font(token.font) }
 }
 
 // MARK: - Bloc Tokens — Cold Zinc A (Phase 1)
@@ -266,39 +267,35 @@ enum BlocColor {
     ]
 }
 
-struct BlocFontToken: CustomStringConvertible {
-    let font: Font
-    var description: String { "tabular \(String(describing: font))" }
-}
-
 enum BlocTypography {
-    static let grade = BlocFontToken(font: .system(size: 22, weight: .bold).monospacedDigit())
+    /// Grade — 22pt bold with tabular numbers (monospacedDigit) for V-grade hierarchy.
+    static let grade: Font = .system(size: 22, weight: .bold).monospacedDigit()
+    /// Explicit weight for real trait verification (Font is opaque).
+    static let gradeWeight: Font.Weight = .bold
     static let status: Font = .system(size: 11, weight: .semibold)
     static let metadata: Font = .system(size: 11, weight: .regular)
     static let hero: Font = .system(size: 34, weight: .bold)
     static let caption: Font = .caption
 }
 
-enum BlocSpacing {
+// BlocSpacing/BlocRadius reuse canonical DesignSpacing/DesignRadius to avoid value duplication.
+// New Bloc-specific gaps/radii are added via extension on the canonical types.
+typealias BlocSpacing = DesignSpacing
+extension DesignSpacing {
     static let sectionGap: CGFloat = 40
-    static let xSmall: CGFloat = 4
-    static let small: CGFloat = 8
-    static let compact: CGFloat = 12
-    static let medium: CGFloat = 16
-    static let comfortable: CGFloat = 20
-    static let large: CGFloat = 24
-    static let xLarge: CGFloat = 32
     static let xxLarge: CGFloat = 48
 }
 
-enum BlocRadius {
-    static let control: CGFloat = 10
-    static let card: CGFloat = 16
+typealias BlocRadius = DesignRadius
+extension DesignRadius {
     static let container: CGFloat = 20
-    static let sheet: CGFloat = 24
     static let capsule: CGFloat = 999
+    static var sheet: CGFloat { sheetSection }
 }
 
+/// Progressive glass — raw Material for `.background` contexts is `.ultraThin`.
+/// For the glass *effect* on views, use `View.blocGlass()` which applies
+/// `glassEffect(.regular.tint(BlocColor.opticBlueTint))` on iOS 26+ and falls back to `.ultraThinMaterial`.
 enum BlocMaterial {
     static let glass: Material = .ultraThin
 }

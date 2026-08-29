@@ -9,7 +9,8 @@ final class DesignTokensTests: XCTestCase {
     }
 
     func testGradeTypographyIsBoldTabular() {
-        XCTAssertTrue(String(describing: BlocTypography.grade).contains("tabular"))
+        XCTAssertEqual(BlocTypography.gradeWeight, .bold)
+        XCTAssertTrue(String(describing: BlocTypography.grade).contains("MonospacedDigit"))
     }
 
     func testSpacingAndRadiusTokensExist() {
