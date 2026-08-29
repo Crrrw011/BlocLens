@@ -4,6 +4,7 @@ struct AddContributionView: View {
     let action: AddAction
     let environment: AppEnvironment
     var preselectedWallZone: WallZone?
+    var preselectedRoute: ClimbingRoute?
 
     @Environment(\.dismiss) private var dismiss
     @State private var gyms: [Gym] = []
@@ -204,7 +205,11 @@ struct AddContributionView: View {
             if let zone = preselectedWallZone {
                 lockedGymName = gyms.first { $0.id == zone.gymID }?.name ?? ""
             }
-            selectedRouteID = routes.first { $0.lifecycle == .active }?.id
+            if let route = preselectedRoute {
+                selectedRouteID = route.id
+            } else {
+                selectedRouteID = routes.first { $0.lifecycle == .active }?.id
+            }
         } catch {
             errorMessage = "Contribution options could not be loaded. Try again."
         }

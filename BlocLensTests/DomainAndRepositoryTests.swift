@@ -94,10 +94,10 @@ struct BetaDomainTests {
         #expect(result.map(\.id.rawValue) == ["beta-west-end-1-a", "beta-west-end-1-b"])
     }
 
-    @Test func absentBodyProfileUsesHelpfulCount() {
+    @Test func fullSolutionSortsBeforeHelpfulCount() {
         let links = DevelopmentFixtures.betaLinks.filter { $0.routeID == "west-end-slab-r1" }
         let result = BetaRanker.visibleLinks(links, viewer: nil)
-        #expect(result.map(\.id.rawValue) == ["beta-west-end-1-b", "beta-west-end-1-a"])
+        #expect(result.map(\.id.rawValue) == ["beta-west-end-1-a", "beta-west-end-1-b"])
     }
 
     @Test func brokenAndHiddenBetaAreFiltered() {

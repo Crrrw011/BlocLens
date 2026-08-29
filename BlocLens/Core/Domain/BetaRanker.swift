@@ -12,10 +12,18 @@ nonisolated enum BetaRanker {
         guard let viewer,
               let viewerHeight = viewer.heightCentimetres,
               let viewerArmSpan = viewer.armSpanCentimetres else {
-            return visible.sorted(by: helpfulThenStableID)
+            return visible.sorted(by: rankWithoutBody)
         }
 
         return visible.sorted { lhs, rhs in
+            let lhsFull = lhs.tags.contains(.fullSolution)
+            let rhsFull = rhs.tags.contains(.fullSolution)
+            if lhsFull != rhsFull {
+                return lhsFull
+            }
+            if lhs.helpfulCount != rhs.helpfulCount {
+                return lhs.helpfulCount > rhs.helpfulCount
+            }
             let lhsDistance = bodyDistance(
                 link: lhs,
                 viewerHeight: viewerHeight,
@@ -26,12 +34,20 @@ nonisolated enum BetaRanker {
                 viewerHeight: viewerHeight,
                 viewerArmSpan: viewerArmSpan
             )
-
             if lhsDistance != rhsDistance {
                 return lhsDistance < rhsDistance
             }
-            return helpfulThenStableID(lhs, rhs)
+            return stableID(lhs, rhs)
         }
+    }
+
+    private static func rankWithoutBody(_ lhs: BetaLink, _ rhs: BetaLink) -> Bool {
+        let lhsFull = lhs.tags.contains(.fullSolution)
+        let rhsFull = rhs.tags.contains(.fullSolution)
+        if lhsFull != rhsFull {
+            return lhsFull
+        }
+        return helpfulThenStableID(lhs, rhs)
     }
 
     private static func bodyDistance(
@@ -50,6 +66,10 @@ nonisolated enum BetaRanker {
         if lhs.helpfulCount != rhs.helpfulCount {
             return lhs.helpfulCount > rhs.helpfulCount
         }
-        return lhs.id.rawValue < rhs.id.rawValue
+        return stableID(lhs, rhs)
+    }
+
+    private static func stableID(_ lhs: BetaLink, _ rhs: BetaLink) -> Bool {
+        lhs.id.rawValue < rhs.id.rawValue
     }
 }

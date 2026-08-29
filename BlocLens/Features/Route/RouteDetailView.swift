@@ -17,6 +17,7 @@ struct RouteDetailView: View {
     @State private var saveFeedbackTrigger = 0
     @State private var helpfulFeedbackTrigger = 0
     @State private var isEditRoutePresented = false
+    @State private var isShareBetaPresented = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
@@ -74,6 +75,9 @@ struct RouteDetailView: View {
         }
         .sheet(isPresented: $isEditRoutePresented) {
             EditRouteView(environment: environment, session: session, route: route)
+        }
+        .sheet(isPresented: $isShareBetaPresented) {
+            AddContributionView(action: .publishBetaLink, environment: environment, preselectedRoute: route)
         }
         .task { await viewModel.load(viewerProfile: session.authenticationState.profile) }
         .onChange(of: session.resumedIntent) { _, intent in
@@ -178,25 +182,27 @@ struct RouteDetailView: View {
                 .aspectRatio(16 / 10, contentMode: .fit)
                 .overlay {
                     VStack(spacing: DesignSpacing.small) {
-                        RouteColourSwatch(colourOrTag: route.colour, size: 64)
-                        Text(L10n.Route.photoPlaceholder)
+                        Image(systemName: "link.badge.plus")
+                            .font(.title)
+                            .foregroundStyle(DesignColour.opticBlue)
+                        Text(L10n.Beta.noBetaTitle)
                             .font(DesignTypography.cardTitle)
-                        Text(route.colour)
+                            .multilineTextAlignment(.center)
+                        Text(L10n.Beta.noBetaMessage)
                             .font(DesignTypography.supporting)
                             .foregroundStyle(DesignColour.textSecondary)
+                            .multilineTextAlignment(.center)
+                        Button(L10n.Beta.addBeta) {
+                            if session.requireAuthentication(for: .add(.publishBetaLink)) {
+                                isShareBetaPresented = true
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .accessibilityIdentifier("add-beta-button")
                     }
+                    .padding(DesignSpacing.medium)
                 }
                 .overlay { RoundedRectangle(cornerRadius: DesignRadius.large).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
-
-            if session.isContributionPromptVisible("route-photo-\(route.id.rawValue)") {
-                ContributionPromptView(
-                    title: L10n.Route.photoContributionTitle,
-                    message: L10n.Route.photoContributionMessage,
-                    primaryActionTitle: L10n.Route.addPhoto,
-                    primaryAction: { requestContribution(.photo) },
-                    dismissAction: { session.dismissContributionPrompt("route-photo-\(route.id.rawValue)") }
-                )
-            }
 
             HStack(alignment: .center, spacing: DesignSpacing.compact) {
                 RouteColourSwatch(colourOrTag: route.colour, size: 52)
@@ -541,16 +547,9 @@ private struct BetaLinkCard: View {
             HelpfulCountView(count: link.helpfulCount + (isHelpful ? 1 : 0))
 
             if link.embedSupport == .supported {
-                RoundedRectangle(cornerRadius: DesignRadius.small)
-                    .fill(DesignColour.opticBlue.opacity(0.1))
-                    .frame(height: 110)
-                    .overlay {
-                        VStack {
-                            Image(systemName: "play.rectangle")
-                            Text(L10n.Beta.embedPlaceholder)
-                        }
-                        .foregroundStyle(DesignColour.opticBlue)
-                    }
+                BetaVideoPlayerView(url: link.sourceURL)
+                    .frame(height: 210)
+                    .clipShape(RoundedRectangle(cornerRadius: DesignRadius.small))
             } else {
                 Button(L10n.Beta.openOriginalPost, action: openOriginal)
                     .buttonStyle(SecondaryButtonStyle())
