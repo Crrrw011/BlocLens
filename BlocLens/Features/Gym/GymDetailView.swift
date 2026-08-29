@@ -8,7 +8,6 @@ struct GymDetailView: View {
     @StateObject private var viewModel: GymDetailViewModel
     @State private var isFavourite = false
     @State private var isAddWallZonePresented = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(gym: Gym, environment: AppEnvironment, session: AppSession) {
         self.gym = gym
@@ -142,7 +141,7 @@ struct GymDetailView: View {
 
     private var verifiedCapsuleGlass: some View {
         Label {
-            Text(gym.isVerified ? L10n.Gym.verified : LocalizedStringResource(stringLiteral: "Community"))
+            Text(gym.isVerified ? L10n.Gym.verified : L10n.Gym.community)
         } icon: {
             Image(systemName: gym.isVerified ? "checkmark.seal.fill" : "person.2")
         }
@@ -171,12 +170,12 @@ struct GymDetailView: View {
     private var resetCapsuleText: String {
         if let reset = gym.latestResetDate {
             let days = Calendar.current.dateComponents([.day], from: reset, to: Date()).day ?? 0
-            if days == 0 { return "Reset today" }
-            if days == 1 { return "Reset 1d" }
-            if days < 7 { return "Reset \(days)d" }
+            if days == 0 { return String(localized: L10n.Gym.resetToday) }
+            if days == 1 { return String(localized: L10n.Gym.resetOneDay) }
+            if days < 7 { return L10n.Gym.resetDays(days) }
             return reset.formatted(date: .abbreviated, time: .omitted)
         }
-        return "Reset —"
+        return String(localized: L10n.Gym.resetUnknown)
     }
 
     @ViewBuilder
@@ -271,7 +270,7 @@ struct GymDetailView: View {
                 .foregroundStyle(DesignColour.textTertiary)
             HStack(spacing: DesignSpacing.small) {
                 Label {
-                    Text(gym.isVerified ? L10n.Gym.verified : LocalizedStringResource(stringLiteral: "Community"))
+                    Text(gym.isVerified ? L10n.Gym.verified : L10n.Gym.community)
                 } icon: {
                     Image(systemName: gym.isVerified ? "checkmark.seal.fill" : "person.2")
                 }
@@ -305,7 +304,7 @@ struct GymDetailView: View {
     private var freshSetsSection: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.small) {
             HStack {
-                Label { Text(verbatim: "Fresh Sets") } icon: { Image(systemName: "arrow.clockwise.circle.fill") }
+                Label { Text(L10n.Gym.freshSets) } icon: { Image(systemName: "arrow.clockwise.circle.fill") }
                     .font(DesignTypography.supporting.weight(.semibold))
                     .foregroundStyle(DesignColour.textSecondary)
                 Spacer()
@@ -481,7 +480,7 @@ struct GymDetailView: View {
             Divider().opacity(0.5).padding(.horizontal, DesignSpacing.medium)
             let routes = viewModel.routesByZoneID[zone.id] ?? []
             if routes.isEmpty {
-                Text(verbatim: "No active routes")
+                Text(L10n.Gym.noActiveRoutes)
                     .font(BlocTypography.caption)
                     .foregroundStyle(DesignColour.textTertiary)
                     .padding(.horizontal, DesignSpacing.medium)
@@ -500,7 +499,7 @@ struct GymDetailView: View {
                     if routes.count > 5 {
                         NavigationLink(value: zone) {
                             HStack {
-                                Text(verbatim: "View all \(routes.count) routes")
+                                Text(L10n.Gym.viewAllRoutes(count: routes.count))
                                 Spacer()
                                 Image(systemName: "chevron.right")
                             }

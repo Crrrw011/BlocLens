@@ -108,6 +108,7 @@ enum L10n {
         static let openGym: LocalizedStringResource = "gym.openGym"
         static let viewGym: LocalizedStringResource = "gym.viewGym"
         static let verified: LocalizedStringResource = "gym.verified"
+        static let community: LocalizedStringResource = LocalizedStringResource("gym.community", defaultValue: "Community")
         static let developmentFixture: LocalizedStringResource = "gym.developmentFixture"
         static let currentRoutesAndZones: LocalizedStringResource = "gym.currentRoutesAndZones"
         static let latestReset: LocalizedStringResource = "gym.latestReset"
@@ -127,6 +128,19 @@ enum L10n {
         static let contributionMessage: LocalizedStringResource = "gym.contribution.message"
         static let addWallZone: LocalizedStringResource = "gym.addWallZone"
         static let addRouteInZone: LocalizedStringResource = "gym.addRouteInZone"
+        static let freshSets: LocalizedStringResource = LocalizedStringResource("gym.freshSets", defaultValue: "Fresh Sets")
+        static let resetToday: LocalizedStringResource = LocalizedStringResource("gym.reset.today", defaultValue: "Reset today")
+        static let resetOneDay: LocalizedStringResource = LocalizedStringResource("gym.reset.oneDay", defaultValue: "Reset 1d")
+        static let resetUnknown: LocalizedStringResource = LocalizedStringResource("gym.reset.unknown", defaultValue: "Reset —")
+        static let noActiveRoutes: LocalizedStringResource = LocalizedStringResource("gym.noActiveRoutes", defaultValue: "No active routes")
+
+        static func resetDays(_ count: Int) -> String {
+            String(localized: "Reset \(count)d")
+        }
+
+        static func viewAllRoutes(count: Int) -> String {
+            String(localized: "View all \(count) routes")
+        }
     }
 
     enum WallZone {
