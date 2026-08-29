@@ -31,17 +31,28 @@ struct WallZoneRouteListView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            zoneHeader
-            filterBar
-            routeContent
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                heroPhotoSection
+                VStack(alignment: .leading, spacing: BlocSpacing.sectionGap) {
+                    titleGroup
+                    Divider().overlay(DesignColour.separator.opacity(0.6))
+                    compactMetadataRow
+                    filterBar
+                    routeContent
+                }
+                .padding(.horizontal, DesignSpacing.medium)
+                .padding(.top, DesignSpacing.medium)
+                .padding(.bottom, DesignSpacing.large)
+            }
         }
+        .ignoresSafeArea(edges: .top)
         .navigationTitle(wallZone.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    if session.requireAuthentication(for: .add(.addNewRoute)) {
+                    if session.requireAuthentication(for: .addRouteInZone(wallZoneID: wallZone.id)) {
                         isAddRoutePresented = true
                     }
                 } label: {
@@ -86,25 +97,159 @@ struct WallZoneRouteListView: View {
         .onChange(of: viewModel.options.gradeBand) { _, _ in Task { await viewModel.load() } }
         .onChange(of: viewModel.options.hasBeta) { _, _ in Task { await viewModel.load() } }
         .onChange(of: viewModel.options.sort) { _, _ in Task { await viewModel.load() } }
+        .onChange(of: session.resumedIntent) { _, intent in
+            let expected = ProtectedIntent.addRouteInZone(wallZoneID: wallZone.id)
+            guard intent == expected else { return }
+            isAddRoutePresented = true
+            session.consumeResumedIntent(expected)
+        }
         .task { await viewModel.load() }
     }
 
-    private var zoneHeader: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-            Text(wallZone.locationDescription)
-            HStack {
-                Label(L10n.wallKind(wallZone.wallKind), systemImage: "rectangle.stack")
-                if let reset = wallZone.latestResetDate {
-                    Label(reset.formatted(date: .abbreviated, time: .omitted), systemImage: "arrow.clockwise")
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(DesignColour.secondaryText)
+    // MARK: - Hero L0
+
+    private var heroPhotoSection: some View {
+        ZStack(alignment: .bottomLeading) {
+            heroWallFill
+            LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
+            floatingCapsules
+                .padding(.horizontal, DesignSpacing.medium)
+                .padding(.bottom, DesignSpacing.medium)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(DesignColour.surface)
+        .frame(maxWidth: .infinity)
+        .aspectRatio(4 / 3, contentMode: .fit)
+        .clipped()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "\(wallZone.name) \(String(localized: L10n.wallKind(wallZone.wallKind)))"))
     }
+
+    private var heroWallFill: some View {
+        ZStack {
+            wallBaseColor
+            Rectangle().fill(Color.white.opacity(0.04))
+        }
+    }
+
+    private var wallBaseColor: Color {
+        switch wallZone.wallKind {
+        case .compWall: BlocColor.opticBlueTint
+        case .sprayWall: Color(uiColor: .tertiarySystemBackground)
+        case .regularSetWall: Color(uiColor: .secondarySystemBackground)
+        }
+    }
+
+    private var floatingCapsules: some View {
+        HStack(spacing: DesignSpacing.small) {
+            wallKindCapsuleSolid
+            statusCapsuleGlass
+            resetCapsuleGlass
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var wallKindCapsuleSolid: some View {
+        Text(L10n.wallKind(wallZone.wallKind))
+            .font(BlocTypography.grade)
+            .foregroundStyle(Color(uiColor: .label))
+            .padding(.horizontal, 14)
+            .frame(minHeight: 32)
+            .background(Color(uiColor: .systemBackground), in: Capsule())
+            .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+            .accessibilityIdentifier("hero-wallKind")
+    }
+
+    private var statusCapsuleGlass: some View {
+        Label(L10n.wallAvailability(wallZone.availability), systemImage: wallZone.availability == .active ? "checkmark.circle" : "pause.circle")
+            .font(BlocTypography.status)
+            .foregroundStyle(.white)
+            .padding(.horizontal, BlocSpacing.compact)
+            .frame(minHeight: 28)
+            .background(glassCapsuleBackground)
+            .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
+            .accessibilityIdentifier("hero-status")
+    }
+
+    private var resetCapsuleGlass: some View {
+        Label(resetCapsuleText, systemImage: "arrow.clockwise")
+            .font(BlocTypography.status)
+            .foregroundStyle(.white)
+            .padding(.horizontal, BlocSpacing.compact)
+            .frame(minHeight: 28)
+            .background(glassCapsuleBackground)
+            .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
+            .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
+            .accessibilityIdentifier("hero-reset")
+    }
+
+    private var resetCapsuleText: String {
+        if let reset = wallZone.latestResetDate {
+            let days = Calendar.current.dateComponents([.day], from: reset, to: Date()).day ?? 0
+            if days == 0 { return "Reset today" }
+            if days == 1 { return "Reset 1d" }
+            if days < 7 { return "Reset \(days)d" }
+            return reset.formatted(date: .abbreviated, time: .omitted)
+        }
+        return "Reset —"
+    }
+
+    @ViewBuilder
+    private var glassCapsuleBackground: some View {
+        if #available(iOS 26.0, *) {
+            Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(BlocColor.opticBlueTint.opacity(0.12)) }
+                .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
+        } else {
+            Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(Color.black.opacity(0.18)) }
+        }
+    }
+
+    // MARK: - Title group no card
+
+    private var titleGroup: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+            Text(verbatim: wallZone.name)
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(DesignColour.textPrimary)
+                .minimumScaleFactor(0.85)
+                .lineLimit(1)
+                .accessibilityIdentifier("hero-location")
+            HStack(spacing: DesignSpacing.small) {
+                Label(wallZone.locationDescription, systemImage: "mappin")
+                    .lineLimit(1)
+                if !wallZone.locationDescription.isEmpty {
+                    Text(verbatim: "·")
+                }
+                Text(L10n.wallKind(wallZone.wallKind))
+                    .font(BlocTypography.status)
+                    .foregroundStyle(BlocColor.opticBlue)
+            }
+            .font(DesignTypography.supporting)
+            .foregroundStyle(DesignColour.textSecondary)
+            .lineLimit(1)
+            if let reset = wallZone.latestResetDate {
+                Text(reset.formatted(date: .abbreviated, time: .omitted))
+                    .font(BlocTypography.caption)
+                    .foregroundStyle(DesignColour.textTertiary)
+            }
+        }
+    }
+
+    // MARK: - Compact metadata row
+
+    private var compactMetadataRow: some View {
+        // ponytail: 25° hardcoded, replace with wallZone.angle when model adds it
+        let kind = String(localized: L10n.wallKind(wallZone.wallKind))
+        let material = String(localized: L10n.surfaceMaterial(wallZone.surfaceMaterial))
+        return Text(verbatim: "\(kind) · \(material) · 25° · \(wallZone.routeCount) routes · \(wallZone.betaCount) beta")
+            .font(BlocTypography.metadata)
+            .foregroundStyle(DesignColour.textSecondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .accessibilityIdentifier("hero-metadata")
+    }
+
+    // MARK: - Filter bar
 
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -133,41 +278,42 @@ struct WallZoneRouteListView: View {
             .pickerStyle(.menu)
             }
         }
-        .padding(.horizontal, DesignSpacing.medium)
-        .padding(.vertical, DesignSpacing.small)
-        .background(DesignColour.backgroundSecondary)
     }
+
+    // MARK: - Route content
 
     @ViewBuilder
     private var routeContent: some View {
         switch viewModel.state {
         case .initial, .loading:
-            LoadingStateView().frame(maxHeight: .infinity)
+            LoadingStateView().frame(maxWidth: .infinity)
         case .loaded(let routes), .offlineWithCache(let routes):
-            List {
-                Section(L10n.RouteList.currentRoutes) {
-                    ForEach(routes) { route in
-                        NavigationLink(value: route) {
-                            RouteRow(route: route, status: visibleStatus(for: route))
-                        }
-                        .accessibilityIdentifier("route-row-\(route.id.rawValue)")
-                    }
-                }
-
+            VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+                sectionContainer(title: L10n.RouteList.currentRoutes, routes: routes)
                 if !viewModel.archivedRoutes.isEmpty {
-                    Section {
-                        DisclosureGroup(L10n.RouteList.archivedRoutes, isExpanded: $showsArchived) {
+                    DisclosureGroup(isExpanded: $showsArchived) {
+                        VStack(alignment: .leading, spacing: 0) {
                             ForEach(viewModel.archivedRoutes) { route in
                                 NavigationLink(value: route) {
                                     RouteRow(route: route, status: visibleStatus(for: route))
                                 }
                                 .accessibilityIdentifier("route-row-\(route.id.rawValue)")
+                                if route.id != viewModel.archivedRoutes.last?.id {
+                                    Divider().opacity(0.5)
+                                }
                             }
                         }
+                        .padding(.top, DesignSpacing.small)
+                    } label: {
+                        Text(L10n.RouteList.archivedRoutes)
+                            .font(DesignTypography.supporting.weight(.semibold))
+                            .foregroundStyle(DesignColour.textSecondary)
                     }
+                    .padding(DesignSpacing.medium)
+                    .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                    .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
                 }
             }
-            .listStyle(.insetGrouped)
         case .empty:
             VStack(spacing: DesignSpacing.medium) {
                 EmptyStateView(
@@ -181,6 +327,7 @@ struct WallZoneRouteListView: View {
                         .padding(.horizontal, DesignSpacing.large)
                 }
             }
+            .frame(maxWidth: .infinity)
         case .error:
             ErrorStateView(message: L10n.State.fixtureErrorMessage) {
                 Task { await viewModel.load() }
@@ -194,6 +341,32 @@ struct WallZoneRouteListView: View {
         }
     }
 
+    private func sectionContainer(title: LocalizedStringResource, routes: [ClimbingRoute]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(DesignTypography.supporting.weight(.semibold))
+                .foregroundStyle(DesignColour.textSecondary)
+                .padding(.horizontal, DesignSpacing.medium)
+                .padding(.top, DesignSpacing.medium)
+                .padding(.bottom, DesignSpacing.small)
+            VStack(spacing: 0) {
+                ForEach(routes) { route in
+                    NavigationLink(value: route) {
+                        RouteRow(route: route, status: visibleStatus(for: route))
+                    }
+                    .accessibilityIdentifier("route-row-\(route.id.rawValue)")
+                    if route.id != routes.last?.id {
+                        Divider().opacity(0.5).padding(.leading, DesignSpacing.medium + 12)
+                    }
+                }
+            }
+            .padding(.horizontal, DesignSpacing.medium)
+            .padding(.bottom, DesignSpacing.small)
+        }
+        .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+    }
+
     private func visibleStatus(for route: ClimbingRoute) -> LogbookStatus? {
         session.authenticationState.isSignedIn ? viewModel.statusByRouteID[route.id] : nil
     }
@@ -204,64 +377,96 @@ private struct RouteRow: View {
     let status: LogbookStatus?
 
     var body: some View {
-        HStack(alignment: .top, spacing: DesignSpacing.compact) {
-            RouteColourSwatch(colourOrTag: route.colour, size: 44)
-            VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-                HStack {
-                    Text("\(route.colour) \(L10n.terrain(route.terrain))")
-                        .font(DesignTypography.cardTitle)
-                        .fontWeight(.bold)
-                    if route.lifecycle == .archived {
-                        StatusChip(title: L10n.Route.archived, systemImage: "archivebox", colour: DesignColour.archived)
-                    }
-                }
-                ViewThatFits(in: .horizontal) {
-                    metadata
-                    VStack(alignment: .leading, spacing: DesignSpacing.xSmall) { metadata }
-                }
-                if route.communityGradeSummary.displayGrade == nil, route.communityGradeSummary.voteCount > 0 {
-                    Text(route.communityGradeSummary.voteCount, format: .number) + Text(L10n.Route.validVotesSuffix)
-                        .font(.caption2)
-                        .foregroundStyle(DesignColour.textTertiary)
-                }
-                if let reset = route.resetDate {
-                    Label(reset.formatted(.relative(presentation: .named)), systemImage: "clock")
-                        .font(.caption2)
-                        .foregroundStyle(DesignColour.tertiaryText)
-                }
+        HStack(spacing: DesignSpacing.small) {
+            HoldDot(colour: route.colour)
+            // HoldColour·V·Status·Beta·Reset — high-density one-line
+            HStack(spacing: 4) {
+                Text(verbatim: route.colour)
+                    .foregroundStyle(DesignColour.textPrimary)
+                Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary)
+                Text(route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+                    .foregroundStyle(BlocColor.opticBlue)
+                    .fontWeight(.semibold)
                 if let status {
-                    StatusChip(title: L10n.logbookStatus(status), systemImage: statusIcon(status), colour: DesignColour.brandPrimary)
+                    Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary)
+                    Text(L10n.logbookStatus(status))
+                        .foregroundStyle(DesignColour.textSecondary)
+                } else if route.lifecycle == .archived {
+                    Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary)
+                    Text(L10n.Route.archived)
+                        .foregroundStyle(DesignColour.archived)
+                }
+                Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary)
+                Label("\(route.betaCount)", systemImage: "link")
+                    .foregroundStyle(DesignColour.textSecondary)
+                Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary)
+                if let reset = route.resetDate {
+                    Text(reset.formatted(.relative(presentation: .named)))
+                        .foregroundStyle(DesignColour.textTertiary)
+                } else {
+                    Text(verbatim: "—").foregroundStyle(DesignColour.textTertiary)
                 }
             }
+            .font(BlocTypography.caption)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DesignColour.textTertiary)
         }
-        .padding(.vertical, DesignSpacing.small)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "\(route.colour) \(route.displayGrade?.displayName ?? "") \(route.betaCount) beta"))
     }
+}
 
-    private var metadata: some View {
-        HStack(spacing: DesignSpacing.compact) {
-            Label(route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown), systemImage: "number")
-                    if let community = route.communityGradeSummary.displayGrade {
-                Label {
-                    Text(L10n.Route.communityShortLabel) + Text(verbatim: " \(community.displayName)")
-                } icon: {
-                    Image(systemName: "person.3")
-                }
-                    }
-            Label("\(route.betaCount)", systemImage: "link")
-        }
-        .font(.caption)
-        .foregroundStyle(DesignColour.textSecondary)
-    }
+private struct HoldDot: View {
+    let colour: String
+    var size: CGFloat = 8
 
-    private func statusIcon(_ status: LogbookStatus) -> String {
-        switch status {
-        case .wantToTry: "bookmark.fill"
-        case .projecting: "hammer.fill"
-        case .sent: "checkmark.circle.fill"
-        case .flash: "bolt.fill"
+    var body: some View {
+        Group {
+            switch token.shape {
+            case .circle: Circle().fill(fillColor)
+            case .square: RoundedRectangle(cornerRadius: 1.5, style: .continuous).fill(fillColor)
+            case .diamond: DiamondShape().fill(fillColor)
             }
         }
+        .overlay {
+            Group {
+                switch token.shape {
+                case .circle: Circle().stroke(DesignColour.separator.opacity(0.35), lineWidth: 0.5)
+                case .square: RoundedRectangle(cornerRadius: 1.5, style: .continuous).stroke(DesignColour.separator.opacity(0.35), lineWidth: 0.5)
+                case .diamond: DiamondShape().stroke(DesignColour.separator.opacity(0.35), lineWidth: 0.5)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    private var token: BlocColor.HoldColor {
+        let n = colour.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        if let exact = BlocColor.routePalette.first(where: { $0.name.lowercased() == n }) { return exact }
+        if let partial = BlocColor.routePalette.first(where: { n.contains($0.name.lowercased()) }) { return partial }
+        return BlocColor.grey
+    }
+
+    private var fillColor: Color { token.color }
+}
+
+private struct DiamondShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.midY))
+        p.closeSubpath()
+        return p
+    }
 }
 
 #Preview("Wall Zone Route List") {
