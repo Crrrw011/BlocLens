@@ -39,4 +39,20 @@ final class GymPhotoServiceTests: XCTestCase {
         let record = try JSONDecoder().decode(GymRecord.self, from: json)
         XCTAssertNil(record.googlePlaceID)
     }
+
+    func testNoopPhotoServiceThrowsOnFetch() async {
+        let service = NoopGymPhotoService()
+        do {
+            _ = try await service.fetchPhoto(for: "ChIJtest", width: 800)
+            XCTFail("Should throw")
+        } catch {
+            // Expected
+        }
+    }
+
+    func testGymPhotoStructEquality() {
+        let photo1 = GymPhoto(imageURL: URL(string: "https://example.com/photo.jpg")!, attribution: "Author", attributionHTML: nil)
+        let photo2 = GymPhoto(imageURL: URL(string: "https://example.com/photo.jpg")!, attribution: "Author", attributionHTML: nil)
+        XCTAssertEqual(photo1, photo2)
+    }
 }

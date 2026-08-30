@@ -10,6 +10,7 @@ nonisolated struct GooglePlaceResult: Equatable, Sendable {
 
 nonisolated protocol GooglePlacesClient: Sendable {
     func searchText(_ query: String) async throws -> [GooglePlaceResult]
+    func fetchPlaceDetails(placeID: String, fields: String) async throws -> [String: Any]
 }
 
 struct RemoteGooglePlacesClient: GooglePlacesClient, Sendable {
@@ -63,11 +64,34 @@ struct RemoteGooglePlacesClient: GooglePlacesClient, Sendable {
             )
         }
     }
+
+    func fetchPlaceDetails(placeID: String, fields: String) async throws -> [String: Any] {
+        guard !apiKey.isEmpty, apiKey != "YOUR_GOOGLE_PLACES_API_KEY" else {
+            throw RepositoryError.invalidConfiguration
+        }
+        let url = URL(string: "https://places.googleapis.com/v1/places/\(placeID)?fields=\(fields)")!
+        var request = URLRequest(url: url)
+        request.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
+        request.setValue(fields, forHTTPHeaderField: "X-Goog-FieldMask")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw RepositoryError.externalServiceError
+        }
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw RepositoryError.decodingFailure
+        }
+        return json
+    }
 }
 
 struct NoopGooglePlacesClient: GooglePlacesClient, Sendable {
     func searchText(_ query: String) async throws -> [GooglePlaceResult] {
         []
+    }
+
+    func fetchPlaceDetails(placeID: String, fields: String) async throws -> [String: Any] {
+        [:]
     }
 }
 
