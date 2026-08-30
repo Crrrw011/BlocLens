@@ -33,6 +33,7 @@ struct MapView: View {
         NavigationStack(path: $path) {
             content
                 .navigationTitle(L10n.Map.title)
+                .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(for: Gym.self) { gym in
                     GymDetailView(gym: gym, environment: environment, session: session)
                 }
@@ -43,7 +44,9 @@ struct MapView: View {
                     RouteDetailView(route: route, environment: environment, session: session)
                 }
         }
-        .task { await viewModel.load() }
+        .task(id: session.authenticationState.isSignedIn) {
+            await viewModel.load()
+        }
         .sheet(isPresented: $showsSearch) {
             LocalSearchView(environment: environment, session: session) { result in
                 showsSearch = false
@@ -115,10 +118,10 @@ struct MapView: View {
                     } label: {
                         Image(systemName: selectedGym?.id == gym.id ? "mountain.2.circle.fill" : "mountain.2.circle")
                             .font(.title2.weight(.semibold))
-                            .foregroundStyle(selectedGym?.id == gym.id ? .white : DesignColour.brandPrimary)
+                            .foregroundStyle(selectedGym?.id == gym.id ? .white : BlocColor.opticBlue)
                             .frame(width: 44, height: 44)
-                            .background(selectedGym?.id == gym.id ? DesignColour.brandPrimary : DesignColour.surfaceElevated, in: Circle())
-                            .overlay { Circle().stroke(DesignColour.brandPrimary.opacity(0.55), lineWidth: selectedGym?.id == gym.id ? 2 : 1) }
+                            .background(selectedGym?.id == gym.id ? BlocColor.opticBlue : DesignColour.surfaceElevated, in: Circle())
+                            .overlay { Circle().stroke(BlocColor.opticBlue.opacity(0.45), lineWidth: selectedGym?.id == gym.id ? 2 : 1) }
                             .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
                     }
                     .accessibilityLabel(gym.name)
@@ -130,22 +133,7 @@ struct MapView: View {
         .safeAreaInset(edge: .top) {
             VStack(spacing: DesignSpacing.small) {
                 if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
-                HStack(spacing: DesignSpacing.small) {
-                    Button { showsSearch = true } label: { Image(systemName: "magnifyingglass") }
-                        .buttonStyle(IconButtonStyle())
-                        .accessibilityLabel(L10n.Search.title)
-                        .accessibilityIdentifier("map-search-button")
-                    FilterPill(title: L10n.MapFilter.title, activeCount: viewModel.filterOptions.activeCount) {
-                        showsFilters = true
-                    }
-                    .accessibilityIdentifier("map-filter-button")
-                    Spacer(minLength: 0)
-                    Button { showsNearbyMessage = true } label: { Image(systemName: "location") }
-                        .buttonStyle(IconButtonStyle())
-                        .accessibilityLabel(L10n.Map.nearbyGyms)
-                }
-                .padding(DesignSpacing.small)
-                .adaptiveGlass(interactive: true)
+                floatingSearchBar
             }
             .padding(.horizontal, DesignSpacing.medium)
             .padding(.top, DesignSpacing.small)
@@ -162,6 +150,46 @@ struct MapView: View {
             }
         }
     }
+
+    // MARK: - Floating search / filters — map is interface
+
+    private var floatingSearchBar: some View {
+        HStack(spacing: DesignSpacing.small) {
+            Button { showsSearch = true } label: {
+                HStack(spacing: DesignSpacing.small) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.subheadline.weight(.semibold))
+                    Text(L10n.Search.prompt)
+                        .font(DesignTypography.supporting)
+                        .lineLimit(1)
+                }
+                .foregroundStyle(DesignColour.textSecondary)
+                .padding(.horizontal, DesignSpacing.compact)
+                .frame(minHeight: 38)
+                .background(Color(uiColor: .systemBackground), in: Capsule())
+                .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
+                .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L10n.Search.title)
+            .accessibilityIdentifier("map-search-button")
+
+            FilterPill(title: L10n.MapFilter.title, activeCount: viewModel.filterOptions.activeCount) {
+                showsFilters = true
+            }
+            .accessibilityIdentifier("map-filter-button")
+
+            Spacer(minLength: 0)
+
+            Button { showsNearbyMessage = true } label: {
+                Image(systemName: "location")
+            }
+            .buttonStyle(IconButtonStyle())
+            .accessibilityLabel(L10n.Map.nearbyGyms)
+        }
+        .padding(DesignSpacing.small)
+        .blocGlass(interactive: true)
+    }
 }
 
 private struct GymPreviewCard: View {
@@ -171,62 +199,83 @@ private struct GymPreviewCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.compact) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-                    HStack {
-                        Text(gym.name).font(.headline)
+            HStack(alignment: .top, spacing: DesignSpacing.small) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: DesignSpacing.xSmall) {
+                        Text(verbatim: gym.name)
+                            .font(.headline)
+                            .foregroundStyle(DesignColour.textPrimary)
+                            .lineLimit(1)
                         if gym.isVerified {
                             Image(systemName: "checkmark.seal.fill")
-                                .foregroundStyle(DesignColour.opticBlue)
+                                .foregroundStyle(BlocColor.opticBlue)
+                                .font(.caption)
                                 .accessibilityLabel(L10n.Gym.verified)
                         }
                     }
-                    Text(gym.suburb)
-                        .font(.subheadline)
-                        .foregroundStyle(DesignColour.secondaryText)
+                    HStack(spacing: 4) {
+                        Label(gym.brandName, systemImage: "building.2")
+                        Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary)
+                        Text(verbatim: "\(gym.suburb), \(gym.state)")
+                        if gym.betaCount > 0 {
+                            Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary)
+                            Label("\(gym.betaCount)", systemImage: "link")
+                        }
+                    }
+                    .font(BlocTypography.caption)
+                    .foregroundStyle(DesignColour.textSecondary)
+                    .lineLimit(1)
                 }
-                Spacer()
+                Spacer(minLength: DesignSpacing.small)
                 Button(action: close) {
                     Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(DesignColour.textTertiary)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel(L10n.Common.close)
                 .accessibilityIdentifier("gym-preview-close")
             }
 
-            ViewThatFits(in: .horizontal) {
-                previewMetadata
-                VStack(alignment: .leading, spacing: DesignSpacing.small) { previewMetadata }
-            }
+            Text(verbatim: previewMetadataText)
+                .font(BlocTypography.metadata)
+                .foregroundStyle(DesignColour.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DesignSpacing.xSmall) {
-                    ForEach(gym.facilities.prefix(3), id: \.self) { facility in
-                        FacilityChip(facility: facility)
+            if !gym.facilities.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DesignSpacing.xSmall) {
+                        ForEach(gym.facilities.prefix(3), id: \.self) { facility in
+                            FacilityChip(facility: facility)
+                        }
                     }
                 }
             }
 
-            Button(action: openGym) {
-                Label(L10n.Gym.viewGym, systemImage: "arrow.right")
-            }
-                .buttonStyle(PrimaryButtonStyle())
-                .frame(maxWidth: .infinity, alignment: .trailing)
+            HStack {
+                Spacer()
+                Button(action: openGym) {
+                    Label(L10n.Gym.viewGym, systemImage: "arrow.right")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(CompactActionButtonStyle())
                 .accessibilityIdentifier("open-gym-button")
+            }
         }
         .padding(DesignSpacing.medium)
-        .adaptiveGlass(interactive: true)
+        .blocGlass(interactive: true)
     }
 
-    private var previewMetadata: some View {
-        HStack(spacing: DesignSpacing.compact) {
-            Label("\(gym.betaCount)", systemImage: "link")
-            if let reset = gym.latestResetDate {
-                Label(reset.formatted(.relative(presentation: .named)), systemImage: "arrow.clockwise")
-            }
-            Label(L10n.hardSoft(gym.overallHardSoftSummary), systemImage: "dial.medium")
+    private var previewMetadataText: String {
+        let zones = gym.wallZoneIDs.count
+        let beta = gym.betaCount
+        let hardSoft = String(localized: L10n.hardSoft(gym.overallHardSoftSummary))
+        if let reset = gym.latestResetDate {
+            let rel = reset.formatted(.relative(presentation: .named))
+            return "\(zones) zones · \(beta) beta · \(hardSoft) · \(rel)"
         }
-        .font(DesignTypography.caption)
-        .foregroundStyle(DesignColour.textSecondary)
+        return "\(zones) zones · \(beta) beta · \(hardSoft)"
     }
 }
 
