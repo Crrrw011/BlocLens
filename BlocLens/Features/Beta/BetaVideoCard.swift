@@ -9,6 +9,7 @@ struct BetaVideoCard: View {
     let openOriginal: () -> Void
     let markHelpful: () -> Void
     let reportIssue: () -> Void
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.small) {
@@ -70,17 +71,21 @@ struct BetaVideoCard: View {
         .accessibilityLabel(Text(verbatim: link.sourceURL.host ?? String(localized: L10n.betaPlatform(link.platform))))
     }
 
+    @ViewBuilder
+    private var domainCapsuleBackground: some View {
+        if reduceTransparency {
+            Capsule().fill(Color.black.opacity(0.72))
+        } else if #available(iOS 26.0, *) {
+            Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(Color.black.opacity(0.16)) }
+                .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
+        } else {
+            Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(Color.black.opacity(0.16)) }
+        }
+    }
+
     private var floatingGlassBar: some View {
         HStack(spacing: DesignSpacing.small) {
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .overlay { Capsule().fill(Color.black.opacity(0.16)) }
-                .overlay {
-                    if #available(iOS 26.0, *) {
-                        Capsule().fill(.ultraThinMaterial)
-                            .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
-                    }
-                }
+            domainCapsuleBackground
                 .overlay {
                     Label(domainShort, systemImage: platformIcon(link.platform))
                         .font(BlocTypography.status)

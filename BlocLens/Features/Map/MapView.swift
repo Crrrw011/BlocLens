@@ -165,7 +165,7 @@ struct MapView: View {
                 }
                 .foregroundStyle(DesignColour.textSecondary)
                 .padding(.horizontal, DesignSpacing.compact)
-                .frame(minHeight: 38)
+                .frame(minHeight: 44)
                 .background(Color(uiColor: .systemBackground), in: Capsule())
                 .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
                 .shadow(color: .black.opacity(0.08), radius: 6, y: 2)

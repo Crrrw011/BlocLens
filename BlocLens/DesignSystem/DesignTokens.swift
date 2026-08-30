@@ -109,10 +109,14 @@ struct CardStyle: ViewModifier {
 
 struct AdaptiveGlassStyle: ViewModifier {
     let interactive: Bool
-
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if reduceTransparency {
+            content
+                .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: DesignRadius.card, style: .continuous))
+                .overlay { RoundedRectangle(cornerRadius: DesignRadius.card, style: .continuous).stroke(DesignColour.separator, lineWidth: 1) }
+        } else if #available(iOS 26.0, *) {
             content.glassEffect(
                 .regular.tint(DesignColour.brandTint).interactive(interactive),
                 in: RoundedRectangle(cornerRadius: DesignRadius.card, style: .continuous)
@@ -310,9 +314,13 @@ enum BlocMaterial {
 
 struct BlocGlassModifier: ViewModifier {
     let interactive: Bool
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if reduceTransparency {
+            content.background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: BlocRadius.card, style: .continuous))
+                .overlay { RoundedRectangle(cornerRadius: BlocRadius.card, style: .continuous).stroke(DesignColour.separator, lineWidth: 1) }
+        } else if #available(iOS 26.0, *) {
             content.glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(interactive), in: RoundedRectangle(cornerRadius: BlocRadius.card, style: .continuous))
         } else {
             content.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: BlocRadius.card, style: .continuous))

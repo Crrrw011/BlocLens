@@ -12,6 +12,7 @@ struct WallZoneRouteListView: View {
     @State private var isReportPresented = false
     @Namespace private var heroNS
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     init(wallZone: WallZone, environment: AppEnvironment, session: AppSession) {
         self.wallZone = wallZone
@@ -199,7 +200,9 @@ struct WallZoneRouteListView: View {
 
     @ViewBuilder
     private var glassCapsuleBackground: some View {
-        if #available(iOS 26.0, *) {
+        if reduceTransparency {
+            Capsule().fill(Color(uiColor: .secondarySystemBackground))
+        } else if #available(iOS 26.0, *) {
             Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(BlocColor.opticBlueTint.opacity(0.12)) }
                 .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
         } else {
@@ -421,7 +424,7 @@ private struct RouteRow: View {
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "\(route.colour) \(route.displayGrade?.displayName ?? "") \(route.betaCount) beta"))
+        .accessibilityLabel(Text(verbatim: "\(RouteColourPresentation.gradeAndShapeLabel(grade: route.displayGrade?.displayName, colour: route.colour)) \(route.betaCount) beta"))
     }
 }
 

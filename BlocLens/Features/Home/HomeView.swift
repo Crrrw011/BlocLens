@@ -6,6 +6,7 @@ struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @Namespace private var heroNS
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     init(environment: AppEnvironment, session: AppSession) {
         self.environment = environment
@@ -174,7 +175,9 @@ struct HomeView: View {
 
     @ViewBuilder
     private var glassCapsuleBackground: some View {
-        if #available(iOS 26.0, *) {
+        if reduceTransparency {
+            Capsule().fill(Color(uiColor: .secondarySystemBackground))
+        } else if #available(iOS 26.0, *) {
             Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(BlocColor.opticBlueTint.opacity(0.12)) }
                 .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
         } else {
@@ -336,7 +339,7 @@ struct HomeView: View {
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "\(item.route.colour) \(item.route.displayGrade?.displayName ?? "") \(urgencyText(for: item.route))"))
+        .accessibilityLabel(Text(verbatim: "\(RouteColourPresentation.gradeAndShapeLabel(grade: item.route.displayGrade?.displayName, colour: item.route.colour)) \(urgencyText(for: item.route))"))
     }
 
     private func gradeBadge(for route: ClimbingRoute) -> some View {

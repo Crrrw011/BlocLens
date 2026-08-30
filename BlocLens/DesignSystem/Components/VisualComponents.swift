@@ -151,7 +151,7 @@ struct RouteColourSwatch: View {
         .accessibilityElement()
         .accessibilityLabel(
             Text(L10n.Route.colourAccessibilityPrefix)
-                + Text(verbatim: " \(RouteColourPresentation.accessibilityName(for: colourOrTag))")
+                + Text(verbatim: " \(RouteColourPresentation.accessibilityLabel(for: colourOrTag))")
         )
     }
 

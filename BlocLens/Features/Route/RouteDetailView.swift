@@ -20,6 +20,10 @@ struct RouteDetailView: View {
     @State private var isShareBetaPresented = false
     @State private var isSecondaryExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
+    @Environment(\.colorSchemeContrast) private var colorContrast
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Namespace private var heroNS
     @Namespace private var statusNS
 
@@ -182,7 +186,7 @@ struct RouteDetailView: View {
         .aspectRatio(4 / 3, contentMode: .fit)
         .clipped()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "\(route.colour) \(String(localized: L10n.terrain(route.terrain))) \(route.displayGrade?.displayName ?? "")"))
+        .accessibilityLabel(Text(verbatim: "\(RouteColourPresentation.accessibilityLabel(for: route.colour)) \(String(localized: L10n.terrain(route.terrain))) \(route.displayGrade?.displayName ?? "")"))
     }
 
     private var heroWallFill: some View {
@@ -218,7 +222,7 @@ struct RouteDetailView: View {
             .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
             .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
             .accessibilityIdentifier("hero-grade")
-            .accessibilityLabel(Text(verbatim: route.displayGrade?.displayName ?? "Unknown"))
+            .accessibilityLabel(Text(verbatim: RouteColourPresentation.gradeAndShapeLabel(grade: route.displayGrade?.displayName, colour: route.colour)))
             .matchedGeometryEffect(id: "hero-grade-\(route.id.rawValue)", in: heroNS, isSource: !reduceMotion)
     }
 
@@ -240,7 +244,7 @@ struct RouteDetailView: View {
             .padding(.horizontal, BlocSpacing.compact)
             .frame(minHeight: 28)
             .background(glassCapsuleBackground)
-            .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
+            .overlay { Capsule().stroke(.white.opacity(glassStrokeOpacity), lineWidth: differentiateWithoutColor || colorContrast == .increased ? 1 : 0.5) }
             .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
             // Want→Projecting→Sent→Flash + Active→Reset Soon→Archived: transform+opacity only, Reduce Motion instant
             .contentTransition(.opacity)
@@ -281,7 +285,7 @@ struct RouteDetailView: View {
             .padding(.horizontal, BlocSpacing.compact)
             .frame(minHeight: 28)
             .background(glassCapsuleBackground)
-            .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
+            .overlay { Capsule().stroke(.white.opacity(glassStrokeOpacity), lineWidth: differentiateWithoutColor || colorContrast == .increased ? 1 : 0.5) }
             .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
             .accessibilityIdentifier("hero-reset")
     }
@@ -303,12 +307,18 @@ struct RouteDetailView: View {
 
     @ViewBuilder
     private var glassCapsuleBackground: some View {
-        if #available(iOS 26.0, *) {
+        if reduceTransparency {
+            Capsule().fill(Color(uiColor: .secondarySystemBackground))
+        } else if #available(iOS 26.0, *) {
             Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(BlocColor.opticBlueTint.opacity(0.12)) }
                 .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
         } else {
             Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(Color.black.opacity(0.18)) }
         }
+    }
+
+    private var glassStrokeOpacity: Double {
+        (differentiateWithoutColor || colorContrast == .increased) ? 0.85 : 0.18
     }
 
     // MARK: - Title group no card
@@ -363,8 +373,9 @@ struct RouteDetailView: View {
         return Text(verbatim: "\(terrain) · \(style) · 25° · Community \(community)")
             .font(BlocTypography.metadata)
             .foregroundStyle(DesignColour.textSecondary)
-            .lineLimit(1)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             .truncationMode(.tail)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Main actions capsule + BetaPreview + private note

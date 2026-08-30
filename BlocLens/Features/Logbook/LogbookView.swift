@@ -227,7 +227,7 @@ struct LogbookView: View {
                     .contentTransition(.opacity)
             }
             .padding(.horizontal, BlocSpacing.compact)
-            .frame(minHeight: 32)
+            .frame(minHeight: 44)
             .background(isSelected ? Color.clear : DesignColour.surfaceElevated, in: Capsule())
             .overlay { Capsule().stroke(isSelected ? Color.clear : DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
         }
@@ -409,7 +409,7 @@ struct LogbookView: View {
         .padding(.horizontal, DesignSpacing.medium)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "\(timeString(for: item.entry.date)) \(item.route.colour) \(item.route.displayGrade?.displayName ?? "") \(String(localized: L10n.logbookStatus(item.entry.status)))"))
+        .accessibilityLabel(Text(verbatim: "\(timeString(for: item.entry.date)) \(RouteColourPresentation.gradeAndShapeLabel(grade: item.route.displayGrade?.displayName, colour: item.route.colour)) \(String(localized: L10n.logbookStatus(item.entry.status)))"))
     }
 
     private func timelineDot(isFirst: Bool, status: LogbookStatus) -> some View {
