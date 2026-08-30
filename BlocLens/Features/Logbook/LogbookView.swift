@@ -22,6 +22,7 @@ struct LogbookView: View {
                 }
             }
                 .navigationTitle(L10n.Logbook.title)
+                .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(for: ClimbingRoute.self) { route in
                     RouteDetailView(route: route, environment: environment, session: session)
                 }
@@ -76,144 +77,409 @@ struct LogbookView: View {
         }
     }
 
+    // MARK: - Flighty timeline dashboard
+
     private func dashboard(data: LogbookDashboardData, isOffline: Bool) -> some View {
-        List {
-            if isOffline {
-                Section {
+        let filtered = viewModel.filteredRecords(from: data)
+        let groups = timelineGroups(from: filtered)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: BlocSpacing.sectionGap) {
+                if isOffline {
                     OfflineBanner(message: L10n.State.offlineCachedMessage)
                 }
-            }
-
-            Section(L10n.Logbook.statistics) {
-                Label(L10n.Logbook.privateByDefaultMessage, systemImage: "lock.fill")
-                    .font(DesignTypography.caption)
-                    .foregroundStyle(DesignColour.textSecondary)
-                MetricCard(title: L10n.Logbook.climbingCount, value: "\(data.statistics.climbingCount)", systemImage: "figure.climbing", emphasized: true)
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignSpacing.small) {
-                    MetricCard(title: L10n.Logbook.sentCount, value: "\(data.statistics.sentCount)", systemImage: "checkmark.circle.fill")
-                    MetricCard(title: L10n.Logbook.flashCount, value: "\(data.statistics.flashCount)", systemImage: "bolt.fill")
+                // Compact stats — Flighty secondary, not hero
+                statsStrip(data: data)
+                filterBar
+                if !data.projects.isEmpty {
+                    projectsSection(items: data.projects)
                 }
-                MetricCard(
-                    title: L10n.Logbook.highestGrade,
-                    value: data.statistics.highestGrade?.displayName ?? String(localized: L10n.Grade.unknown),
-                    systemImage: "arrow.up.right"
-                )
-                if !data.statistics.gradeDistribution.isEmpty {
-                    ForEach(data.statistics.gradeDistribution.keys.sorted(), id: \.self) { grade in
-                        gradeDistributionRow(
-                            grade: grade,
-                            count: data.statistics.gradeDistribution[grade, default: 0],
-                            maximum: data.statistics.gradeDistribution.values.max() ?? 1
-                        )
-                    }
-                }
+                timelineSection(groups: groups, isFiltered: filtered.count != data.recentRecords.count)
             }
-
-            Section(L10n.Logbook.filters) {
-                Picker(L10n.Logbook.statusFilter, selection: $viewModel.statusFilter) {
-                    Text(L10n.Common.all).tag(LogbookStatus?.none)
-                    ForEach(LogbookStatus.allCases, id: \.self) { status in
-                        Text(L10n.logbookStatus(status)).tag(Optional(status))
-                    }
-                }
-                Toggle(L10n.Logbook.lastThirtyDays, isOn: $viewModel.recentOnly)
-                    .tint(DesignColour.brandPrimary)
-            }
-
-            Section(L10n.Logbook.projects) {
-                if data.projects.isEmpty {
-                    Text(L10n.Home.noProjects)
-                        .foregroundStyle(DesignColour.secondaryText)
-                } else {
-                    ForEach(data.projects) { item in
-                        recordRow(item)
-                    }
-                }
-            }
-
-            Section(L10n.Logbook.recentRecords) {
-                let filtered = viewModel.filteredRecords(from: data)
-                if filtered.isEmpty {
-                    Text(L10n.Logbook.noMatchingRecords)
-                        .foregroundStyle(DesignColour.secondaryText)
-                } else {
-                    ForEach(filtered) { item in
-                        NavigationLink(value: item.route) { recordRow(item) }
-                    }
-                }
-            }
+            .padding(.horizontal, DesignSpacing.medium)
+            .padding(.top, DesignSpacing.small)
+            .padding(.bottom, DesignSpacing.large)
         }
+        .background(DesignColour.backgroundSecondary)
         .accessibilityIdentifier("logbook-dashboard")
     }
 
-    private func gradeDistributionRow(grade: VGrade, count: Int, maximum: Int) -> some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-            HStack {
-                Text(verbatim: grade.displayName)
-                Spacer()
-                Text(count, format: .number)
+    // MARK: - Stats strip
+
+    private func statsStrip(data: LogbookDashboardData) -> some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            HStack(spacing: DesignSpacing.medium) {
+                statCell(value: "\(data.statistics.climbingCount)", label: L10n.Logbook.climbingCount)
+                Divider().frame(height: 28).opacity(0.3)
+                statCell(value: "\(data.statistics.sentCount)", label: L10n.Logbook.sentCount)
+                Divider().frame(height: 28).opacity(0.3)
+                statCell(value: "\(data.statistics.flashCount)", label: L10n.Logbook.flashCount)
+                Divider().frame(height: 28).opacity(0.3)
+                statCell(value: data.statistics.highestGrade?.displayName ?? String(localized: L10n.Grade.unknown), label: L10n.Logbook.highestGrade, isGrade: true)
             }
-            GeometryReader { proxy in
-                Capsule()
-                    .fill(DesignColour.surface)
-                    .overlay(alignment: .leading) {
-                        Capsule()
-                            .fill(DesignColour.opticBlue)
-                            .frame(width: proxy.size.width * CGFloat(count) / CGFloat(max(maximum, 1)))
-                    }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if !data.statistics.gradeDistribution.isEmpty {
+                gradeDistributionCompact(data: data.statistics)
             }
-            .frame(height: 8)
+            Label(L10n.Logbook.privateByDefaultMessage, systemImage: "lock.fill")
+                .font(BlocTypography.caption)
+                .foregroundStyle(DesignColour.textTertiary)
         }
+        .padding(DesignSpacing.medium)
+        .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
         .accessibilityElement(children: .combine)
     }
 
-    private func statisticRow(_ label: LocalizedStringResource, value: String) -> some View {
-        HStack {
+    private func statCell(value: String, label: LocalizedStringResource, isGrade: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: value)
+                .font(isGrade ? BlocTypography.grade : .system(size: 20, weight: .bold).monospacedDigit())
+                .foregroundStyle(isGrade ? BlocColor.opticBlue : DesignColour.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(label)
-            Spacer()
-            Text(value)
-                .foregroundStyle(DesignColour.secondaryText)
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.06)
+                .textCase(.uppercase)
+                .foregroundStyle(DesignColour.textTertiary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func gradeDistributionCompact(data: LogbookStatistics) -> some View {
+        let maxCount = data.gradeDistribution.values.max() ?? 1
+        let sorted = data.gradeDistribution.keys.sorted()
+        return VStack(alignment: .leading, spacing: 4) {
+            ForEach(sorted, id: \.self) { grade in
+                let count = data.gradeDistribution[grade, default: 0]
+                HStack(spacing: DesignSpacing.small) {
+                    Text(verbatim: grade.displayName)
+                        .font(BlocTypography.caption.weight(.semibold))
+                        .foregroundStyle(DesignColour.textSecondary)
+                        .frame(width: 28, alignment: .leading)
+                    GeometryReader { proxy in
+                        Capsule()
+                            .fill(DesignColour.surfaceElevated)
+                            .overlay(alignment: .leading) {
+                                Capsule()
+                                    .fill(BlocColor.opticBlue)
+                                    .frame(width: proxy.size.width * CGFloat(count) / CGFloat(max(maxCount, 1)))
+                            }
+                    }
+                    .frame(height: 6)
+                    Text(verbatim: "\(count)")
+                        .font(BlocTypography.caption)
+                        .foregroundStyle(DesignColour.textTertiary)
+                        .frame(width: 18, alignment: .trailing)
+                }
+            }
         }
     }
 
-    private func recordRow(_ item: LogbookRecordItem) -> some View {
-        HStack(alignment: .top, spacing: DesignSpacing.compact) {
-            RouteColourSwatch(colourOrTag: item.route.colour, size: 40)
-            VStack(alignment: .leading) {
-                Text(item.route.colour).font(.headline)
-                HStack {
-                    Text(item.route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))
-                    Text(item.entry.date.formatted(date: .abbreviated, time: .omitted))
+    // MARK: - Filter bar (Flighty pills, not List picker)
+
+    private var filterBar: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            Text(L10n.Logbook.filters)
+                .font(.system(size: 11, weight: .bold))
+                .tracking(0.08)
+                .textCase(.uppercase)
+                .foregroundStyle(DesignColour.textTertiary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DesignSpacing.small) {
+                    filterPill(title: String(localized: L10n.Common.all), isSelected: viewModel.statusFilter == nil) {
+                        viewModel.statusFilter = nil
+                    }
+                    ForEach(LogbookStatus.allCases, id: \.self) { status in
+                        filterPill(
+                            title: String(localized: L10n.logbookStatus(status)).uppercased(),
+                            isSelected: viewModel.statusFilter == status
+                        ) {
+                            viewModel.statusFilter = status
+                        }
+                    }
                 }
-                .font(.caption)
-                .foregroundStyle(DesignColour.secondaryText)
             }
-            Spacer()
-            VStack(alignment: .trailing) {
-                StatusChip(
-                    title: L10n.logbookStatus(item.entry.status),
-                    systemImage: statusIcon(item.entry.status),
-                    colour: DesignColour.brandPrimary
-                )
-                Label(
-                    item.entry.syncState == .queued ? L10n.Logbook.queued : L10n.Logbook.synced,
-                    systemImage: item.entry.syncState == .queued ? "clock.arrow.circlepath" : "checkmark.icloud"
-                )
-                .font(.caption2)
-                .foregroundStyle(item.entry.syncState == .queued ? DesignColour.warning : DesignColour.textSecondary)
-            }
+            Toggle(L10n.Logbook.lastThirtyDays, isOn: $viewModel.recentOnly)
+                .font(DesignTypography.supporting)
+                .tint(BlocColor.opticBlue)
         }
-        .padding(.vertical, DesignSpacing.xSmall)
+        .accessibilityIdentifier("logbook-filters")
+    }
+
+    private func filterPill(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(verbatim: title)
+                .font(BlocTypography.status)
+                .lineLimit(1)
+                .padding(.horizontal, BlocSpacing.compact)
+                .frame(minHeight: 32)
+                .foregroundStyle(isSelected ? .white : DesignColour.textPrimary)
+                .background(isSelected ? BlocColor.opticBlue : DesignColour.surfaceElevated, in: Capsule())
+                .overlay { Capsule().stroke(isSelected ? Color.clear : DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    // MARK: - Projects compact (if any)
+
+    private func projectsSection(items: [LogbookRecordItem]) -> some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            Text(L10n.Logbook.projects)
+                .font(.system(size: 11, weight: .bold))
+                .tracking(0.08)
+                .textCase(.uppercase)
+                .foregroundStyle(DesignColour.textTertiary)
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    NavigationLink(value: item.route) { projectRow(item) }
+                        .buttonStyle(.plain)
+                    if item.id != items.last?.id {
+                        Divider().opacity(0.4).padding(.leading, DesignSpacing.medium + 12)
+                    }
+                }
+            }
+            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+        }
+    }
+
+    private func projectRow(_ item: LogbookRecordItem) -> some View {
+        HStack(spacing: DesignSpacing.small) {
+            HoldDot(colour: item.route.colour, size: 10)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text(verbatim: item.route.colour)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DesignColour.textPrimary)
+                    Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary)
+                    Text(verbatim: item.route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+                        .font(BlocTypography.caption.weight(.semibold))
+                        .foregroundStyle(BlocColor.opticBlue)
+                }
+                .lineLimit(1)
+                Text(L10n.logbookStatus(item.entry.status))
+                    .font(BlocTypography.caption)
+                    .foregroundStyle(DesignColour.textSecondary)
+            }
+            Spacer(minLength: DesignSpacing.small)
+            if let count = item.entry.attemptCount, count > 0 {
+                Text(verbatim: "\(count) tries")
+                    .font(BlocTypography.caption)
+                    .foregroundStyle(DesignColour.textTertiary)
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DesignColour.textTertiary)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, DesignSpacing.medium)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 
-    private func statusIcon(_ status: LogbookStatus) -> String {
-        switch status {
-        case .wantToTry: "bookmark.fill"
-        case .projecting: "hammer.fill"
-        case .sent: "checkmark.circle.fill"
-        case .flash: "bolt.fill"
+    // MARK: - Timeline TODAY → Time+State+Object
+
+    private func timelineSection(groups: [(date: Date, title: String, items: [LogbookRecordItem])], isFiltered: Bool) -> some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            HStack(alignment: .firstTextBaseline, spacing: DesignSpacing.small) {
+                Text(L10n.Logbook.recentRecords)
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.08)
+                    .textCase(.uppercase)
+                    .foregroundStyle(DesignColour.textTertiary)
+                if !groups.isEmpty {
+                    Text(verbatim: "· \(groups.flatMap(\.items).count)")
+                        .font(BlocTypography.caption)
+                        .foregroundStyle(DesignColour.textTertiary)
+                }
+                Spacer()
+                if isFiltered {
+                    Button {
+                        viewModel.statusFilter = nil
+                        viewModel.recentOnly = false
+                    } label: {
+                        Text(verbatim: "Clear")
+                            .font(BlocTypography.caption.weight(.semibold))
+                            .foregroundStyle(BlocColor.opticBlue)
+                    }
+                }
+            }
+
+            if groups.isEmpty {
+                Text(L10n.Logbook.noMatchingRecords)
+                    .font(DesignTypography.supporting)
+                    .foregroundStyle(DesignColour.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DesignSpacing.medium)
+                    .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                    .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+            } else {
+                ForEach(groups, id: \.date) { group in
+                    VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+                        Text(verbatim: group.title)
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(0.06)
+                            .textCase(.uppercase)
+                            .foregroundStyle(DesignColour.textSecondary)
+                            .padding(.leading, DesignSpacing.xSmall)
+                        VStack(spacing: 0) {
+                            ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
+                                NavigationLink(value: item.route) { timelineRow(item, isFirst: index == 0) }
+                                    .buttonStyle(.plain)
+                                if item.id != group.items.last?.id {
+                                    Divider().opacity(0.4).padding(.leading, DesignSpacing.medium + 12)
+                                }
+                            }
+                        }
+                        .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                        .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+                        .overlay(alignment: .leading) {
+                            Rectangle()
+                                .fill(DesignColour.separator.opacity(0.35))
+                                .frame(width: 1)
+                                .padding(.leading, DesignSpacing.medium + 5)
+                                .padding(.vertical, DesignSpacing.medium)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    private func timelineRow(_ item: LogbookRecordItem, isFirst: Bool) -> some View {
+        HStack(alignment: .top, spacing: DesignSpacing.small) {
+            timelineDot(isFirst: isFirst, status: item.entry.status)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 4) {
+                    Text(verbatim: timeString(for: item.entry.date))
+                        .font(BlocTypography.caption.weight(.semibold))
+                        .foregroundStyle(DesignColour.textPrimary)
+                    Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary).font(BlocTypography.caption)
+                    Text(verbatim: String(localized: L10n.logbookStatus(item.entry.status)).uppercased())
+                        .font(BlocTypography.caption.weight(.bold))
+                        .foregroundStyle(timelineStatusColor(item.entry.status))
+                    if item.entry.syncState == .queued {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(DesignColour.warning)
+                            .accessibilityLabel(L10n.Logbook.queued)
+                    }
+                }
+                HStack(spacing: 4) {
+                    HoldDot(colour: item.route.colour, size: 8)
+                    Text(verbatim: item.route.colour)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DesignColour.textPrimary)
+                    Text(verbatim: "·").foregroundStyle(DesignColour.textTertiary).font(BlocTypography.caption)
+                    Text(verbatim: item.route.displayGrade?.displayName ?? String(localized: L10n.Grade.unknown))
+                        .font(BlocTypography.caption.weight(.semibold))
+                        .foregroundStyle(BlocColor.opticBlue)
+                    if let count = item.entry.attemptCount, count > 0 {
+                        Text(verbatim: "· \(count) \(count == 1 ? "try" : "tries")")
+                            .font(BlocTypography.caption)
+                            .foregroundStyle(DesignColour.textTertiary)
+                    }
+                }
+                .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DesignColour.textTertiary)
+                .padding(.top, 2)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, DesignSpacing.medium)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "\(timeString(for: item.entry.date)) \(item.route.colour) \(item.route.displayGrade?.displayName ?? "") \(String(localized: L10n.logbookStatus(item.entry.status)))"))
+    }
+
+    private func timelineDot(isFirst: Bool, status: LogbookStatus) -> some View {
+        Circle()
+            .fill(isFirst ? timelineStatusColor(status) : Color(uiColor: .systemBackground))
+            .frame(width: 10, height: 10)
+            .overlay { Circle().stroke(isFirst ? timelineStatusColor(status) : DesignColour.separator, lineWidth: isFirst ? 0 : 1.5) }
+            .overlay { if isFirst { Circle().stroke(Color.white.opacity(0.9), lineWidth: 1.5) } }
+            .padding(.top, 2)
+            .accessibilityHidden(true)
+    }
+
+    private func timelineStatusColor(_ status: LogbookStatus) -> Color {
+        switch status {
+        case .flash: DesignColour.success
+        case .sent: BlocColor.opticBlue
+        case .projecting: BlocColor.project
+        case .wantToTry: DesignColour.textSecondary
+        }
+    }
+
+    // MARK: - Grouping
+
+    private func timelineGroups(from items: [LogbookRecordItem]) -> [(date: Date, title: String, items: [LogbookRecordItem])] {
+        let sorted = items.sorted { $0.entry.date > $1.entry.date }
+        let cal = Calendar.current
+        let grouped = Dictionary(grouping: sorted) { cal.startOfDay(for: $0.entry.date) }
+        let days = grouped.keys.sorted(by: >)
+        return days.map { day in
+            let title: String
+            if cal.isDateInToday(day) { title = "TODAY" }
+            else if cal.isDateInYesterday(day) { title = "YESTERDAY" }
+            else { title = day.formatted(date: .abbreviated, time: .omitted).uppercased() }
+            return (date: day, title: title, items: (grouped[day] ?? []).sorted { $0.entry.date > $1.entry.date })
+        }
+    }
+
+    private func timeString(for date: Date) -> String {
+        date.formatted(date: .omitted, time: .shortened)
+    }
+}
+
+private struct HoldDot: View {
+    let colour: String
+    var size: CGFloat = 8
+    var body: some View {
+        Group {
+            switch token.shape {
+            case .circle: Circle().fill(fillColor)
+            case .square: RoundedRectangle(cornerRadius: 1.5, style: .continuous).fill(fillColor)
+            case .diamond: DiamondShape().fill(fillColor)
+            }
+        }
+        .overlay {
+            Group {
+                switch token.shape {
+                case .circle: Circle().stroke(DesignColour.separator.opacity(0.35), lineWidth: 0.5)
+                case .square: RoundedRectangle(cornerRadius: 1.5, style: .continuous).stroke(DesignColour.separator.opacity(0.35), lineWidth: 0.5)
+                case .diamond: DiamondShape().stroke(DesignColour.separator.opacity(0.35), lineWidth: 0.5)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+    private var token: BlocColor.HoldColor {
+        let n = colour.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        if let exact = BlocColor.routePalette.first(where: { $0.name.lowercased() == n }) { return exact }
+        if let partial = BlocColor.routePalette.first(where: { n.contains($0.name.lowercased()) }) { return partial }
+        return BlocColor.grey
+    }
+    private var fillColor: Color { token.color }
+}
+
+private struct DiamondShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.midY))
+        p.closeSubpath()
+        return p
     }
 }
 
