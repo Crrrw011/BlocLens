@@ -29,6 +29,7 @@ nonisolated struct HomeDashboardData: Equatable, Sendable {
     let projects: [HomeProjectItem]
     let resets: [HomeResetItem]
     let recentRecords: [HomeRecordItem]
+    let freshZones: [WallZone]
 }
 
 @MainActor
@@ -55,12 +56,13 @@ final class HomeViewModel: ObservableObject {
             }
             let gymsByID = Dictionary(uniqueKeysWithValues: gyms.map { ($0.id, $0) })
             let zonesByID = Dictionary(uniqueKeysWithValues: zones.map { ($0.id, $0) })
-            let projects: [HomeProjectItem] = entries.filter { $0.status == .projecting }.compactMap { entry -> HomeProjectItem? in
+            var projects: [HomeProjectItem] = entries.filter { $0.status == .projecting }.compactMap { entry -> HomeProjectItem? in
                 guard let route = routesByID[entry.routeID],
                       let gym = gymsByID[route.gymID],
                       let zone = zonesByID[route.wallZoneID] else { return nil }
                 return HomeProjectItem(entry: entry, route: route, gym: gym, wallZone: zone)
             }
+            projects.sort { urgencyDays(for: $0.route) < urgencyDays(for: $1.route) }
             let recent: [HomeRecordItem] = entries.prefix(4).compactMap { entry -> HomeRecordItem? in
                 guard let route = routesByID[entry.routeID],
                       let gym = gymsByID[route.gymID],
@@ -74,11 +76,15 @@ final class HomeViewModel: ObservableObject {
                     return HomeResetItem(gym: gym, date: date, wallZone: zone)
                 }
             }.sorted { $0.date > $1.date }
+            let freshZones = zones
+                .filter { $0.latestResetDate != nil }
+                .sorted { ($0.latestResetDate ?? .distantPast) > ($1.latestResetDate ?? .distantPast) }
             let data = HomeDashboardData(
                 frequentGym: gyms.first { $0.id == DevelopmentFixtures.mockProfile.favouriteGymID } ?? gyms.first,
                 projects: projects,
                 resets: Array(resets.prefix(3)),
-                recentRecords: Array(recent)
+                recentRecords: Array(recent),
+                freshZones: Array(freshZones.prefix(6))
             )
             state = environment.dataAvailability == .offlineCached ? .offlineWithCache(data) : .loaded(data)
         } catch RepositoryError.offlineNoCache {
@@ -88,6 +94,15 @@ final class HomeViewModel: ObservableObject {
         } catch {
             state = .error(.fixtureFailure)
         }
+    }
+
+    private func urgencyDays(for route: ClimbingRoute) -> Int {
+        if let archive = route.expectedArchiveDate {
+            let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: archive)).day ?? Int.max
+            return days
+        }
+        // No archive estimate — less urgent than any dated reset
+        return Int.max - 1
     }
 
     private func currentUserEntries() async throws -> [LogbookEntry] {

@@ -20,28 +20,33 @@ struct AppShellView: View {
     }
 
     var body: some View {
-        TabView(selection: tabSelection) {
-            HomeView(environment: environment, session: session)
-                .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.systemImage) }
-                .tag(AppTab.home)
+        ZStack(alignment: .bottom) {
+            TabView(selection: tabSelection) {
+                HomeView(environment: environment, session: session)
+                    .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.systemImage) }
+                    .tag(AppTab.home)
 
-            MapView(environment: environment, session: session)
-                .tabItem { Label(AppTab.map.title, systemImage: AppTab.map.systemImage) }
-                .tag(AppTab.map)
+                MapView(environment: environment, session: session)
+                    .tabItem { Label(AppTab.map.title, systemImage: AppTab.map.systemImage) }
+                    .tag(AppTab.map)
 
-            Color.clear
-                .tabItem { Label(AppTab.add.title, systemImage: AppTab.add.systemImage) }
-                .tag(AppTab.add)
+                Color.clear
+                    .tabItem { Label(AppTab.add.title, systemImage: AppTab.add.systemImage) }
+                    .tag(AppTab.add)
 
-            LogbookView(environment: environment, session: session)
-                .tabItem { Label(AppTab.logbook.title, systemImage: AppTab.logbook.systemImage) }
-                .tag(AppTab.logbook)
+                LogbookView(environment: environment, session: session)
+                    .tabItem { Label(AppTab.logbook.title, systemImage: AppTab.logbook.systemImage) }
+                    .tag(AppTab.logbook)
 
-            ProfileView(environment: environment, session: session)
-                .tabItem { Label(AppTab.profile.title, systemImage: AppTab.profile.systemImage) }
-                .tag(AppTab.profile)
+                ProfileView(environment: environment, session: session)
+                    .tabItem { Label(AppTab.profile.title, systemImage: AppTab.profile.systemImage) }
+                    .tag(AppTab.profile)
+            }
+            .tint(BlocColor.opticBlue)
+            centreAddButton
+                .padding(.bottom, 8)
+                .accessibilityIdentifier("centre-add-button")
         }
-        .tint(DesignColour.opticBlue)
         .confirmationDialog(
             L10n.Add.menuTitle,
             isPresented: $isAddMenuPresented,
@@ -78,6 +83,25 @@ struct AppShellView: View {
             selectedAddAction = action
             session.consumeResumedIntent(.add(action))
         }
+        .sensoryFeedback(.selection, trigger: isAddMenuPresented)
+    }
+
+    private var centreAddButton: some View {
+        Button {
+            BlocHaptics.lightImpact()
+            isAddMenuPresented = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 56, height: 56)
+                .background(BlocColor.opticBlue, in: Circle())
+                .overlay { Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.5) }
+                .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
+                .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L10n.Tab.add)
         .sensoryFeedback(.selection, trigger: isAddMenuPresented)
     }
 }
