@@ -92,7 +92,7 @@ struct RemoteRepositoryTests {
         let record = GymRecord(
             id: gymID, name: "Test Gym", brandName: "Brand", latitude: -27.0, longitude: 153.0,
             suburb: "West End", state: "QLD", isVerified: true, dataSource: "official",
-            betaCount: 2, latestResetDate: nil
+            betaCount: 2, latestResetDate: nil, googlePlaceID: nil
         )
         let facility = GymFacilityRecord(gymID: gymID, facility: "showers", isAvailable: true)
         let zone = WallZoneRecord(
@@ -117,7 +117,7 @@ struct RemoteRepositoryTests {
         let record = GymRecord(
             id: gymID, name: "Sparse Gym", brandName: nil, latitude: -27.0, longitude: 153.0,
             suburb: "Enoggera", state: "QLD", isVerified: false, dataSource: "community",
-            betaCount: 0, latestResetDate: nil
+            betaCount: 0, latestResetDate: nil, googlePlaceID: nil
         )
         let band = GymHardSoftBandRecord(gradeBand: "Overall", eligibleRouteCount: 0, medianGradeDelta: nil, assessment: "not_enough_community_data")
         let dataSource = FakeGymDataSource(gyms: [record], facilities: [], zones: [], hardSoft: [gymID: [band]])
@@ -143,7 +143,7 @@ struct RemoteRepositoryTests {
         let record = GymRecord(
             id: gymID, name: "Urban Climb West End", brandName: "Urban Climb", latitude: -27.0,
             longitude: 153.0, suburb: "West End", state: "QLD", isVerified: true,
-            dataSource: "official", betaCount: 0, latestResetDate: nil
+            dataSource: "official", betaCount: 0, latestResetDate: nil, googlePlaceID: nil
         )
         let band = GymHardSoftBandRecord(gradeBand: "Overall", eligibleRouteCount: 0, medianGradeDelta: nil, assessment: "not_enough_community_data")
         let dataSource = FakeGymDataSource(gyms: [record], facilities: [], zones: [], hardSoft: [gymID: [band]])

@@ -12,6 +12,7 @@ nonisolated struct GymRecord: Codable, Equatable, Sendable {
     let dataSource: String
     let betaCount: Int?
     let latestResetDate: Date?
+    let googlePlaceID: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, latitude, longitude, suburb, state
@@ -20,6 +21,7 @@ nonisolated struct GymRecord: Codable, Equatable, Sendable {
         case dataSource = "data_source"
         case betaCount = "beta_count"
         case latestResetDate = "latest_reset_date"
+        case googlePlaceID = "google_place_id"
     }
 
     func domain(
@@ -56,7 +58,8 @@ nonisolated struct GymRecord: Codable, Equatable, Sendable {
                 .sorted { $0.displayOrder < $1.displayOrder }
                 .map { WallZoneID(rawValue: RemoteIdentifier.domainString($0.id)) },
             operatingSummary: operatingSummary,
-            dataSourceState: source
+            dataSourceState: source,
+            googlePlaceID: googlePlaceID
         )
     }
 }

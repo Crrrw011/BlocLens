@@ -48,4 +48,5 @@ nonisolated struct Gym: Identifiable, Codable, Equatable, Hashable, Sendable {
     let wallZoneIDs: [WallZoneID]
     let operatingSummary: OperatingSummary
     let dataSourceState: DataSourceState
+    let googlePlaceID: String?
 }

@@ -43,7 +43,8 @@ nonisolated enum DevelopmentFixtures {
             facilities: [.parking, .showers, .trainingBoard, .cafe, .lockers, .accessibleEntry],
             wallZoneIDs: zoneIDs(for: "urban-climb-west-end"),
             operatingSummary: .developmentFixture,
-            dataSourceState: .developmentFixture
+            dataSourceState: .developmentFixture,
+            googlePlaceID: nil
         ),
         Gym(
             id: "urban-climb-newstead",
@@ -59,7 +60,8 @@ nonisolated enum DevelopmentFixtures {
             facilities: [.parking, .showers, .trainingBoard, .cafe, .lockers, .accessibleEntry],
             wallZoneIDs: zoneIDs(for: "urban-climb-newstead"),
             operatingSummary: .developmentFixture,
-            dataSourceState: .developmentFixture
+            dataSourceState: .developmentFixture,
+            googlePlaceID: nil
         ),
         Gym(
             id: "nine-degrees-enoggera",
@@ -75,7 +77,8 @@ nonisolated enum DevelopmentFixtures {
             facilities: [.parking, .trainingBoard, .cafe, .lockers],
             wallZoneIDs: zoneIDs(for: "nine-degrees-enoggera"),
             operatingSummary: .developmentFixture,
-            dataSourceState: .developmentFixture
+            dataSourceState: .developmentFixture,
+            googlePlaceID: nil
         )
     ]
 

@@ -99,7 +99,8 @@ struct RemoteMappingTests {
             isVerified: false,
             dataSource: "development_fixture",
             betaCount: 0,
-            latestResetDate: nil
+            latestResetDate: nil,
+            googlePlaceID: nil
         )
         let unavailable = GymFacilityRecord(
             gymID: gymID,
