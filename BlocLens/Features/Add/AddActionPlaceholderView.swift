@@ -9,12 +9,13 @@ struct AddActionPlaceholderView: View {
             VStack(spacing: DesignSpacing.large) {
                 Image(systemName: action.systemImage)
                     .font(.system(size: 48))
-                    .foregroundStyle(DesignColour.opticBlue)
+                    .foregroundStyle(BlocColor.opticBlue)
                 Text(action.title)
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
                 Text(action == .identifyOrMarkRoute ? L10n.Add.markRouteComingLater : L10n.Add.placeholderMessage)
-                    .foregroundStyle(DesignColour.secondaryText)
+                    .font(DesignTypography.supporting)
+                    .foregroundStyle(DesignColour.textSecondary)
                     .multilineTextAlignment(.center)
             }
             .padding(DesignSpacing.large)

@@ -49,7 +49,7 @@ struct RelationshipManagementView: View {
             HStack {
                 Image(systemName: "person.crop.circle")
                     .font(.title2)
-                    .foregroundStyle(DesignColour.opticBlue)
+                    .foregroundStyle(BlocColor.opticBlue)
                 VStack(alignment: .leading) {
                     Text(verbatim: profile.username).font(.headline)
                     if profile.isTrustedContributor {

@@ -142,7 +142,7 @@ struct ProfileEditView: View {
                 Text(title).font(DesignTypography.body)
             } icon: {
                 Image(systemName: icon)
-                    .foregroundStyle(DesignColour.brandPrimary)
+                    .foregroundStyle(BlocColor.opticBlue)
             }
         }
         if isOn.wrappedValue {
