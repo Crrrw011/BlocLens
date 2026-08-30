@@ -1,0 +1,10 @@
+// BlocLens build-time configuration (placeholders).
+// Copy to Config.xcconfig and fill with real values. Config.xcconfig is gitignored.
+// Never commit real keys. The anon key is publishable but must not be hardcoded in Swift source.
+// These values are injected into Info.plist at build time via $(BLOCLENS_...) and read at runtime
+// even when the app is launched from the home screen (Scheme env vars are not available there).
+
+BLOCLENS_SUPABASE_URL = http://127.0.0.1:54321
+BLOCLENS_SUPABASE_ANON_KEY = your-local-anon-key
+BLOCLENS_CLOUD_URL = https://your-project.supabase.co
+BLOCLENS_CLOUD_ANON_KEY = your-cloud-anon-key

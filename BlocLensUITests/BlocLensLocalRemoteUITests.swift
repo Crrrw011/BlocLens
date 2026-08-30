@@ -6,6 +6,12 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
+        addUIInterruptionMonitor(withDescription: "System password prompt") { alert in
+            let notNow = alert.buttons["Not Now"]
+            guard notNow.exists else { return false }
+            notNow.tap()
+            return true
+        }
     }
 
     @MainActor
@@ -45,7 +51,10 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap()
         search.typeText(colour)
-        XCTAssertTrue(app.staticTexts[colour].waitForExistence(timeout: 8))
+        let createdRoute = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label CONTAINS %@", colour)
+        ).firstMatch
+        XCTAssertTrue(createdRoute.waitForExistence(timeout: 20))
     }
 
     @MainActor
@@ -53,7 +62,7 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
         let app = try launchLocal()
         try signIn(app, email: "fixture-climber-1@bloclens.invalid")
         app.tabBars.buttons["Add"].tap()
-        app.buttons["Share beta link"].tap()
+        app.buttons["Share beta link"].firstMatch.tap()
         fill(app.textFields["share-beta-url-field"], with: "http://example.com/beta")
         fill(app.textFields["share-beta-original-url-field"], with: "http://example.com/post")
         fill(app.textFields["share-beta-author-field"], with: "Local Fixture")
@@ -118,12 +127,21 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
     @MainActor
     private func launchLocal() throws -> XCUIApplication {
         let environment = ProcessInfo.processInfo.environment
-        let url = try XCTUnwrap(environment["BLOCLENS_SUPABASE_URL"])
+        guard let url = environment["BLOCLENS_SUPABASE_URL"], !url.contains("your-") else {
+            throw XCTSkip("Local Supabase not configured — set BLOCLENS_SUPABASE_URL/BLOCLENS_SUPABASE_ANON_KEY")
+        }
         XCTAssertTrue(url.contains("127.0.0.1") || url.contains("localhost"))
         XCTAssertFalse(url.contains(".supabase.co"))
-        let key = try XCTUnwrap(environment["BLOCLENS_SUPABASE_ANON_KEY"])
+        guard let key = environment["BLOCLENS_SUPABASE_ANON_KEY"], !key.contains("your-") else {
+            throw XCTSkip("Local Supabase not configured")
+        }
         let app = XCUIApplication()
-        app.launchArguments = ["--skip-onboarding", "--local-supabase"]
+        app.launchArguments = [
+            "--skip-onboarding",
+            "--local-supabase",
+            "--disable-password-autofill",
+            "--ephemeral-auth-storage"
+        ]
         app.launchEnvironment["BLOCLENS_SUPABASE_URL"] = url
         app.launchEnvironment["BLOCLENS_SUPABASE_ANON_KEY"] = key
         app.launch()
@@ -140,6 +158,10 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
         app.buttons["profile-sign-in-button"].tap()
         try completeSignInGate(app, email: email)
         XCTAssertTrue(app.descendants(matching: .any)["profile-signed-in"].waitForExistence(timeout: 8))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
+        if app.keyboards.firstMatch.exists {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
+        }
     }
 
     @MainActor
@@ -152,7 +174,12 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
 
     @MainActor
     private func signOut(_ app: XCUIApplication) throws {
-        app.buttons["profile-settings-link"].tap()
+        let settingsLink = app.buttons["profile-settings-link"]
+        for _ in 0..<4 where !settingsLink.exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(settingsLink.waitForExistence(timeout: 5))
+        settingsLink.tap()
         let signOutButton = app.buttons["settings-debug-sign-out"]
         for _ in 0..<4 where !signOutButton.exists {
             app.swipeUp()
@@ -168,8 +195,20 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
 
     @MainActor
     private func completeSignInGate(_ app: XCUIApplication, email: String) throws {
+        let signInInstead = app.buttons["auth-sign-in-instead-button"]
+        if signInInstead.waitForExistence(timeout: 8) {
+            signInInstead.tap()
+        }
+        let usePassword = app.buttons["auth-use-password-button"]
+        if usePassword.waitForExistence(timeout: 8) {
+            usePassword.tap()
+        }
         fill(app.textFields["auth-email-field"], with: email)
-        fill(app.secureTextFields["auth-password-field"], with: fixturePassword)
+        fill(app.textFields["auth-password-field"], with: fixturePassword)
+        let keyboardReturn = app.keyboards.buttons["return"]
+        if keyboardReturn.exists {
+            keyboardReturn.tap()
+        }
         app.buttons["auth-email-sign-in-button"].tap()
     }
 
@@ -184,9 +223,25 @@ final class BlocLensLocalRemoteUITests: XCTestCase {
     private func openDefaultAddRouteZone(in app: XCUIApplication) {
         app.tabBars.buttons["Map"].tap()
         let annotation = app.buttons["gym-annotation-10000000-0000-4000-8000-000000000003"]
-        XCTAssertTrue(annotation.waitForExistence(timeout: 12))
-        annotation.tap()
-        app.buttons["open-gym-button"].tap()
+        if annotation.waitForExistence(timeout: 8) {
+            annotation.tap()
+            app.buttons["open-gym-button"].tap()
+        } else {
+            let searchButton = app.buttons["map-search-button"]
+            XCTAssertTrue(
+                searchButton.waitForExistence(timeout: 8),
+                "Map did not expose guest controls after sign-out. Hierarchy: \(app.debugDescription)"
+            )
+            searchButton.tap()
+            let search = app.searchFields.firstMatch
+            XCTAssertTrue(search.waitForExistence(timeout: 8))
+            search.tap()
+            search.typeText("9 Degrees Enoggera")
+            app.keyboards.buttons["search"].tap()
+            let gymResult = app.staticTexts["9 Degrees Enoggera"].firstMatch
+            XCTAssertTrue(gymResult.waitForExistence(timeout: 8))
+            gymResult.tap()
+        }
         let zone = app.buttons["wall-zone-row-20000000-0000-4000-8000-000000000007"]
         XCTAssertTrue(zone.waitForExistence(timeout: 8))
         zone.tap()

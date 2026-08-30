@@ -1,5 +1,6 @@
 .DS_Store
 opencode.json
+.opencode/
 .build/
 DerivedData/
 **/xcuserdata/
@@ -11,6 +12,7 @@ SimulatorScreenshots/
 *.env
 .env*
 !.env.example
+Config.xcconfig
 supabase/.branches/
 supabase/.temp/
 supabase/.env*

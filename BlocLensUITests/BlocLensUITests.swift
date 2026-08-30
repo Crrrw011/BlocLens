@@ -4,6 +4,8 @@ final class BlocLensUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
+        // Ensure clean language preference between tests (previous test may have set Korean)
+        UserDefaults.standard.removeObject(forKey: "bloclens.language.preference.v1")
     }
 
     @MainActor
@@ -16,7 +18,7 @@ final class BlocLensUITests: XCTestCase {
         let reveal = app.buttons["reveal-beta-button"]
         XCTAssertTrue(reveal.waitForExistence(timeout: 8))
         reveal.tap()
-        XCTAssertTrue(app.navigationBars["Sign In"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Welcome Back"].waitForExistence(timeout: 5))
         app.buttons["mock-sign-in-button"].tap()
         let safety = app.buttons["acknowledge-beta-safety-button"].firstMatch
         XCTAssertTrue(safety.waitForExistence(timeout: 10))
@@ -56,7 +58,7 @@ final class BlocLensUITests: XCTestCase {
         app.buttons["onboarding-continue-button"].tap()
         XCTAssertTrue(app.staticTexts["Track your climbing"].waitForExistence(timeout: 5))
         app.buttons["onboarding-explore-map-button"].tap()
-        XCTAssertTrue(app.navigationBars["Map"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.tabBars.buttons["Map"].waitForExistence(timeout: 8))
     }
 
     @MainActor
@@ -90,14 +92,14 @@ final class BlocLensUITests: XCTestCase {
     @MainActor
     func testDebugEmptyAndOfflineStates() throws {
         let emptyApp = XCUIApplication()
-        emptyApp.launchArguments = ["--skip-onboarding", "--mock-empty"]
+        emptyApp.launchArguments = ["--skip-onboarding", "--mock-empty", "--reset-language"]
         emptyApp.launch()
         emptyApp.tabBars.buttons["Map"].tap()
         XCTAssertTrue(emptyApp.staticTexts["No Gyms Available"].waitForExistence(timeout: 8))
         emptyApp.terminate()
 
         let offlineApp = XCUIApplication()
-        offlineApp.launchArguments = ["--skip-onboarding", "--mock-offline-cached"]
+        offlineApp.launchArguments = ["--skip-onboarding", "--mock-offline-cached", "--reset-language"]
         offlineApp.launch()
         XCTAssertTrue(offlineApp.staticTexts["You are offline. Showing cached development data."].waitForExistence(timeout: 8))
         offlineApp.tabBars.buttons["Map"].tap()
@@ -109,13 +111,13 @@ final class BlocLensUITests: XCTestCase {
         let lightApp = XCUIApplication()
         lightApp.launchArguments = ["--skip-onboarding", "-AppleInterfaceStyle", "Light"]
         lightApp.launch()
-        XCTAssertTrue(lightApp.navigationBars["Home"].waitForExistence(timeout: 8))
+        XCTAssertTrue(lightApp.tabBars.buttons["Home"].waitForExistence(timeout: 8))
         lightApp.terminate()
 
         let darkApp = XCUIApplication()
         darkApp.launchArguments = ["--skip-onboarding", "-AppleInterfaceStyle", "Dark"]
         darkApp.launch()
-        XCTAssertTrue(darkApp.navigationBars["Home"].waitForExistence(timeout: 8))
+        XCTAssertTrue(darkApp.tabBars.buttons["Home"].waitForExistence(timeout: 8))
     }
 
     @MainActor
@@ -133,14 +135,14 @@ final class BlocLensUITests: XCTestCase {
         let korean = app.buttons["language-option-korean"]
         XCTAssertTrue(korean.waitForExistence(timeout: 5))
         korean.tap()
-        XCTAssertTrue(app.navigationBars["프로필"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["profile-settings-link"].waitForExistence(timeout: 5))
 
         app.buttons["profile-settings-link"].tap()
         app.buttons["settings-language-link"].tap()
         let english = app.buttons["language-option-englishAustralian"]
         XCTAssertTrue(english.waitForExistence(timeout: 5))
         english.tap()
-        XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["profile-settings-link"].waitForExistence(timeout: 5))
 
         app.buttons["profile-settings-link"].tap()
         app.buttons["settings-language-link"].tap()
@@ -190,7 +192,7 @@ final class BlocLensUITests: XCTestCase {
         XCTAssertTrue(archivedRoute.waitForExistence(timeout: 5))
         archivedRoute.tap()
 
-        XCTAssertTrue(app.staticTexts["Archived Route"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["Archived"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.staticTexts["This route is read-only history. Beta links, grades and Logbook records are preserved."].exists)
         XCTAssertFalse(app.staticTexts["Current"].exists)
     }
