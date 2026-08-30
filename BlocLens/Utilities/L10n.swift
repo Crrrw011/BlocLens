@@ -103,6 +103,14 @@ enum L10n {
         static let inactive: LocalizedStringResource = "filter.inactive"
     }
 
+    enum GymPhoto {
+        static let loading: LocalizedStringResource = "gymPhoto.loading"
+        static let noPhoto: LocalizedStringResource = "gymPhoto.noPhoto"
+        static let error: LocalizedStringResource = "gymPhoto.error"
+        static let photoOf: LocalizedStringResource = "gymPhoto.photoOf"
+        static let fromGoogle: LocalizedStringResource = "gymPhoto.fromGoogle"
+    }
+
     enum Gym {
         static let detailTitle: LocalizedStringResource = "gym.detail.title"
         static let openGym: LocalizedStringResource = "gym.openGym"

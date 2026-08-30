@@ -3187,6 +3187,56 @@
         }
       }
     },
+    "gymPhoto.error" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo unavailable"
+          }
+        }
+      }
+    },
+    "gymPhoto.fromGoogle" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo courtesy of Google"
+          }
+        }
+      }
+    },
+    "gymPhoto.loading" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading photo…"
+          }
+        }
+      }
+    },
+    "gymPhoto.noPhoto" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No photo available"
+          }
+        }
+      }
+    },
+    "gymPhoto.photoOf" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo of %@"
+          }
+        }
+      }
+    },
     "hardSoft.balanced" : {
       "localizations" : {
         "en-AU" : {
