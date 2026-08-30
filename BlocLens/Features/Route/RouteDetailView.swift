@@ -20,6 +20,8 @@ struct RouteDetailView: View {
     @State private var isShareBetaPresented = false
     @State private var isSecondaryExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var heroNS
+    @Namespace private var statusNS
 
     init(
         route: ClimbingRoute,
@@ -217,6 +219,7 @@ struct RouteDetailView: View {
             .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
             .accessibilityIdentifier("hero-grade")
             .accessibilityLabel(Text(verbatim: route.displayGrade?.displayName ?? "Unknown"))
+            .matchedGeometryEffect(id: "hero-grade-\(route.id.rawValue)", in: heroNS, isSource: !reduceMotion)
     }
 
     private var holdTextColor: Color {
@@ -239,6 +242,10 @@ struct RouteDetailView: View {
             .background(glassCapsuleBackground)
             .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
             .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
+            // Want→Projecting→Sent→Flash + Active→Reset Soon→Archived: transform+opacity only, Reduce Motion instant
+            .contentTransition(.opacity)
+            .animation(BlocMotion.animation(BlocMotion.stateChange, reduceMotion: reduceMotion), value: viewModel.logbookEntry?.status)
+            .animation(BlocMotion.animation(BlocMotion.stateChange, reduceMotion: reduceMotion), value: route.lifecycle)
             .accessibilityIdentifier("hero-status")
     }
 
@@ -381,19 +388,28 @@ struct RouteDetailView: View {
             ForEach(LogbookStatus.allCases, id: \.self) { status in
                 let isSelected = viewModel.logbookEntry?.status == status
                 Button {
-                    BlocHaptics.lightImpact()
+                    // Spec: selection light / Send success / Flash heavy+success
+                    switch status {
+                    case .wantToTry, .projecting: BlocHaptics.lightImpact()
+                    case .sent: BlocHaptics.sendSuccess()
+                    case .flash: BlocHaptics.flashSuccess()
+                    }
                     Task { await saveLogbook(status) }
                 } label: {
-                    Text(L10n.logbookStatus(status))
-                        .font(BlocTypography.status)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .foregroundStyle(isSelected ? .white : DesignColour.textPrimary)
-                        .background(
-                            isSelected ? BlocColor.opticBlue : Color.clear,
-                            in: Capsule()
-                        )
+                    ZStack {
+                        if isSelected {
+                            Capsule().fill(BlocColor.opticBlue)
+                                .matchedGeometryEffect(id: "logbook-selection", in: statusNS, isSource: !reduceMotion)
+                        }
+                        Text(L10n.logbookStatus(status))
+                            .font(BlocTypography.status)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .foregroundStyle(isSelected ? .white : DesignColour.textPrimary)
+                            .contentTransition(.opacity)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(isSelected ? Color.clear : Color.clear, in: Capsule())
                 }
                 .accessibilityIdentifier("logbook-status-\(status.rawValue)")
                 .accessibilityValue(isSelected ? L10n.Common.selected : L10n.Common.notSelected)
@@ -403,6 +419,8 @@ struct RouteDetailView: View {
         .background(glassSegmentBackground)
         .overlay { Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5) }
         .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+        .animation(BlocMotion.animation(BlocMotion.stateChange, reduceMotion: reduceMotion), value: viewModel.logbookEntry?.status)
+        .sensoryFeedback(.selection, trigger: viewModel.logbookEntry?.status)
     }
 
     @ViewBuilder
@@ -716,14 +734,17 @@ struct RouteDetailView: View {
         VStack(alignment: .leading, spacing: DesignSpacing.small) {
             SectionTitle(title: L10n.Route.accuracyTitle)
             Button(L10n.Route.suggestCorrection) {
+                BlocHaptics.lightImpact()
                 requestContribution(.correction)
             }
             .buttonStyle(SecondaryButtonStyle())
             Button(L10n.Route.reportRoute) {
+                BlocHaptics.destructiveWarning()
                 requestContribution(.reportRoute)
             }
             .buttonStyle(CompactActionButtonStyle())
             Button {
+                BlocHaptics.lightImpact()
                 requestContribution(.reset)
             } label: {
                 Label { Text(verbatim: "Confirm wall reset") } icon: { Image(systemName: "arrow.clockwise") }

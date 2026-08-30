@@ -13,6 +13,7 @@ struct AppShellView: View {
                 if newTab == .add {
                     isAddMenuPresented = true
                 } else {
+                    BlocHaptics.selectionChanged()
                     session.selectedTab = newTab
                 }
             }

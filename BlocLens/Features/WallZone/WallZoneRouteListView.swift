@@ -10,6 +10,8 @@ struct WallZoneRouteListView: View {
     @State private var isAddRoutePresented = false
     @State private var isEditZonePresented = false
     @State private var isReportPresented = false
+    @Namespace private var heroNS
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(wallZone: WallZone, environment: AppEnvironment, session: AppSession) {
         self.wallZone = wallZone
@@ -156,6 +158,7 @@ struct WallZoneRouteListView: View {
             .background(Color(uiColor: .systemBackground), in: Capsule())
             .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
             .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+            .matchedGeometryEffect(id: "hero-grade-\(wallZone.id.rawValue)", in: heroNS, isSource: !reduceMotion)
             .accessibilityIdentifier("hero-wallKind")
     }
 

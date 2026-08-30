@@ -66,7 +66,9 @@ enum DesignRadius {
 }
 
 enum DesignMotion {
+    /// Quick 0.16 easeOut — tap feedback, selection light. Only transform+opacity.
     static let quick = Animation.easeOut(duration: 0.16)
+    /// Spatial spring 0.28 / damping 0.86 (≈ stiffness 100 damping 20) — Gym→Wall→Route, Want→Projecting→Sent→Flash, Active→Reset Soon→Archived. Only transform+opacity.
     static let stateChange = Animation.spring(response: 0.28, dampingFraction: 0.86)
     static let reveal = Animation.easeInOut(duration: 0.24)
 
@@ -74,6 +76,9 @@ enum DesignMotion {
         reduceMotion ? nil : animation
     }
 }
+
+/// BlocMotion alias — Cold Zinc A token name for DesignMotion.
+typealias BlocMotion = DesignMotion
 
 struct PageTitleStyle: ViewModifier {
     func body(content: Content) -> some View {
@@ -316,14 +321,30 @@ struct BlocGlassModifier: ViewModifier {
 }
 
 enum BlocHaptics {
+    /// Token marker — exists for tests; use selectionChanged()/lightImpact() for triggers.
     static let selection = "selection"
     static func selectionChanged() {
         UISelectionFeedbackGenerator().selectionChanged()
     }
-    static func success() {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-    }
     static func lightImpact() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
+    static func heavyImpact() {
+        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+    }
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+    static func warning() {
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+    }
+    /// Flash = heavy + success per spec.
+    static func flashSuccess() {
+        heavyImpact()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+    /// Send = success.
+    static func sendSuccess() { success() }
+    /// Destructive = warning.
+    static func destructiveWarning() { warning() }
 }

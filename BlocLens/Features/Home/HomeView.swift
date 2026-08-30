@@ -4,6 +4,8 @@ struct HomeView: View {
     let environment: AppEnvironment
     @ObservedObject var session: AppSession
     @StateObject private var viewModel: HomeViewModel
+    @Namespace private var heroNS
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(environment: AppEnvironment, session: AppSession) {
         self.environment = environment
@@ -127,6 +129,7 @@ struct HomeView: View {
             .background(Color(uiColor: .systemBackground), in: Capsule())
             .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
             .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+            .matchedGeometryEffect(id: "hero-grade-\(gym.id.rawValue)", in: heroNS, isSource: !reduceMotion)
             .accessibilityIdentifier("hero-suburb")
     }
 

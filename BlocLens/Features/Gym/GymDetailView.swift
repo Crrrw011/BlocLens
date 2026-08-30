@@ -8,6 +8,8 @@ struct GymDetailView: View {
     @StateObject private var viewModel: GymDetailViewModel
     @State private var isFavourite = false
     @State private var isAddWallZonePresented = false
+    @Namespace private var heroNS
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(gym: Gym, environment: AppEnvironment, session: AppSession) {
         self.gym = gym
@@ -136,6 +138,7 @@ struct GymDetailView: View {
             .background(Color(uiColor: .systemBackground), in: Capsule())
             .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
             .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+            .matchedGeometryEffect(id: "hero-grade-\(gym.id.rawValue)", in: heroNS, isSource: !reduceMotion)
             .accessibilityIdentifier("hero-suburb")
     }
 

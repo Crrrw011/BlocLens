@@ -5,6 +5,8 @@ struct LogbookView: View {
     @ObservedObject var session: AppSession
 
     @StateObject private var viewModel: LogbookViewModel
+    @Namespace private var filterNS
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(environment: AppEnvironment, session: AppSession) {
         self.environment = environment
@@ -209,18 +211,29 @@ struct LogbookView: View {
     }
 
     private func filterPill(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(verbatim: title)
-                .font(BlocTypography.status)
-                .lineLimit(1)
-                .padding(.horizontal, BlocSpacing.compact)
-                .frame(minHeight: 32)
-                .foregroundStyle(isSelected ? .white : DesignColour.textPrimary)
-                .background(isSelected ? BlocColor.opticBlue : DesignColour.surfaceElevated, in: Capsule())
-                .overlay { Capsule().stroke(isSelected ? Color.clear : DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+        Button {
+            if !reduceMotion { BlocHaptics.selectionChanged() }
+            action()
+        } label: {
+            ZStack {
+                if isSelected {
+                    Capsule().fill(BlocColor.opticBlue)
+                        .matchedGeometryEffect(id: "logbook-filter-selection", in: filterNS, isSource: !reduceMotion)
+                }
+                Text(verbatim: title)
+                    .font(BlocTypography.status)
+                    .lineLimit(1)
+                    .foregroundStyle(isSelected ? .white : DesignColour.textPrimary)
+                    .contentTransition(.opacity)
+            }
+            .padding(.horizontal, BlocSpacing.compact)
+            .frame(minHeight: 32)
+            .background(isSelected ? Color.clear : DesignColour.surfaceElevated, in: Capsule())
+            .overlay { Capsule().stroke(isSelected ? Color.clear : DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .animation(BlocMotion.animation(BlocMotion.quick, reduceMotion: reduceMotion), value: isSelected)
     }
 
     // MARK: - Projects compact (if any)
