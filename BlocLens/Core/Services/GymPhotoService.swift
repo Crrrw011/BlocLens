@@ -17,31 +17,16 @@ struct NoopGymPhotoService: GymPhotoService, Sendable {
 }
 
 actor RemoteGymPhotoService: GymPhotoService {
-    let apiKey: String
-    private let session: URLSession
+    private let client: GooglePlacesClient
 
-    init(apiKey: String, session: URLSession = .shared) {
-        self.apiKey = apiKey
-        self.session = session
+    init(client: GooglePlacesClient) {
+        self.client = client
     }
 
     func fetchPhoto(for placeID: String, width: Int) async throws -> GymPhoto {
-        guard !apiKey.isEmpty, apiKey != "YOUR_GOOGLE_PLACES_API_KEY" else {
-            throw RepositoryError.invalidConfiguration
-        }
+        let json = try await client.fetchPlaceDetails(placeID: placeID, fields: "photos.name,photos.authorAttributions")
 
-        let detailsURL = URL(string: "https://places.googleapis.com/v1/places/\(placeID)?fields=photos")!
-        var detailsRequest = URLRequest(url: detailsURL)
-        detailsRequest.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
-        detailsRequest.setValue("photos.name,photos.authorAttributions", forHTTPHeaderField: "X-Goog-FieldMask")
-
-        let (detailsData, detailsResponse) = try await session.data(for: detailsRequest)
-        guard let http = detailsResponse as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw RepositoryError.externalServiceError
-        }
-
-        guard let json = try JSONSerialization.jsonObject(with: detailsData) as? [String: Any],
-              let photos = json["photos"] as? [[String: Any]],
+        guard let photos = json["photos"] as? [[String: Any]],
               let firstPhoto = photos.first,
               let photoName = firstPhoto["name"] as? String else {
             throw RepositoryError.decodingFailure
@@ -51,7 +36,9 @@ actor RemoteGymPhotoService: GymPhotoService {
             .compactMap { $0["displayName"] as? String }
             .joined(separator: ", ")
 
-        let photoURL = URL(string: "https://places.googleapis.com/v1/\(photoName)/media?maxWidthPx=\(width)")!
+        guard let photoURL = URL(string: "https://places.googleapis.com/v1/\(photoName)/media?maxWidthPx=\(width)") else {
+            throw RepositoryError.invalidConfiguration
+        }
         return GymPhoto(imageURL: photoURL, attribution: attribution, attributionHTML: nil)
     }
 }
