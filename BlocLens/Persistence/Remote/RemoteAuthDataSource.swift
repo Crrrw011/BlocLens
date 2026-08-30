@@ -11,6 +11,7 @@ nonisolated protocol RemoteAuthDataSource: Sendable {
     func sendEmailOTP(email: String) async throws
     func verifyEmailOTP(email: String, token: String) async throws -> RemoteAuthSignUpResult
     func signOut() async throws
+    func clearLocalSession() async throws
     func deleteAccount() async throws
     func updatePassword(_ password: String) async throws
     func fetchProfile() async throws -> UserProfileRecord?
@@ -102,6 +103,10 @@ struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
 
     func signOut() async throws {
         try await client.auth.signOut()
+    }
+
+    func clearLocalSession() async throws {
+        try await client.auth.signOut(scope: .local)
     }
 
     func deleteAccount() async throws {

@@ -5,6 +5,7 @@ import Supabase
 final class LocalSupabaseIntegrationTests: XCTestCase {
     private var configuration: RemoteConfiguration!
     private var client: SupabaseClient!
+    private var authStorage: IntegrationAuthStorage!
 
     override func setUp() async throws {
         let environment = ProcessInfo.processInfo.environment
@@ -15,13 +16,14 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         }
         let key = environment["BLOCLENS_SUPABASE_ANON_KEY"] ?? ""
         configuration = try RemoteConfiguration(mode: .integrationTest, projectURL: url, publishableKey: key)
-        client = SupabaseClientFactory.makeClient(configuration: configuration)
+        authStorage = IntegrationAuthStorage()
+        client = SupabaseClientFactory.makeClient(configuration: configuration, authStorage: authStorage)
         // The SDK restores sessions from the Keychain. Ensure each test starts anonymous.
         try? await client.auth.signOut()
     }
 
     private func makeEnvironment() -> AppEnvironment {
-        AppEnvironment.localSupabase(configuration: configuration)
+        AppEnvironment.localSupabase(configuration: configuration, client: client)
     }
 
     func testReadsThreeGyms() async throws {
@@ -31,7 +33,8 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
 
     func testReadsNineWallZones() async throws {
         let zones = try await makeEnvironment().gymRepository.allWallZones()
-        XCTAssertEqual(zones.count, 9)
+        let seedIDs = Set(RemoteSeedIdentifiers.wallZones.values)
+        XCTAssertEqual(zones.filter { seedIDs.contains($0.id.rawValue) }.count, 9)
     }
 
     func testReadsVisibleRoutes() async throws {
@@ -43,8 +46,9 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
     func testGymFacilitiesAggregate() async throws {
         let gyms = try await makeEnvironment().gymRepository.allGyms()
         let westEnd = try XCTUnwrap(gyms.first { $0.name == "Urban Climb West End" })
+        let seedZoneIDs = Set(RemoteSeedIdentifiers.wallZones.values)
         XCTAssertFalse(westEnd.facilities.isEmpty)
-        XCTAssertEqual(westEnd.wallZoneIDs.count, 3)
+        XCTAssertEqual(westEnd.wallZoneIDs.filter { seedZoneIDs.contains($0.rawValue) }.count, 3)
     }
 
     func testHardSoftSummaryMaps() async throws {
@@ -622,6 +626,27 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
         }
     }
 
+    func testLocalSessionRestoresAcrossClientRecreation() async throws {
+        let repository = makeAuthRepository()
+        let email = "restore-\(UUID().uuidString.prefix(8))@example.com"
+        let signedUp = await repository.signUp(email: email, password: "password123")
+        guard case .profileSetup = signedUp else {
+            return XCTFail("Expected profileSetup after signUp, got \(signedUp)")
+        }
+
+        let restoredClient = SupabaseClientFactory.makeClient(
+            configuration: configuration,
+            authStorage: authStorage
+        )
+        let restoredRepository = SupabaseAuthenticationRepository(
+            dataSource: SupabaseAuthDataSource(client: restoredClient)
+        )
+        let restored = await restoredRepository.restoreSession()
+        guard case .profileSetup = restored else {
+            return XCTFail("Expected persisted profileSetup session, got \(restored)")
+        }
+    }
+
     func testLocalSignInWrongPassword() async throws {
         let repository = makeAuthRepository()
         let email = "auth-\(UUID().uuidString.prefix(8))@example.com"
@@ -650,5 +675,22 @@ final class LocalSupabaseIntegrationTests: XCTestCase {
 
         let restored = await repository.restoreSession()
         XCTAssertEqual(restored, .guest)
+    }
+}
+
+private final class IntegrationAuthStorage: AuthLocalStorage, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: Data] = [:]
+
+    func store(key: String, value: Data) throws {
+        lock.withLock { values[key] = value }
+    }
+
+    func retrieve(key: String) throws -> Data? {
+        lock.withLock { values[key] }
+    }
+
+    func remove(key: String) throws {
+        _ = lock.withLock { values.removeValue(forKey: key) }
     }
 }

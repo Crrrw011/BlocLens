@@ -48,6 +48,7 @@ nonisolated enum ProtectedIntent: Equatable, Sendable {
     case revealBeta(routeID: ClimbingRouteID)
     case saveLogbook(routeID: ClimbingRouteID, status: LogbookStatus)
     case add(AddAction)
+    case addRouteInZone(wallZoneID: WallZoneID)
     case helpful(betaID: BetaLinkID)
     case account
 }

@@ -22,17 +22,23 @@ final class MapViewModel: ObservableObject {
         state = .loading
         do {
             let gyms = try await repository.allGyms()
+            try Task.checkCancellation()
             allLoadedGyms = gyms
             guard !gyms.isEmpty else {
                 state = .empty
                 return
             }
             applyFilters()
+        } catch is CancellationError {
+            return
         } catch RepositoryError.offlineNoCache {
+            guard !Task.isCancelled else { return }
             state = .offlineWithoutCache
         } catch let error as RepositoryError {
+            guard !Task.isCancelled else { return }
             state = .error(error)
         } catch {
+            guard !Task.isCancelled else { return }
             state = .error(.fixtureFailure)
         }
     }

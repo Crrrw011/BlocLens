@@ -61,9 +61,11 @@ combined.scan(/create(?: or replace)? function.*?(?=create(?: or replace)? funct
   next unless function_sql.match?(/security definer/i)
 
   function_name = function_sql[/function\s+(?:public|private)\.(\w+)/i, 1] || "unknown"
-  errors << "SECURITY DEFINER function #{function_name} has no empty search_path." unless function_sql.match?(
-    /set search_path = ''/i
+  hardened_later = combined.match?(
+    /alter function\s+(?:public|private)\.#{Regexp.escape(function_name)}\s*\(.*?\)\s*set search_path = '';/im
   )
+  errors << "SECURITY DEFINER function #{function_name} has no empty search_path." unless
+    function_sql.match?(/set search_path = ''/i) || hardened_later
 end
 
 errors << "A video table is present." if executable_sql.match?(/create table\s+(?:public\.)?\w*video\w*/i)

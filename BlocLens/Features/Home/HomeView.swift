@@ -17,8 +17,6 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle(L10n.Home.title)
-                .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(for: Gym.self) { GymDetailView(gym: $0, environment: environment, session: session) }
                 .navigationDestination(for: WallZone.self) { WallZoneRouteListView(wallZone: $0, environment: environment, session: session) }
                 .navigationDestination(for: ClimbingRoute.self) { RouteDetailView(route: $0, environment: environment, session: session) }
@@ -49,10 +47,10 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 if let gym = data.frequentGym {
                     currentGymHero(gym: gym)
-                    VStack(alignment: .leading, spacing: BlocSpacing.sectionGap) {
+                    VStack(alignment: .leading, spacing: DesignSpacing.large) {
                         if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
                         currentGymTitle(gym: gym)
-                        Divider().overlay(DesignColour.separator.opacity(0.6))
+                        Divider().overlay(DesignColour.separator.opacity(0.35)).padding(.horizontal, DesignSpacing.medium)
                         currentGymMetadata(gym: gym, data: data)
                         activeProjectsSection(data: data)
                         freshSetsSection(data: data)
@@ -71,10 +69,10 @@ struct HomeView: View {
                     .padding(.top, DesignSpacing.medium)
                     .padding(.bottom, DesignSpacing.large)
                 } else {
-                    VStack(alignment: .leading, spacing: BlocSpacing.sectionGap) {
+                    VStack(alignment: .leading, spacing: DesignSpacing.large) {
                         if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
                         compactEmpty(message: L10n.Home.noFrequentGym, systemImage: "mappin.slash")
-                            .padding(.top, DesignSpacing.large)
+                            .padding(.top, DesignSpacing.medium)
                         activeProjectsSection(data: data)
                         freshSetsSection(data: data)
                         recentClimbsSection(data: data)
@@ -221,7 +219,7 @@ struct HomeView: View {
             .foregroundStyle(DesignColour.textSecondary)
             .lineLimit(1)
             if let reset = gym.latestResetDate {
-                Text(reset.formatted(date: .abbreviated, time: .omitted))
+                Text(verbatim: "\(String(localized: "Last reset")) · \(reset.formatted(date: .abbreviated, time: .omitted))")
                     .font(BlocTypography.caption)
                     .foregroundStyle(DesignColour.textTertiary)
             }
@@ -460,8 +458,9 @@ struct HomeView: View {
         }
         .padding(.horizontal, DesignSpacing.compact)
         .padding(.vertical, DesignSpacing.small)
-        .background(DesignColour.surfaceElevated, in: Capsule())
-        .overlay { Capsule().stroke(DesignColour.separator.opacity(0.45), lineWidth: 0.5) }
+        .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DesignColour.separator.opacity(0.65), lineWidth: 0.5) }
+        .shadow(color: .black.opacity(0.04), radius: 4, y: 1)
         .accessibilityIdentifier("fresh-zone-\(zone.id.rawValue)")
     }
 

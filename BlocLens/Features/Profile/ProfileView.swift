@@ -14,8 +14,6 @@ struct ProfileView: View {
                     signedOutProfile
                 }
             }
-            .navigationTitle(L10n.Profile.title)
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 

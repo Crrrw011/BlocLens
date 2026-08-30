@@ -14,6 +14,15 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func restoreSession() async -> AuthenticationState {
         do {
             currentState = try await resolvedCurrentSession()
+        } catch RepositoryError.unauthenticated {
+            do {
+                try await dataSource.clearLocalSession()
+                currentState = .guest
+            } catch let error as RepositoryError {
+                currentState = .error(error)
+            } catch {
+                currentState = .error(RemoteErrorMapping.map(error))
+            }
         } catch let error as RepositoryError {
             currentState = .error(error)
         } catch {
@@ -25,7 +34,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func signIn(email: String, password: String) async -> AuthenticationState {
         do {
             try await dataSource.signIn(email: email, password: password)
-            currentState = try await resolvedCurrentSession()
+            currentState = try await resolvedAuthenticatedSession()
         } catch let error as RepositoryError {
             currentState = .error(error)
         } catch {
@@ -37,15 +46,16 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func signUp(email: String, password: String) async -> AuthenticationState {
         do {
             let result = try await dataSource.signUp(email: email, password: password)
-            guard result.hasSession,
-                  dataSource.hasSession(),
-                  dataSource.currentUserID() == result.userID else {
+            guard result.hasSession else {
                 // The account was created but the session was not issued, which
                 // means email confirmation is required before the user can sign in.
                 currentState = .emailConfirmationRequired
                 return currentState
             }
-            currentState = try await resolvedCurrentSession()
+            guard dataSource.hasSession(), dataSource.currentUserID() == result.userID else {
+                throw RepositoryError.persistenceError
+            }
+            currentState = try await resolvedAuthenticatedSession()
         } catch let error as RepositoryError {
             currentState = .error(error)
         } catch {
@@ -109,7 +119,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func signInWithApple(idToken: String, nonce: String) async -> AuthenticationState {
         do {
             try await dataSource.signInWithApple(idToken: idToken, nonce: nonce)
-            currentState = try await resolvedCurrentSession()
+            currentState = try await resolvedAuthenticatedSession()
         } catch let error as RepositoryError {
             currentState = .error(error)
         } catch {
@@ -121,7 +131,7 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func signInWithGoogle() async -> AuthenticationState {
         do {
             try await dataSource.signInWithGoogle()
-            currentState = try await resolvedCurrentSession()
+            currentState = try await resolvedAuthenticatedSession()
         } catch let error as RepositoryError {
             currentState = .error(error)
         } catch {
@@ -178,13 +188,14 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
     func verifyEmailOTP(email: String, token: String) async -> AuthenticationState {
         do {
             let result = try await dataSource.verifyEmailOTP(email: email, token: token)
-            guard result.hasSession,
-                  dataSource.hasSession(),
-                  dataSource.currentUserID() == result.userID else {
+            guard result.hasSession else {
                 currentState = .emailConfirmationRequired
                 return currentState
             }
-            currentState = try await resolvedCurrentSession()
+            guard dataSource.hasSession(), dataSource.currentUserID() == result.userID else {
+                throw RepositoryError.persistenceError
+            }
+            currentState = try await resolvedAuthenticatedSession()
         } catch let error as RepositoryError {
             currentState = .error(error)
         } catch {
@@ -205,6 +216,11 @@ actor SupabaseAuthenticationRepository: AuthenticationRepository {
 
     private func resolvedCurrentSession() async throws -> AuthenticationState {
         guard dataSource.hasSession() else { return .guest }
+        return try await resolvedAuthenticatedSession()
+    }
+
+    private func resolvedAuthenticatedSession() async throws -> AuthenticationState {
+        guard dataSource.hasSession() else { throw RepositoryError.persistenceError }
         guard let record = try await dataSource.fetchProfile() else {
             throw RepositoryError.notFound
         }

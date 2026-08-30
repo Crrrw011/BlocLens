@@ -32,8 +32,6 @@ struct MapView: View {
     var body: some View {
         NavigationStack(path: $path) {
             content
-                .navigationTitle(L10n.Map.title)
-                .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(for: Gym.self) { gym in
                     GymDetailView(gym: gym, environment: environment, session: session)
                 }

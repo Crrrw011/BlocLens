@@ -207,7 +207,9 @@ New hard-coded development-stage copy uses `Text(verbatim:)` and does not alter 
 
 ## D-4R authentication and Block boundary
 
-Local email sign-up was verified to return a real Supabase session. The earlier integration failures were caused by invoking Simulator tests with code signing disabled: the SDK could not use its secure session storage in that test configuration. Simulator tests that exercise Auth therefore run with normal local signing. The repository never fabricates a session, and profile setup, the 16+ declaration, restoration and pending-intent recovery all use the authenticated SDK user.
+Local email sign-up was verified to return a real Supabase session. The earlier integration failures were caused by invoking app-hosted tests with code signing disabled: the SDK could not use its secure session storage in that test configuration. Integration tests inject an isolated, lock-protected in-memory implementation of the SDK's `AuthLocalStorage` protocol and share one `SupabaseClient` across authentication and business repositories. Production and normally signed Local Remote UI tests continue using the SDK's default Keychain storage. The repository never fabricates a session, and profile setup, the 16+ declaration, restoration and pending-intent recovery all use the authenticated SDK user.
+
+The authentication repository distinguishes a server response that intentionally contains no session from a server-issued session that could not be persisted. Only the former becomes `emailConfirmationRequired`; the latter is an explicit persistence error. This prevents a successful local sign-up from being misreported as an email-confirmation flow. Session restoration is exercised across a recreated client using the same injected test storage.
 
 The composition root now exposes the current Domain `UserID` through a closure backed by the single shared `SupabaseClient`. Mock mode deliberately returns the development fixture identity; Local Remote mode derives it from the current Auth session. Views do not retain a second SDK user or authenticated Boolean. Sign-out errors are propagated and preserve the existing authenticated state instead of presenting a false guest state. A role refresh failure fails closed, records an unconfirmed capability state and hides privileged UI.
 
@@ -216,6 +218,12 @@ Migration `20260827001650_secure_block_aware_reads.sql` separates anonymous and 
 `get_my_blocked_profiles()` is the narrow owner-only exception used by the Block management screen. It returns safe profile fields only for rows where `blocker_id = auth.uid()`; it does not reveal who blocked the caller. This lets a user unblock an account without reopening ordinary public-profile, beta or comment reads. Unblock never restores Follow.
 
 The local seed now includes deterministic email/password identities for ordinary, Trusted Contributor, Verified Gym, Moderator and Administrator test roles. They use reserved `.invalid` addresses and a local-only test password. No service-role credential enters the app or UI tests. Mock remains the default and Release remains Mock-only. Cloud behaviour and complete D-4 localisation remain separate follow-up scopes.
+
+### Stage 8 D-1R local security baseline
+
+Migration `20260829023243_harden_notification_function_search_paths.sql` fixes the `search_path` of the four notification-outbox trigger functions without rewriting historical migrations. The trigger functions remain private execution boundaries; the migration adds no client grant and no new Data API surface. Static schema checks recognise this explicit later hardening while continuing to reject an unhardened `SECURITY DEFINER` function.
+
+Local verification is split deliberately: unsigned app-hosted Integration Tests receive an injected memory-only Auth store, while Local Remote UI Tests use a normally signed Simulator and the real Keychain path. Both use only the loopback project and the same repository composition root. The default app environment remains Mock, dependencies remain locked, and no Cloud OAuth or Cloud database was exercised in this repair.
 
 ## D-5A account deletion and Logbook export
 

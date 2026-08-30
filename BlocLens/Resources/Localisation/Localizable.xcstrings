@@ -1,8 +1,11 @@
 {
   "sourceLanguage" : "en-AU",
   "strings" : {
-    "" : {},
+    "" : {
+
+    },
     "%@ · %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en-AU" : {
           "stringUnit" : {
@@ -24,17 +27,8 @@
         }
       }
     },
-    "%@ %@" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@"
-          }
-        }
-      }
-    },
     "%@, %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en-AU" : {
           "stringUnit" : {
@@ -850,6 +844,28 @@
         }
       }
     },
+    "beta.addBeta" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Beta"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "베타 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加 Beta"
+          }
+        }
+      }
+    },
     "beta.brokenLink" : {
       "localizations" : {
         "en-AU" : {
@@ -1092,6 +1108,50 @@
         }
       }
     },
+    "beta.noBeta.message" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Be the first to share how to climb this route."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 루트를 오르는 방법을 가장 먼저 공유해보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成为第一个分享这条线路攀爬方法的人。"
+          }
+        }
+      }
+    },
+    "beta.noBeta.title" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No beta has been sent yet."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 공유된 베타가 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有人分享 beta。"
+          }
+        }
+      }
+    },
     "beta.offline.message" : {
       "localizations" : {
         "en-AU" : {
@@ -1220,6 +1280,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "平台"
+          }
+        }
+      }
+    },
+    "beta.playInline" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play in app"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱에서 재생"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在应用内播放"
           }
         }
       }
@@ -1686,6 +1768,12 @@
         }
       }
     },
+    "Check your email for the reset link." : {
+
+    },
+    "Close" : {
+
+    },
     "common.all" : {
       "localizations" : {
         "en-AU" : {
@@ -1840,7 +1928,9 @@
         }
       }
     },
-    "common.save" : {},
+    "common.save" : {
+
+    },
     "common.selected" : {
       "localizations" : {
         "en-AU" : {
@@ -1906,6 +1996,24 @@
           }
         }
       }
+    },
+    "Create a password" : {
+
+    },
+    "Create your account to get started" : {
+
+    },
+    "Don't have an account?" : {
+
+    },
+    "Email Address" : {
+
+    },
+    "Enter your email" : {
+
+    },
+    "Enter your email and we'll send you a link to reset your password." : {
+
     },
     "facility.accessibleEntry" : {
       "localizations" : {
@@ -2035,6 +2143,116 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "训练板"
+          }
+        }
+      }
+    },
+    "feedbackCategory.dataCorrection" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data correction"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "데이터 수정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数据更正"
+          }
+        }
+      }
+    },
+    "feedbackCategory.issue" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Issue"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "问题"
+          }
+        }
+      }
+    },
+    "feedbackCategory.other" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기타"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他"
+          }
+        }
+      }
+    },
+    "feedbackCategory.safety" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safety"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "안전"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安全"
+          }
+        }
+      }
+    },
+    "feedbackCategory.suggestion" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggestion"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "제안"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议"
           }
         }
       }
@@ -2171,6 +2389,9 @@
         }
       }
     },
+    "Forgot your password?" : {
+
+    },
     "grade.unknown" : {
       "localizations" : {
         "en-AU" : {
@@ -2281,7 +2502,9 @@
         }
       }
     },
-    "Gym" : {},
+    "Gym" : {
+
+    },
     "gym.addRouteInZone" : {
       "localizations" : {
         "en-AU" : {
@@ -2322,6 +2545,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加墙区"
+          }
+        }
+      }
+    },
+    "gym.community" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Community"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "커뮤니티"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "社区"
           }
         }
       }
@@ -2568,6 +2813,28 @@
         }
       }
     },
+    "gym.freshSets" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fresh Sets"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로운 세트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新定线"
+          }
+        }
+      }
+    },
     "gym.hardSoftIndex" : {
       "localizations" : {
         "en-AU" : {
@@ -2608,6 +2875,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最新换线"
+          }
+        }
+      }
+    },
+    "gym.noActiveRoutes" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No active routes"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "활성 루트 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无活跃线路"
           }
         }
       }
@@ -2722,138 +3011,6 @@
         }
       }
     },
-    "gym.resetDate" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset Date"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "리셋 날짜"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "换线日期"
-          }
-        }
-      }
-    },
-    "gym.verified" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verified Gym"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "인증 암장"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已认证岩馆"
-          }
-        }
-      }
-    },
-    "gym.viewGym" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View gym"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "암장 보기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看岩馆"
-          }
-        }
-      }
-    },
-    "gym.community" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Community"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "커뮤니티"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "社区"
-          }
-        }
-      }
-    },
-    "gym.freshSets" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fresh Sets"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "새로운 세트"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新定线"
-          }
-        }
-      }
-    },
-    "gym.noActiveRoutes" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No active routes"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "활성 루트 없음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无活跃线路"
-          }
-        }
-      }
-    },
     "gym.reset.days" : {
       "localizations" : {
         "en-AU" : {
@@ -2942,6 +3099,50 @@
         }
       }
     },
+    "gym.resetDate" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset Date"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "리셋 날짜"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "换线日期"
+          }
+        }
+      }
+    },
+    "gym.verified" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verified Gym"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인증 암장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已认证岩馆"
+          }
+        }
+      }
+    },
     "gym.viewAllRoutes" : {
       "localizations" : {
         "en-AU" : {
@@ -2960,6 +3161,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查看全部 %lld 条线路"
+          }
+        }
+      }
+    },
+    "gym.viewGym" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View gym"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "암장 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看岩馆"
           }
         }
       }
@@ -3051,6 +3274,9 @@
           }
         }
       }
+    },
+    "Hide password" : {
+
     },
     "home.activeProjects" : {
       "localizations" : {
@@ -3427,6 +3653,12 @@
           }
         }
       }
+    },
+    "Last reset" : {
+
+    },
+    "Link Sent ✓" : {
+
     },
     "logbook.attempts" : {
       "localizations" : {
@@ -4948,6 +5180,12 @@
         }
       }
     },
+    "OR CONTINUE WITH" : {
+
+    },
+    "Password" : {
+
+    },
     "password.confirm.placeholder" : {
       "localizations" : {
         "en-AU" : {
@@ -5190,7 +5428,9 @@
         }
       }
     },
-    "profile.edit" : {},
+    "profile.edit" : {
+
+    },
     "profile.empty.message" : {
       "localizations" : {
         "en-AU" : {
@@ -5477,19 +5717,51 @@
         }
       }
     },
-    "profileEdit.armSpan" : {},
-    "profileEdit.cm" : {},
-    "profileEdit.gradeHint" : {},
-    "profileEdit.gradeSystem" : {},
-    "profileEdit.height" : {},
-    "profileEdit.measurements" : {},
-    "profileEdit.notSureYet" : {},
-    "profileEdit.regularGrade" : {},
-    "profileEdit.saveFailed" : {},
-    "profileEdit.subtitle" : {},
-    "profileEdit.title" : {},
-    "profileEdit.vScale" : {},
-    "profileEdit.yds" : {},
+    "profileEdit.armSpan" : {
+
+    },
+    "profileEdit.cm" : {
+
+    },
+    "profileEdit.gradeHint" : {
+
+    },
+    "profileEdit.gradeSystem" : {
+
+    },
+    "profileEdit.height" : {
+
+    },
+    "profileEdit.measurements" : {
+
+    },
+    "profileEdit.notSureYet" : {
+
+    },
+    "profileEdit.regularGrade" : {
+
+    },
+    "profileEdit.saveFailed" : {
+
+    },
+    "profileEdit.subtitle" : {
+
+    },
+    "profileEdit.title" : {
+
+    },
+    "profileEdit.vScale" : {
+
+    },
+    "profileEdit.yds" : {
+
+    },
+    "Reset Password" : {
+
+    },
+    "Reset today" : {
+
+    },
     "route.accuracy.title" : {
       "localizations" : {
         "en-AU" : {
@@ -6414,6 +6686,50 @@
         }
       }
     },
+    "search.googlePlaces.section" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From Google"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google 검색 결과"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自 Google"
+          }
+        }
+      }
+    },
+    "search.localResults" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In BlocLens"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BlocLens 내 결과"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BlocLens 内结果"
+          }
+        }
+      }
+    },
     "search.prompt" : {
       "localizations" : {
         "en-AU" : {
@@ -6458,6 +6774,28 @@
         }
       }
     },
+    "search.submitGym" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Submit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "제출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提交"
+          }
+        }
+      }
+    },
     "search.title" : {
       "localizations" : {
         "en-AU" : {
@@ -6479,6 +6817,12 @@
           }
         }
       }
+    },
+    "Send Reset Link" : {
+
+    },
+    "Set Password" : {
+
     },
     "settings.appearance" : {
       "localizations" : {
@@ -6696,6 +7040,138 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "导出攀登日志"
+          }
+        }
+      }
+    },
+    "settings.feedback.category" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Category"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카테고리"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "类别"
+          }
+        }
+      }
+    },
+    "settings.feedback.footer" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feedback is sent to the BlocLens team for review. Please do not include personal information."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "피드백은 BlocLens 팀에 전달되어 검토됩니다. 개인정보는 포함하지 마세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反馈将发送给 BlocLens 团队审核。请勿包含个人信息。"
+          }
+        }
+      }
+    },
+    "settings.feedback.message" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Message"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메시지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内容"
+          }
+        }
+      }
+    },
+    "settings.feedback.messagePrompt" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tell us what happened or what you would like to see"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무슨 일이 있었는지 또는 보고 싶은 기능을 알려주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "告诉我们发生了什么或您希望看到的内容"
+          }
+        }
+      }
+    },
+    "settings.feedback.submit" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send Feedback"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "피드백 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送反馈"
+          }
+        }
+      }
+    },
+    "settings.feedback.success" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thank you. Your feedback has been received."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "감사합니다. 피드백이 접수되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "感谢您的反馈，我们已收到。"
           }
         }
       }
@@ -7139,6 +7615,15 @@
           }
         }
       }
+    },
+    "Show password" : {
+
+    },
+    "Sign in to your account to continue" : {
+
+    },
+    "Sign Up" : {
+
     },
     "state.error.title" : {
       "localizations" : {
@@ -8312,401 +8797,11 @@
         }
       }
     },
-    "settings.feedback.category" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Category"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "카테고리"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "类别"
-          }
-        }
-      }
+    "Welcome" : {
+
     },
-    "settings.feedback.message" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Message"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "메시지"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "内容"
-          }
-        }
-      }
-    },
-    "settings.feedback.messagePrompt" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tell us what happened or what you would like to see"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "무슨 일이 있었는지 또는 보고 싶은 기능을 알려주세요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "告诉我们发生了什么或您希望看到的内容"
-          }
-        }
-      }
-    },
-    "settings.feedback.submit" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Send Feedback"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "피드백 보내기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "发送反馈"
-          }
-        }
-      }
-    },
-    "settings.feedback.success" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thank you. Your feedback has been received."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "감사합니다. 피드백이 접수되었습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "感谢您的反馈，我们已收到。"
-          }
-        }
-      }
-    },
-    "settings.feedback.footer" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Feedback is sent to the BlocLens team for review. Please do not include personal information."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "피드백은 BlocLens 팀에 전달되어 검토됩니다. 개인정보는 포함하지 마세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "反馈将发送给 BlocLens 团队审核。请勿包含个人信息。"
-          }
-        }
-      }
-    },
-    "feedbackCategory.issue" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Issue"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "문제"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "问题"
-          }
-        }
-      }
-    },
-    "feedbackCategory.suggestion" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suggestion"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "제안"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建议"
-          }
-        }
-      }
-    },
-    "feedbackCategory.safety" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Safety"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "안전"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "安全"
-          }
-        }
-      }
-    },
-    "feedbackCategory.dataCorrection" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Data correction"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "데이터 수정"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "数据更正"
-          }
-        }
-      }
-    },
-    "feedbackCategory.other" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Other"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "기타"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "其他"
-          }
-        }
-      }
-    },
-    "search.googlePlaces.section" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "From Google"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google 검색 결과"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "来自 Google"
-          }
-        }
-      }
-    },
-    "search.localResults" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In BlocLens"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "BlocLens 내 결과"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "BlocLens 内结果"
-          }
-        }
-      }
-    },
-    "search.submitGym" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Submit"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "제출"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提交"
-          }
-        }
-      }
-    },
-    "beta.noBeta.title" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No beta has been sent yet."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "아직 공유된 베타가 없습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "还没有人分享 beta。"
-          }
-        }
-      }
-    },
-    "beta.noBeta.message" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Be the first to share how to climb this route."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 루트를 오르는 방법을 가장 먼저 공유해보세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "成为第一个分享这条线路攀爬方法的人。"
-          }
-        }
-      }
-    },
-    "beta.addBeta" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add Beta"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "베타 추가"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加 Beta"
-          }
-        }
-      }
-    },
-    "beta.playInline" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Play in app"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "앱에서 재생"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在应用内播放"
-          }
-        }
-      }
+    "Welcome Back" : {
+
     }
   },
   "version" : "1.0"

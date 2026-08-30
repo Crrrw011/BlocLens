@@ -65,6 +65,18 @@ struct AuthStateMachineTests {
         }
     }
 
+    @Test func restoreSessionClearsRejectedStoredSessionAndReturnsGuest() async throws {
+        let fake = FakeAuthDataSource(hasSession: true)
+        fake.fetchProfileError = RepositoryError.unauthenticated
+        let repository = SupabaseAuthenticationRepository(dataSource: fake)
+
+        let state = await repository.restoreSession()
+
+        #expect(state == .guest)
+        #expect(!fake.hasSession())
+        #expect(fake.clearLocalSessionCallCount == 1)
+    }
+
     @Test func signInSuccessReturnsSignedIn() async throws {
         let fake = FakeAuthDataSource(
             hasSession: true,
@@ -93,6 +105,16 @@ struct AuthStateMachineTests {
 
         #expect(state == .emailConfirmationRequired)
         #expect(!fake.hasSession())
+    }
+
+    @Test func signUpWithServerSessionThatCannotPersistReturnsError() async throws {
+        let fake = FakeAuthDataSource(signUpHasSession: true)
+        fake.persistIssuedSession = false
+        let repository = SupabaseAuthenticationRepository(dataSource: fake)
+
+        let state = await repository.signUp(email: "alice@example.com", password: "password123")
+
+        #expect(state == .error(.persistenceError))
     }
 
     @Test func signOutReturnsGuest() async throws {
@@ -216,6 +238,20 @@ struct AuthStateMachineTests {
         #expect(session.resumedIntent == intent)
     }
 
+    @Test func pendingRouteContributionPreservesWallZoneAfterEmailSignIn() async {
+        let environment = AppEnvironment.development()
+        let session = AppSession(environment: environment)
+        await session.load()
+        let intent = ProtectedIntent.addRouteInZone(
+            wallZoneID: WallZoneID(rawValue: "zone-1")
+        )
+
+        #expect(!session.requireAuthentication(for: intent))
+        await session.signIn(email: "alice@example.com", password: "password123")
+
+        #expect(session.resumedIntent == intent)
+    }
+
     // MARK: - OAuth
 
     @Test func appleSignInSuccessReturnsSignedIn() async throws {
@@ -294,9 +330,12 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
     var googleSignInError: Error?
     var signOutError: Error?
     var deleteAccountError: Error?
+    var fetchProfileError: Error?
     var signUpHasSession: Bool
+    var persistIssuedSession = true
     var profileAfterUsernameUpdate: UserProfileRecord?
     var receivedAppleNonce: String?
+    var clearLocalSessionCallCount = 0
 
     init(
         hasSession: Bool = false,
@@ -327,7 +366,7 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
 
     func signUp(email: String, password: String) async throws -> RemoteAuthSignUpResult {
         if let signUpError { throw signUpError }
-        hasSessionFlag = signUpHasSession
+        hasSessionFlag = signUpHasSession && persistIssuedSession
         let userID = userIDValue ?? UUID()
         userIDValue = userID
         return RemoteAuthSignUpResult(userID: userID, hasSession: signUpHasSession)
@@ -350,13 +389,22 @@ private final class FakeAuthDataSource: RemoteAuthDataSource, @unchecked Sendabl
         userIDValue = nil
     }
 
+    func clearLocalSession() async throws {
+        clearLocalSessionCallCount += 1
+        hasSessionFlag = false
+        userIDValue = nil
+    }
+
     func deleteAccount() async throws {
         if let deleteAccountError { throw deleteAccountError }
         hasSessionFlag = false
         userIDValue = nil
     }
 
-    func fetchProfile() async throws -> UserProfileRecord? { profileValue }
+    func fetchProfile() async throws -> UserProfileRecord? {
+        if let fetchProfileError { throw fetchProfileError }
+        return profileValue
+    }
 
     func updateUsername(_ username: String, userID: UUID) async throws {
         if let updateUsernameError { throw updateUsernameError }

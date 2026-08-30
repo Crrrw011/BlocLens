@@ -32,7 +32,7 @@ struct AppShellView: View {
                     .tag(AppTab.map)
 
                 Color.clear
-                    .tabItem { Label(AppTab.add.title, systemImage: AppTab.add.systemImage) }
+                    .tabItem { Label("", systemImage: AppTab.add.systemImage) }
                     .tag(AppTab.add)
 
                 LogbookView(environment: environment, session: session)
@@ -45,7 +45,7 @@ struct AppShellView: View {
             }
             .tint(BlocColor.opticBlue)
             centreAddButton
-                .padding(.bottom, 8)
+                .padding(.bottom, 2)
                 .accessibilityIdentifier("centre-add-button")
         }
         .confirmationDialog(

@@ -222,3 +222,11 @@ For signed-in users, the database filters both directions on `profiles`, `beta_l
 The helper functions live in the non-exposed `private` schema, are `SECURITY DEFINER` only to inspect the private Block relation without RLS recursion, fix `search_path` to the empty path and derive the caller solely from `auth.uid()`. `PUBLIC` and `anon` execution are revoked. The owner-only `get_my_blocked_profiles()` RPC exposes only safe profile fields for accounts the caller personally blocked, enabling Unblock without revealing incoming Block relationships.
 
 Local role fixtures are development seed data, not production migrations. Reset creates ordinary, Trusted Contributor, Verified Gym, Moderator and Administrator identities with reserved `.invalid` addresses. pgTAP verifies the 67-valid-Helpful threshold, permanent award semantics, self-vote rejection, gym-specific membership, moderator/admin separation, owner-only Logbook access and direct Data API Block enforcement. Integration and Local Remote UI tests must use a normally signed Simulator so Supabase Auth can persist its session securely.
+
+## Stage 8 D-1R authentication and function hardening
+
+Local authentication tests use the same `SupabaseClient` for Auth and PostgREST. Unsigned app-hosted Integration Tests inject an isolated in-memory `AuthLocalStorage`; production code and signed UI tests retain the SDK Keychain implementation. A server-issued session that cannot be read back is treated as a persistence failure, not as an email-confirmation requirement. This keeps authenticated writes, profile setup and restored identity tied to the real JWT subject.
+
+Migration `20260829023243_harden_notification_function_search_paths.sql` applies an empty `search_path` to the notification enqueue and trigger functions created by the preceding notification migration. It does not change their grants, expose a new RPC, or alter RLS. The static schema contract accepts historical definitions only when a later migration explicitly hardens the exact function signature.
+
+Integration cardinality assertions identify stable seed UUIDs rather than assuming the database has received no earlier contribution writes. A local reset remains the authoritative clean baseline before and after stateful Integration or Remote UI suites. Cloud schema, Cloud Auth and production data were not used for this validation.

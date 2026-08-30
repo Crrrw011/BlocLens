@@ -38,7 +38,7 @@ actor RemoteContributionRepository: ContributionRepository {
     }
 
     func updateRoute(_ routeID: ClimbingRouteID, request: AddRouteRequest) async throws -> ClimbingRoute {
-        let userID = try requireUser()
+        _ = try requireUser()
         let routeUUID = try uuid(routeID, field: "routes.id")
         let colour = trimmed(request.colour)
         guard let colour, !colour.isEmpty else {
@@ -84,7 +84,7 @@ actor RemoteContributionRepository: ContributionRepository {
     }
 
     func updateWallZone(_ wallZoneID: WallZoneID, request: AddWallZoneRequest) async throws -> WallZone {
-        let userID = try requireUser()
+        _ = try requireUser()
         let zoneID = try uuid(wallZoneID, field: "wall_zones.id")
         let name = trimmed(request.name)
         guard let name, !name.isEmpty else { throw RepositoryError.invalidInput }

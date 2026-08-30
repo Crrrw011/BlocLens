@@ -23,8 +23,6 @@ struct LogbookView: View {
                     signedOutState
                 }
             }
-                .navigationTitle(L10n.Logbook.title)
-                .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(for: ClimbingRoute.self) { route in
                     RouteDetailView(route: route, environment: environment, session: session)
                 }
@@ -37,6 +35,7 @@ struct LogbookView: View {
 
     private var signedOutState: some View {
         VStack(spacing: DesignSpacing.large) {
+            Spacer()
             EmptyStateView(
                 title: L10n.Logbook.signInTitle,
                 message: L10n.Logbook.signInMessage,
@@ -47,7 +46,12 @@ struct LogbookView: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .padding(.horizontal, DesignSpacing.large)
+            Spacer()
+            Spacer()
         }
+        .padding(.vertical, DesignSpacing.large)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(DesignColour.backgroundSecondary)
     }
 
     @ViewBuilder
@@ -217,7 +221,7 @@ struct LogbookView: View {
         } label: {
             ZStack {
                 if isSelected {
-                    Capsule().fill(BlocColor.opticBlue)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(BlocColor.opticBlue)
                         .matchedGeometryEffect(id: "logbook-filter-selection", in: filterNS, isSource: !reduceMotion)
                 }
                 Text(verbatim: title)
@@ -226,10 +230,11 @@ struct LogbookView: View {
                     .foregroundStyle(isSelected ? .white : DesignColour.textPrimary)
                     .contentTransition(.opacity)
             }
-            .padding(.horizontal, BlocSpacing.compact)
-            .frame(minHeight: 44)
-            .background(isSelected ? Color.clear : DesignColour.surfaceElevated, in: Capsule())
-            .overlay { Capsule().stroke(isSelected ? Color.clear : DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+            .padding(.horizontal, DesignSpacing.medium)
+            .frame(minWidth: 48, minHeight: 44)
+            .background(isSelected ? Color.clear : DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(isSelected ? Color.clear : DesignColour.separator.opacity(0.65), lineWidth: 0.5) }
+            .shadow(color: isSelected ? .clear : .black.opacity(0.04), radius: 4, y: 1)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

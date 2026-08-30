@@ -49,16 +49,22 @@ struct AppEnvironment: Sendable {
         )
     }
 
-    static func localSupabase(configuration: RemoteConfiguration) -> AppEnvironment {
-        supabase(configuration: configuration)
+    static func localSupabase(
+        configuration: RemoteConfiguration,
+        client: SupabaseClient? = nil
+    ) -> AppEnvironment {
+        supabase(configuration: configuration, client: client)
     }
 
     static func cloudSupabase(configuration: RemoteConfiguration) -> AppEnvironment {
         supabase(configuration: configuration)
     }
 
-    private static func supabase(configuration: RemoteConfiguration) -> AppEnvironment {
-        let client = SupabaseClientFactory.makeClient(configuration: configuration)
+    private static func supabase(
+        configuration: RemoteConfiguration,
+        client providedClient: SupabaseClient? = nil
+    ) -> AppEnvironment {
+        let client = providedClient ?? SupabaseClientFactory.makeClient(configuration: configuration)
         let dataSource = SupabaseRemoteDataSource(client: client)
         let logbookQueue = FileBackedLogbookQueue(
             fileURL: Self.logbookQueueFileURL()
