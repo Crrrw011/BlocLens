@@ -135,11 +135,11 @@ enum L10n {
         static let noActiveRoutes: LocalizedStringResource = LocalizedStringResource("gym.noActiveRoutes", defaultValue: "No active routes")
 
         static func resetDays(_ count: Int) -> String {
-            String(localized: "Reset \(count)d")
+            String(localized: LocalizedStringResource("gym.reset.days", defaultValue: "Reset \(count)d"))
         }
 
         static func viewAllRoutes(count: Int) -> String {
-            String(localized: "View all \(count) routes")
+            String(localized: LocalizedStringResource("gym.viewAllRoutes", defaultValue: "View all \(count) routes"))
         }
     }
 
