@@ -50,6 +50,11 @@ final class GymPhotoServiceTests: XCTestCase {
         }
     }
 
+    func testAppEnvironmentContainsGymPhotoService() {
+        let env = AppEnvironment.development()
+        _ = env.gymPhotoService
+    }
+
     func testGymPhotoStructEquality() {
         let photo1 = GymPhoto(imageURL: URL(string: "https://example.com/photo.jpg")!, attribution: "Author", attributionHTML: nil)
         let photo2 = GymPhoto(imageURL: URL(string: "https://example.com/photo.jpg")!, attribution: "Author", attributionHTML: nil)

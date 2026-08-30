@@ -14,6 +14,7 @@ struct AppEnvironment: Sendable {
     let onboardingStore: any OnboardingStore
     let languagePreferenceStore: any LanguagePreferenceStore
     let googlePlacesClient: any GooglePlacesClient
+    let gymPhotoService: any GymPhotoService
     let currentUserID: @Sendable () -> UserID?
     let dataAvailability: DataAvailability
 
@@ -44,6 +45,7 @@ struct AppEnvironment: Sendable {
             onboardingStore: onboardingStore ?? InMemoryOnboardingStore(isComplete: isOnboardingComplete),
             languagePreferenceStore: languagePreferenceStore,
             googlePlacesClient: NoopGooglePlacesClient(),
+            gymPhotoService: NoopGymPhotoService(),
             currentUserID: { DevelopmentFixtures.currentUserID },
             dataAvailability: scenario == .offlineWithCache ? .offlineCached : .online
         )
@@ -69,6 +71,7 @@ struct AppEnvironment: Sendable {
         let logbookQueue = FileBackedLogbookQueue(
             fileURL: Self.logbookQueueFileURL()
         )
+        let placesClient = GooglePlacesClientFactory.makeFromBundle()
         return AppEnvironment(
             gymRepository: RemoteGymRepository(dataSource: dataSource),
             routeRepository: RemoteRouteRepository(dataSource: dataSource),
@@ -91,7 +94,8 @@ struct AppEnvironment: Sendable {
             ),
             onboardingStore: InMemoryOnboardingStore(isComplete: true),
             languagePreferenceStore: InMemoryLanguagePreferenceStore(),
-            googlePlacesClient: GooglePlacesClientFactory.makeFromBundle(),
+            googlePlacesClient: placesClient,
+            gymPhotoService: RemoteGymPhotoService(client: placesClient),
             currentUserID: {
                 client.auth.currentUser.map {
                     UserID(rawValue: RemoteIdentifier.domainString($0.id))
