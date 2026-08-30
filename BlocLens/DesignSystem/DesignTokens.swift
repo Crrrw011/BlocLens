@@ -8,14 +8,34 @@ enum DesignColour {
             ? UIColor(red: 0.16, green: 0.51, blue: 1, alpha: 0.18)
             : UIColor(red: 0.02, green: 0.43, blue: 0.98, alpha: 0.10)
     })
-    static let backgroundPrimary = Color(uiColor: .systemBackground)
-    static let backgroundSecondary = Color(uiColor: .systemGroupedBackground)
-    static let surfacePrimary = Color(uiColor: .secondarySystemBackground)
-    static let surfaceElevated = Color(uiColor: .tertiarySystemBackground)
+    static let backgroundPrimary = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.systemBackground
+            : UIColor(red: 0.96, green: 0.96, blue: 0.97, alpha: 1)
+    })
+    static let backgroundSecondary = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.systemGroupedBackground
+            : UIColor(red: 0.93, green: 0.93, blue: 0.95, alpha: 1)
+    })
+    static let surfacePrimary = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.secondarySystemBackground
+            : .white
+    })
+    static let surfaceElevated = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.tertiarySystemBackground
+            : UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1)
+    })
     static let textPrimary = Color(uiColor: .label)
     static let textSecondary = Color(uiColor: .secondaryLabel)
     static let textTertiary = Color(uiColor: .tertiaryLabel)
-    static let separator = Color(uiColor: .separator)
+    static let separator = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.separator
+            : UIColor(red: 0.88, green: 0.88, blue: 0.90, alpha: 1)
+    })
     static let success = Color(uiColor: .systemGreen)
     static let warning = Color(uiColor: .systemOrange)
     static let error = Color(uiColor: .systemRed)

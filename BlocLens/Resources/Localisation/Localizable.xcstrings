@@ -5429,7 +5429,14 @@
       }
     },
     "profile.edit" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
     },
     "profile.empty.message" : {
       "localizations" : {
@@ -5585,6 +5592,66 @@
         }
       }
     },
+    "profile.accountAccess" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account access"
+          }
+        }
+      }
+    },
+    "profile.administratorAccess" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Administrator access"
+          }
+        }
+      }
+    },
+    "profile.contributors" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contributors"
+          }
+        }
+      }
+    },
+    "profile.moderatorAccess" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moderator access"
+          }
+        }
+      }
+    },
+    "profile.roleChecksNote" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Role checks come from the authenticated session. Full moderation tools remain on the separate web surface."
+          }
+        }
+      }
+    },
+    "profile.verifiedGymAccess" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verified gym access"
+          }
+        }
+      }
+    },
     "profile.regularGrade" : {
       "localizations" : {
         "en-AU" : {
@@ -5718,43 +5785,134 @@
       }
     },
     "profileEdit.armSpan" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arm span"
+          }
+        }
+      }
     },
     "profileEdit.cm" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cm"
+          }
+        }
+      }
     },
     "profileEdit.gradeHint" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your typical grade on this system"
+          }
+        }
+      }
     },
     "profileEdit.gradeSystem" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grade system"
+          }
+        }
+      }
     },
     "profileEdit.height" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Height"
+          }
+        }
+      }
     },
     "profileEdit.measurements" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measurements"
+          }
+        }
+      }
     },
     "profileEdit.notSureYet" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not sure yet"
+          }
+        }
+      }
     },
     "profileEdit.regularGrade" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regular grade"
+          }
+        }
+      }
     },
     "profileEdit.saveFailed" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not save. Please try again."
+          }
+        }
+      }
     },
     "profileEdit.subtitle" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your measurements and preferred grade"
+          }
+        }
+      }
     },
     "profileEdit.title" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Climbing Profile"
+          }
+        }
+      }
     },
     "profileEdit.vScale" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V-Scale"
+          }
+        }
+      }
     },
     "profileEdit.yds" : {
-
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YDS"
+          }
+        }
+      }
     },
     "Reset Password" : {
 
@@ -7458,6 +7616,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此信息页面将在后续阶段实现。"
+          }
+        }
+      }
+    },
+    "settings.supportSection" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support"
           }
         }
       }

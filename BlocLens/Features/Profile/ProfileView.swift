@@ -169,7 +169,7 @@ struct ProfileView: View {
 
     private var accountAccessCard: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.small) {
-            Text(verbatim: "Account access")
+            Text(L10n.Profile.accountAccess)
                 .font(.system(size: 11, weight: .bold))
                 .tracking(0.08)
                 .textCase(.uppercase)
@@ -179,7 +179,7 @@ struct ProfileView: View {
                     RelationshipManagementView(repository: environment.relationshipRepository)
                 } label: {
                     HStack {
-                        Label { Text(verbatim: "Contributors") } icon: { Image(systemName: "person.2").foregroundStyle(BlocColor.opticBlue) }
+                        Label { Text(L10n.Profile.contributors) } icon: { Image(systemName: "person.2").foregroundStyle(BlocColor.opticBlue) }
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(DesignColour.textTertiary)
                     }
@@ -190,7 +190,7 @@ struct ProfileView: View {
                 if session.isRoleContextConfirmed, !session.roleContext.managedGymIDs.isEmpty {
                     Divider().opacity(0.4).padding(.leading, DesignSpacing.medium)
                     HStack {
-                        Text(verbatim: "Verified gym access").font(DesignTypography.supporting).foregroundStyle(DesignColour.textPrimary)
+                        Text(L10n.Profile.verifiedGymAccess).font(DesignTypography.supporting).foregroundStyle(DesignColour.textPrimary)
                         Spacer()
                         Text(verbatim: "\(session.roleContext.managedGymIDs.count)").font(BlocTypography.caption.weight(.semibold)).foregroundStyle(DesignColour.textSecondary)
                     }
@@ -201,7 +201,7 @@ struct ProfileView: View {
                     Divider().opacity(0.4).padding(.leading, DesignSpacing.medium)
                     HStack {
                         Label {
-                            Text(verbatim: session.roleContext.isAdministrator ? "Administrator access" : "Moderator access")
+                            Text(session.roleContext.isAdministrator ? L10n.Profile.administratorAccess : L10n.Profile.moderatorAccess)
                                 .font(DesignTypography.supporting).foregroundStyle(DesignColour.textSecondary)
                         } icon: { Image(systemName: "checkmark.shield").foregroundStyle(BlocColor.opticBlue) }
                         Spacer()
@@ -212,7 +212,7 @@ struct ProfileView: View {
             }
             .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
             .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
-            Text(verbatim: "Role checks come from the authenticated session. Full moderation tools remain on the separate web surface.")
+            Text(L10n.Profile.roleChecksNote)
                 .font(BlocTypography.caption)
                 .foregroundStyle(DesignColour.textTertiary)
                 .padding(.horizontal, DesignSpacing.xSmall)
@@ -443,7 +443,7 @@ private struct SettingsView: View {
 
     private var supportSection: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.small) {
-            Text(verbatim: "Support")
+            Text(L10n.Settings.supportSection)
                 .font(.system(size: 11, weight: .bold)).tracking(0.08).textCase(.uppercase).foregroundStyle(DesignColour.textTertiary)
             VStack(spacing: 0) {
                 NavigationLink(L10n.Settings.privacy) { PlaceholderInformationView(title: L10n.Settings.privacy) }

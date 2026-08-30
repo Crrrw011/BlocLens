@@ -13,20 +13,23 @@ struct ProfileEditView: View {
     @State private var gradeSystem: GradeSystem?
     @State private var vGrade: VGrade?
     @State private var ydsGrade: YDSGrade?
+    @State private var isNotSureYet: Bool
 
     init(session: AppSession) {
         self.session = session
-        let profile = session.authenticationState.profile
-        _height = State(initialValue: profile?.heightCentimetres)
-        _armSpan = State(initialValue: profile?.armSpanCentimetres)
-        _hasHeight = State(initialValue: profile?.heightCentimetres != nil)
-        _hasArmSpan = State(initialValue: profile?.armSpanCentimetres != nil)
-        _gradeSystem = State(initialValue: profile?.gradeSystem ?? .vScale)
-        _vGrade = State(initialValue: profile?.regularGrade)
-        _ydsGrade = State(initialValue: profile?.ydsGrade)
+        let state = ProfileEditState(profile: session.authenticationState.profile)
+        _height = State(initialValue: state.heightCentimetres)
+        _armSpan = State(initialValue: state.armSpanCentimetres)
+        _hasHeight = State(initialValue: state.hasHeight)
+        _hasArmSpan = State(initialValue: state.hasArmSpan)
+        _gradeSystem = State(initialValue: state.gradeSystem)
+        _vGrade = State(initialValue: state.vGrade)
+        _ydsGrade = State(initialValue: state.ydsGrade)
+        _isNotSureYet = State(initialValue: state.isNotSureYet)
     }
 
     private var isGradeSet: Bool {
+        if isNotSureYet { return false }
         guard let gradeSystem else { return false }
         switch gradeSystem {
         case .vScale: return vGrade != nil
@@ -67,15 +70,19 @@ struct ProfileEditView: View {
                         Text(L10n.ProfileEdit.yds).tag(GradeSystem?.some(.yds))
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: gradeSystem) { _, newValue in
+                        if newValue != nil { isNotSureYet = false }
+                    }
 
                     if gradeSystem == .vScale {
-                        wheelPicker(selection: $vGrade)
+                        vGradeNotSurePicker(selection: $vGrade, isNotSureYet: $isNotSureYet)
                     } else if gradeSystem == .yds {
-                        wheelPicker(selection: $ydsGrade)
+                        ydsGradeNotSurePicker(selection: $ydsGrade, isNotSureYet: $isNotSureYet)
                     }
 
                     Button {
                         withAnimation {
+                            isNotSureYet = true
                             gradeSystem = nil
                             vGrade = nil
                             ydsGrade = nil
@@ -83,7 +90,7 @@ struct ProfileEditView: View {
                     } label: {
                         Label(L10n.ProfileEdit.notSureYet, systemImage: "questionmark.circle")
                             .font(DesignTypography.supporting)
-                            .foregroundStyle(DesignColour.secondaryText)
+                            .foregroundStyle(isNotSureYet ? BlocColor.opticBlue : DesignColour.secondaryText)
                     }
                     .buttonStyle(.plain)
                 } header: {
@@ -160,6 +167,20 @@ struct ProfileEditView: View {
         .frame(height: 120)
     }
 
+    private func vGradeNotSurePicker(selection: Binding<VGrade?>, isNotSureYet: Binding<Bool>) -> some View {
+        Picker(L10n.ProfileEdit.vScale, selection: selection) {
+            Text(L10n.ProfileEdit.notSureYet).tag(VGrade?.none)
+            ForEach(VGrade.allCases.filter { $0 != .unknown }, id: \.self) { value in
+                Text(value.displayName).tag(VGrade?.some(value))
+            }
+        }
+        .pickerStyle(.wheel)
+        .frame(height: 120)
+        .onChange(of: selection.wrappedValue) { _, newValue in
+            isNotSureYet.wrappedValue = newValue == nil
+        }
+    }
+
     private func wheelPicker(selection: Binding<YDSGrade?>) -> some View {
         Picker(L10n.ProfileEdit.yds, selection: selection) {
             ForEach(YDSGrade.allCases, id: \.self) { value in
@@ -168,6 +189,20 @@ struct ProfileEditView: View {
         }
         .pickerStyle(.wheel)
         .frame(height: 120)
+    }
+
+    private func ydsGradeNotSurePicker(selection: Binding<YDSGrade?>, isNotSureYet: Binding<Bool>) -> some View {
+        Picker(L10n.ProfileEdit.yds, selection: selection) {
+            Text(L10n.ProfileEdit.notSureYet).tag(YDSGrade?.none)
+            ForEach(YDSGrade.allCases, id: \.self) { value in
+                Text(value.displayName).tag(YDSGrade?.some(value))
+            }
+        }
+        .pickerStyle(.wheel)
+        .frame(height: 120)
+        .onChange(of: selection.wrappedValue) { _, newValue in
+            isNotSureYet.wrappedValue = newValue == nil
+        }
     }
 
     private func wheelPicker(value: Binding<Double?>) -> some View {
@@ -184,7 +219,7 @@ struct ProfileEditView: View {
         isSaving = true
         showsError = false
         defer { isSaving = false }
-        let useGrade = gradeSystem != nil && isGradeSet
+        let useGrade = !isNotSureYet && gradeSystem != nil && isGradeSet
         let details = ProfileDetailsUpdate(
             heightCentimetres: hasHeight ? height : nil,
             armSpanCentimetres: hasArmSpan ? armSpan : nil,

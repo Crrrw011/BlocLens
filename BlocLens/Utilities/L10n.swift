@@ -308,6 +308,12 @@ enum L10n {
         static let helpfulProgressSuffix: LocalizedStringResource = "profile.helpfulProgressSuffix"
         static let support: LocalizedStringResource = "profile.support"
         static let notProvided: LocalizedStringResource = "profile.notProvided"
+        static let accountAccess: LocalizedStringResource = "profile.accountAccess"
+        static let contributors: LocalizedStringResource = "profile.contributors"
+        static let verifiedGymAccess: LocalizedStringResource = "profile.verifiedGymAccess"
+        static let administratorAccess: LocalizedStringResource = "profile.administratorAccess"
+        static let moderatorAccess: LocalizedStringResource = "profile.moderatorAccess"
+        static let roleChecksNote: LocalizedStringResource = "profile.roleChecksNote"
     }
 
     enum ProfileEdit {
@@ -400,6 +406,7 @@ enum L10n {
         static let deleteAccountErrorTitle: LocalizedStringResource = "settings.deleteAccount.errorTitle"
         static let deleteAccountFailedMessage: LocalizedStringResource = "settings.deleteAccount.failedMessage"
         static let placeholderMessage: LocalizedStringResource = "settings.placeholderMessage"
+        static let supportSection: LocalizedStringResource = "settings.supportSection"
     }
 
     enum State {

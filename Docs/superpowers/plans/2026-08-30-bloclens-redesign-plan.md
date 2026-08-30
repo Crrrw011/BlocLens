@@ -200,9 +200,182 @@ final class DesignTokensTests: XCTestCase {
 - [ ] **Step 3: Final screenshots Light/Dark comparison**
 - [ ] **Step 4: Commit** `git commit -m "design: a11y + visual QA — Cold Zinc A complete"`
 
+### Task 13: Phase 9-A — Logbook, Profile, Localisation & Light Mode Fix
+
+**Files:**
+- Modify: `BlocLens/Features/Logbook/LogbookView.swift`
+- Modify: `BlocLens/Features/Profile/ProfileView.swift`
+- Modify: `BlocLens/Features/Profile/ProfileEditView.swift`
+- Modify: `BlocLens/DesignSystem/DesignTokens.swift`
+- Modify: `BlocLens/Resources/Localisation/Localizable.xcstrings`
+- Modify: `BlocLens/DesignSystem/Components/StateViews.swift` (if EmptyStateView needs action button param)
+- Test: `BlocLensTests/ProfileEditTests.swift` (new)
+- Test: `BlocLensTests/DesignTokenTests.swift` (extend)
+
+**Skills required:** SwiftUI Expert, systematic-debugging, test-driven-development, verification-before-completion, redesign-existing-projects, minimalist-ui, ponytail
+
+**Root causes found during exploration:**
+- Logbook `.empty` case: VStack sits at top of content area — no centering, no `Spacer`, no `frame(maxWidth: .infinity, maxHeight: .infinity)`
+- `profile.edit`: Key exists in String Catalog but localizations block is **empty** — falls back to raw key string
+- All 13 `profileEdit.*` keys: Same — empty localizations, display raw keys at runtime
+- Height/Arm span: `State(initialValue: profile?.heightCentimetres)` defaults to `nil` — no 170cm fallback
+- Regular grade: V-Scale wheel filters `.unknown`, no "Not sure yet" sentinel
+- Light Mode: `DesignColour.backgroundPrimary` = `.systemBackground`, `.surfacePrimary` = `.secondarySystemBackground` — on light devices both resolve to near-identical white
+
+---
+
+- [ ] **Step 1: Write failing tests (TDD)**
+
+```swift
+// BlocLensTests/ProfileEditTests.swift
+import XCTest
+@testable import BlocLens
+
+final class ProfileEditTests: XCTestCase {
+    func testNewProfileHeightDefaultsTo170cm() {
+        let state = ProfileEditState(profile: nil)
+        XCTAssertEqual(state.heightCentimetres, 170)
+    }
+    func testNewProfileArmSpanDefaultsTo170cm() {
+        let state = ProfileEditState(profile: nil)
+        XCTAssertEqual(state.armSpanCentimetres, 170)
+    }
+    func testSavedHeightNotOverwritten() {
+        let profile = ClimbingProfile.mock(heightCentimetres: 180)
+        let state = ProfileEditState(profile: profile)
+        XCTAssertEqual(state.heightCentimetres, 180)
+    }
+    func testSavedArmSpanNotOverwritten() {
+        let profile = ClimbingProfile.mock(armSpanCentimetres: 175)
+        let state = ProfileEditState(profile: profile)
+        XCTAssertEqual(state.armSpanCentimetres, 175)
+    }
+    func testRegularGradeNilShowsNotSureYet() {
+        let state = ProfileEditState(profile: nil)
+        XCTAssertTrue(state.isNotSureYet)
+    }
+    func testNotSureYetSavesAsNil() {
+        var state = ProfileEditState(profile: nil)
+        state.isNotSureYet = true
+        state.vGrade = .v5
+        let saved = state.toSavedGrade()
+        XCTAssertNil(saved)
+    }
+}
+```
+
+- [ ] **Step 2: Run — verify FAIL** `xcodebuild test -only-testing:BlocLensTests/ProfileEditTests -destination 'platform=iOS Simulator,name=iPhone 16'`
+
+- [ ] **Step 3: Fix Logbook empty state centering**
+  - In `LogbookView.swift`, the `.empty` case (line ~66): wrap VStack in a container that fills available space
+  - Use `Spacer()` at top and bottom of VStack to center the group
+  - Add `frame(maxWidth: .infinity, maxHeight: .infinity)` to the container
+  - Keep the existing `EmptyStateView` + `Button(L10n.Logbook.findRoute)` grouping
+  - Ensure background matches `DesignColour.backgroundSecondary`
+  - Verify Tab Bar does not overlap — the available area automatically excludes tab bar in a tabbed NavigationStack
+  - Do NOT use hardcoded offsets, UIScreen, or screen-relative positions
+
+- [ ] **Step 4: Fix Profile localisation key leaks**
+  - In `Localizable.xcstrings`, populate all empty `profile.*` and `profileEdit.*` keys with en-AU source strings:
+    - `profile.edit` → `"Edit"`
+    - `profileEdit.title` → `"Climbing Profile"`
+    - `profileEdit.subtitle` → `"Your measurements and preferred grade"`
+    - `profileEdit.height` → `"Height"`
+    - `profileEdit.armSpan` → `"Arm span"`
+    - `profileEdit.cm` → `"cm"`
+    - `profileEdit.measurements` → `"Measurements"`
+    - `profileEdit.gradeSystem` → `"Grade system"`
+    - `profileEdit.vScale` → `"V-Scale"`
+    - `profileEdit.yds` → `"YDS"`
+    - `profileEdit.regularGrade` → `"Regular grade"`
+    - `profileEdit.gradeHint` → `"Your typical grade on this system"`
+    - `profileEdit.notSureYet` → `"Not sure yet"`
+    - `profileEdit.saveFailed` → `"Could not save. Please try again."`
+  - Preserve existing ko and zh-Hans entries (keep structure, do not fill with machine translation unless confirmed)
+  - Audit all Profile views for any remaining `Text("profile.*")` or `Text(verbatim:)` that should be localized
+  - Audit `ProfileView.swift` account access section — replace hardcoded `Text(verbatim: "Account access")` etc. with `L10n.Profile.*` keys or new keys in String Catalog
+  - Verify no `Text("profile.")` patterns remain via grep
+
+- [ ] **Step 5: Fix Height & Arm span defaults**
+  - In `ProfileEditView.swift`, when `profile?.heightCentimetres` is nil, default `State` to `170`
+  - When `profile?.armSpanCentimetres` is nil, default `State` to `170`
+  - Toggle `_hasHeight` defaults to `true` when height is nil (new user should see the picker with 170 pre-selected)
+  - Toggle `_hasArmSpan` defaults to `true` when arm span is nil
+  - Ensure Cancel discards defaults without writing to profile
+  - Ensure Save only persists when user has interacted
+  - VoiceOver: verify "170 centimetres" reads correctly
+  - No new Service or ViewModel needed — edit the existing State initializers
+
+- [ ] **Step 6: Add "Not sure yet" to Regular grade picker**
+  - In the V-Scale wheel, add a leading `"Not sure yet"` option that maps to `nil` grade
+  - In the YDS wheel, add the same
+  - When "Not sure yet" is selected: `isNotSureYet = true`, grade fields = nil
+  - When a specific grade is selected: `isNotSureYet = false`
+  - "Not sure yet" must NOT participate in grade sorting, highest grade, distribution, or filter
+  - New users with no saved grade default to "Not sure yet" selected
+  - Add `profileEdit.notSureYet` to String Catalog with en-AU value `"Not sure yet"`
+
+- [ ] **Step 7: Fix Light Mode visual hierarchy**
+  - Audit DesignTokens.swift light mode values:
+    - `backgroundPrimary` (.systemBackground): on light = pure white — too uniform with cards
+    - `surfacePrimary` (.secondarySystemBackground): on light = very light grey — minimal contrast
+    - `surfaceElevated` (.tertiarySystemBackground): on light = slightly different grey
+  - Replace system colors with explicit palette for light mode:
+    - `backgroundPrimary`: `Color(white: 0.96)` — soft off-white grouped background
+    - `surfacePrimary`: `.white` — clean card/surface
+    - `surfaceElevated`: `Color(white: 0.98)` — slightly elevated
+    - `separator`: `Color(white: 0.88)` — visible but subtle
+  - Keep Dark Mode values unchanged (`.systemBackground` etc. work well in dark)
+  - Check all pages listed in spec: Home, Map, Gym Detail, Wall Zone, Route Detail, Beta, Logbook, Profile, Settings, Empty/Offline/Error states
+  - Do NOT hardcode colors per page — fix at the token level
+  - Do NOT use shadows, heavy borders, or gradients for hierarchy — use subtle background differentiation only
+  - Ensure text contrast ratios remain accessible
+
+- [ ] **Step 8: Run tests — verify PASS**
+
+- [ ] **Step 9: Simulator verification**
+  - Device 1: iPhone 16 Pro (regular size)
+  - Device 2: iPhone SE or iPhone 13 mini (small size)
+  - Modes: Light + Dark
+  - Dynamic Type: Large
+  - Verification path:
+    1. Logbook empty state — button centered, not clipped by tab bar
+    2. Tap "Find a route" — navigates to map tab
+    3. Return to Logbook
+    4. Profile — "Climbing profile" section, Edit button shows "Edit"
+    5. Tap Edit — no raw `profile.*` keys visible
+    6. Height shows 170cm for new profile
+    7. Arm span shows 170cm for new profile
+    8. Regular grade shows "Not sure yet"
+    9. Select a grade, Cancel — grade reverts
+    10. Select "Not sure yet", Save — persists nil
+    11. Reopen — still shows "Not sure yet"
+    12. Toggle Light/Dark — backgrounds have visible hierarchy
+    13. Check Home, Gym Detail, Route Detail in Light Mode
+  - Screenshots to `/private/tmp/`
+
+- [ ] **Step 10: Accessibility check**
+  - VoiceOver reads all profile labels correctly
+  - Dynamic Type scales empty state and profile edit
+  - 44pt touch targets on buttons
+  - No raw localization keys in accessibility labels
+
+- [ ] **Step 11: Ponytail review**
+  - No new Service created for defaults
+  - No duplicate EmptyStateView component
+  - No new Design Token for a single color — fixed at existing token level
+  - No complex grade system for nil — simple boolean + nil
+  - No per-page color hardcoding
+  - No unnecessary包装层
+
+- [ ] **Step 12: Commit** `git commit -m "fix: polish logbook profile and light mode states"`
+
+---
+
 ## Self-Review
 
 - Spec coverage: all 12 phases map to spec §43; tokens §F, Route Detail §G hero, Home §18, Map §25, Beta §26, Logbook §27 all have tasks — no gaps
+- Task 13 adds: Logbook empty state layout, Profile localisation, Height/Arm span defaults, Regular grade "Not sure yet", Light Mode hierarchy
 - Placeholders: none — every step has file paths, code, or exact expectations
 - Type consistency: `BlocColor.routePalette` shape, `BlocTypography.grade` tabular, `RouteLifecycleIndicator` lifecycle enum consistent across Task 2-3
 

@@ -65,11 +65,15 @@ struct LogbookView: View {
             dashboard(data: data, isOffline: true)
         case .empty:
             VStack(spacing: DesignSpacing.medium) {
+                Spacer()
                 EmptyStateView(title: L10n.Logbook.emptyTitle, message: L10n.Logbook.emptyMessage, systemImage: "book.closed")
                 Button(L10n.Logbook.findRoute) { session.selectedTab = .map }
                     .buttonStyle(PrimaryButtonStyle())
                     .padding(.horizontal, DesignSpacing.large)
+                Spacer()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(DesignColour.backgroundSecondary)
         case .error:
             ErrorStateView(message: L10n.State.fixtureErrorMessage) {
                 Task { await viewModel.load() }
