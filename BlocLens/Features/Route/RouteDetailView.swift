@@ -629,24 +629,27 @@ struct RouteDetailView: View {
         case .initial, .loading:
             LoadingStateView()
         case .loaded(let links), .offlineWithCache(let links):
-            ForEach(links) { link in
-                BetaLinkCard(
-                    link: link,
-                    isHelpful: helpfulLinkIDs.contains(link.id),
-                    openOriginal: { showsExternalHandoffNotice = true },
-                    markHelpful: { markHelpful(link.id) },
-                    reportIssue: {
-                        reportBetaID = link.id
-                        requestContribution(.reportBeta)
-                    }
-                )
-            }
-            ForEach(viewModel.brokenLinks) { link in
-                Label(L10n.Beta.brokenLink, systemImage: "link.badge.plus")
-                    .foregroundStyle(DesignColour.destructive)
-                    .accessibilityLabel(
-                        "\(String(localized: L10n.Beta.brokenLink)): \(String(localized: L10n.betaPlatform(link.platform)))"
+            VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+                ForEach(links) { link in
+                    BetaLinkCard(
+                        link: link,
+                        isHelpful: helpfulLinkIDs.contains(link.id),
+                        openOriginal: { showsExternalHandoffNotice = true },
+                        markHelpful: { markHelpful(link.id) },
+                        reportIssue: {
+                            reportBetaID = link.id
+                            requestContribution(.reportBeta)
+                        }
                     )
+                }
+                ForEach(viewModel.brokenLinks) { link in
+                    Label(L10n.Beta.brokenLink, systemImage: "link.badge.plus")
+                        .font(BlocTypography.caption)
+                        .foregroundStyle(DesignColour.destructive)
+                        .accessibilityLabel(
+                            "\(String(localized: L10n.Beta.brokenLink)): \(String(localized: L10n.betaPlatform(link.platform)))"
+                        )
+                }
             }
         case .empty:
             Text(L10n.Beta.emptyMessage)
@@ -833,6 +836,7 @@ struct RouteDetailView: View {
     }
 }
 
+// Moonlitt video-first — thin wrapper so RouteDetail stays in Route module while Beta/* holds the interface.
 private struct BetaLinkCard: View {
     let link: BetaLink
     let isHelpful: Bool
@@ -841,44 +845,13 @@ private struct BetaLinkCard: View {
     let reportIssue: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.small) {
-            betaMetadataRow(
-                L10n.Beta.platform,
-                value: String(localized: L10n.betaPlatform(link.platform))
-            )
-            betaMetadataRow(L10n.Beta.originalAuthor, value: link.originalAuthor)
-            FlowLayout(tags: link.tags)
-            HelpfulCountView(count: link.helpfulCount + (isHelpful ? 1 : 0))
-
-            if link.embedSupport == .supported {
-                BetaVideoPlayerView(url: link.sourceURL)
-                    .frame(height: 210)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignRadius.small))
-            } else {
-                Button(L10n.Beta.openOriginalPost, action: openOriginal)
-                    .buttonStyle(SecondaryButtonStyle())
-            }
-            HStack {
-                Button(action: markHelpful) {
-                    Label(L10n.Beta.helpful, systemImage: isHelpful ? "hand.thumbsup.fill" : "hand.thumbsup")
-                }
-                    .buttonStyle(CompactActionButtonStyle())
-                    .disabled(isHelpful)
-                Button(L10n.Beta.reportIssue, action: reportIssue)
-                    .buttonStyle(CompactActionButtonStyle())
-            }
-        }
-        .padding(.vertical, DesignSpacing.small)
-        Divider()
-    }
-
-    private func betaMetadataRow(_ label: LocalizedStringResource, value: String) -> some View {
-        HStack {
-            Text(label)
-            Spacer()
-            Text(value)
-                .foregroundStyle(DesignColour.secondaryText)
-        }
+        BetaVideoCard(
+            link: link,
+            isHelpful: isHelpful,
+            openOriginal: openOriginal,
+            markHelpful: markHelpful,
+            reportIssue: reportIssue
+        )
     }
 }
 
@@ -910,21 +883,4 @@ private struct BetaLinkCard: View {
     .preferredColorScheme(.dark)
 }
 
-private struct FlowLayout: View {
-    let tags: [BetaTag]
 
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
-                ForEach(tags, id: \.self) { tag in
-                    Text(L10n.betaTag(tag))
-                        .font(.caption)
-                        .padding(.horizontal, DesignSpacing.small)
-                        .padding(.vertical, DesignSpacing.xSmall)
-                        .background(DesignColour.surface, in: Capsule())
-                }
-            }
-        }
-    }
-
-}
