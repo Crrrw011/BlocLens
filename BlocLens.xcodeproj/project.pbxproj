@@ -33,6 +33,7 @@
 		B8A27300303D1CE7006E5A98 /* BlocLens.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BlocLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B8A2730D303D1CE8006E5A98 /* BlocLensTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlocLensTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B8A27317303D1CE8006E5A98 /* BlocLensUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlocLensUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0FFEE000000000000000001 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -100,6 +101,7 @@
 				B8A27302303D1CE7006E5A98 /* BlocLens */,
 				B8A27310303D1CE8006E5A98 /* BlocLensTests */,
 				B8A2731A303D1CE8006E5A98 /* BlocLensUITests */,
+				C0FFEE000000000000000001 /* Config.xcconfig */,
 				B8A27301303D1CE7006E5A98 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -302,6 +304,7 @@
 /* Begin XCBuildConfiguration section */
 		B8A2731F303D1CE8006E5A98 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0FFEE000000000000000001 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -366,6 +369,7 @@
 		};
 		B8A27320303D1CE8006E5A98 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0FFEE000000000000000001 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -423,6 +427,7 @@
 		};
 		B8A27322303D1CE8006E5A98 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0FFEE000000000000000001 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -458,6 +463,7 @@
 		};
 		B8A27323303D1CE8006E5A98 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0FFEE000000000000000001 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

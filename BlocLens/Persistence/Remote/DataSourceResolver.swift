@@ -42,12 +42,15 @@ enum DataSourceResolver {
         // 3. Explicit remote launch arguments (Debug)
         if arguments.contains("--cloud-supabase") {
             if let config = try? LocalEnvironmentConfiguration.makeCloud(environment: environment, infoDictionary: infoDictionary) {
+                // Persist for subsequent home-screen launches (no args)
+                try? PersistedRemoteConfigurationStore.save(config)
                 return .supabase(configuration: config, reason: "LaunchArgument --cloud-supabase")
             }
             return .error(reason: "Missing BLOCLENS_CLOUD_URL/BLOCLENS_CLOUD_ANON_KEY for --cloud-supabase")
         }
         if arguments.contains("--local-supabase") {
             if let config = try? LocalEnvironmentConfiguration.make(environment: environment, infoDictionary: infoDictionary) {
+                try? PersistedRemoteConfigurationStore.save(config)
                 return .supabase(configuration: config, reason: "LaunchArgument --local-supabase")
             }
             return .error(reason: "Missing BLOCLENS_SUPABASE_URL/BLOCLENS_SUPABASE_ANON_KEY for --local-supabase")
