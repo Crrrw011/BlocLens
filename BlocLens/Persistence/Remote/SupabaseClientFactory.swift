@@ -7,8 +7,8 @@ nonisolated enum SupabaseClientFactory {
         authStorage: (any AuthLocalStorage)? = nil
     ) -> SupabaseClient {
         let options = authStorage.map {
-            SupabaseClientOptions(auth: .init(storage: $0))
-        } ?? SupabaseClientOptions()
+            SupabaseClientOptions(auth: .init(storage: $0, emitLocalSessionAsInitialSession: true))
+        } ?? SupabaseClientOptions(auth: .init(emitLocalSessionAsInitialSession: true))
         return SupabaseClient(
             supabaseURL: configuration.projectURL,
             supabaseKey: configuration.publishableKey,
