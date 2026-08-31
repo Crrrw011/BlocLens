@@ -108,7 +108,6 @@ struct GymDetailView: View {
                 .padding(.bottom, DesignSpacing.medium)
         }
         .frame(maxWidth: .infinity)
-        .aspectRatio(4 / 3, contentMode: .fit)
         .clipped()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: "\(gym.name) \(gym.suburb)"))
