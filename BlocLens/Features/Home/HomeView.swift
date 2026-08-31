@@ -92,27 +92,10 @@ struct HomeView: View {
                     .padding(.top, DesignSpacing.medium)
                     .padding(.bottom, DesignSpacing.large)
                 } else {
-                    VStack(alignment: .leading, spacing: DesignSpacing.large) {
-                        // Safe area spacer for Dynamic Island / status bar when no hero image
-                        Color.clear.frame(height: 12).listRowInsets(EdgeInsets())
-                        if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
-                        if session.authenticationState.isSignedIn {
-                            VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-                                Label("Choose your favourite gym", systemImage: "star.circle")
-                                    .font(.headline)
-                                    .foregroundStyle(DesignColour.textPrimary)
-                                Text("Select a gym to see its wall and reset information on your home screen.")
-                                    .font(DesignTypography.supporting)
-                                    .foregroundStyle(DesignColour.textSecondary)
-                                Button { showsFavouritePicker = true } label: {
-                                    Label("Select Favourite Gym", systemImage: "mappin.and.ellipse")
-                                }
-                                .buttonStyle(PrimaryButtonStyle())
-                            }
-                            .padding(DesignSpacing.medium)
-                            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
-                            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
-                        } else {
+                    if !session.authenticationState.isSignedIn {
+                        // Guest: only Welcome, visually centered between nav and tab bar
+                        VStack {
+                            Spacer()
                             VStack(alignment: .leading, spacing: DesignSpacing.medium) {
                                 Label("Welcome to BlocLens", systemImage: "mountain.2.circle")
                                     .font(.headline)
@@ -128,14 +111,39 @@ struct HomeView: View {
                             .padding(DesignSpacing.medium)
                             .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
                             .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+                            .padding(.horizontal, DesignSpacing.medium)
+                            Spacer()
                         }
-                        activeProjectsSection(data: data)
-                        freshSetsSection(data: data)
-                        recentClimbsSection(data: data)
+                        .frame(maxWidth: .infinity, minHeight: 500)
+                        .padding(.vertical, DesignSpacing.large)
+                    } else {
+                        // Signed-in but no favourite: Choose card + other sections, with more top breathing room
+                        VStack(alignment: .leading, spacing: DesignSpacing.large) {
+                            Color.clear.frame(height: 32)
+                            if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
+                            VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+                                Label("Choose your favourite gym", systemImage: "star.circle")
+                                    .font(.headline)
+                                    .foregroundStyle(DesignColour.textPrimary)
+                                Text("Select a gym to see its wall and reset information on your home screen.")
+                                    .font(DesignTypography.supporting)
+                                    .foregroundStyle(DesignColour.textSecondary)
+                                Button { showsFavouritePicker = true } label: {
+                                    Label("Select Favourite Gym", systemImage: "mappin.and.ellipse")
+                                }
+                                .buttonStyle(PrimaryButtonStyle())
+                            }
+                            .padding(DesignSpacing.medium)
+                            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+                            activeProjectsSection(data: data)
+                            freshSetsSection(data: data)
+                            recentClimbsSection(data: data)
+                        }
+                        .padding(.horizontal, DesignSpacing.medium)
+                        .padding(.top, DesignSpacing.small)
+                        .padding(.vertical, DesignSpacing.small)
                     }
-                    .padding(.horizontal, DesignSpacing.medium)
-                    .padding(.top, DesignSpacing.large)
-                    .padding(.vertical, DesignSpacing.small)
                 }
             }
         }
