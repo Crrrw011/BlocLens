@@ -98,7 +98,7 @@ struct GymDetailView: View {
                 gymName: gym.name,
                 loader: environment.gymPhotoLoader,
                 width: 1200,
-                aspectRatio: 4 / 3,
+                aspectRatio: 16 / 9,
                 cornerRadius: 0
             )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)

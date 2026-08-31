@@ -11,6 +11,8 @@ struct GymPhotoCarouselView: View {
 
     @StateObject private var viewModel: GymPhotoCarouselViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
 
     init(placeID: String?, gymName: String, loader: any GymPhotoLoader, width: Int = 800, aspectRatio: CGFloat = 16/9, cornerRadius: CGFloat = BlocRadius.container, onTap: (() -> Void)? = nil) {
         self.placeID = placeID
@@ -27,14 +29,15 @@ struct GymPhotoCarouselView: View {
         Group {
             if !viewModel.hasContent {
                 placeholder
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(aspectRatio, contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .accessibilityLabel(Text("Photo of \(gymName)"))
                     .accessibilityIdentifier("gym-photo-placeholder")
             } else {
                 carouselContent
             }
         }
+        .aspectRatio(aspectRatio, contentMode: .fit)
+        .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .task {
             await viewModel.onAppear()
@@ -49,34 +52,67 @@ struct GymPhotoCarouselView: View {
 
     @ViewBuilder
     private var carouselContent: some View {
-        VStack(spacing: 6) {
-            TabView(selection: $viewModel.selectedIndex) {
-                ForEach(0..<viewModel.displayCount, id: \.self) { index in
-                    photoPage(at: index)
-                        .tag(index)
-                        .accessibilityIdentifier("gym-photo-page-\(index)")
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: viewModel.selectedIndex)
-            .frame(maxWidth: .infinity)
-            .aspectRatio(aspectRatio, contentMode: .fit)
-            .clipped()
-
-            if viewModel.shouldShowIndicator {
-                HStack(spacing: 6) {
-                    ForEach(0..<viewModel.displayCount, id: \.self) { index in
-                        Circle()
-                            .fill(index == viewModel.selectedIndex ? DesignColour.brandPrimary : DesignColour.separator)
-                            .frame(width: 6, height: 6)
-                            .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: viewModel.selectedIndex)
-                    }
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(Text("Photo \(viewModel.selectedIndex + 1) of \(viewModel.displayCount)"))
-                .accessibilityIdentifier("gym-photo-indicator")
+        TabView(selection: $viewModel.selectedIndex) {
+            ForEach(0..<viewModel.displayCount, id: \.self) { index in
+                photoPage(at: index)
+                    .tag(index)
+                    .accessibilityIdentifier("gym-photo-page-\(index)")
             }
         }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: viewModel.selectedIndex)
+        .overlay(alignment: .bottom) {
+            if viewModel.shouldShowIndicator {
+                pageIndicator
+                    .padding(.bottom, 12)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private var pageIndicator: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<viewModel.displayCount, id: \.self) { index in
+                Circle()
+                    .fill(indicatorDotFill(isSelected: index == viewModel.selectedIndex))
+                    .frame(width: index == viewModel.selectedIndex ? 7 : 6, height: index == viewModel.selectedIndex ? 7 : 6)
+                    .overlay {
+                        if index == viewModel.selectedIndex {
+                            Circle().stroke(Color.black.opacity(0.12), lineWidth: 0.5)
+                        } else if differentiateWithoutColor {
+                            Circle().stroke(Color.white.opacity(0.65), lineWidth: 0.6)
+                        }
+                    }
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background {
+            Capsule()
+                .fill(indicatorBackground)
+                .overlay { Capsule().fill(Color.black.opacity(indicatorBackgroundOpacity)) }
+        }
+        .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
+        .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Photo \(viewModel.selectedIndex + 1) of \(viewModel.displayCount)"))
+        .accessibilityValue(Text("Photo \(viewModel.selectedIndex + 1) of \(viewModel.displayCount)"))
+        .accessibilityAddTraits(.isImage)
+        .accessibilityIdentifier("gym-photo-indicator")
+    }
+
+    private func indicatorDotFill(isSelected: Bool) -> Color {
+        if isSelected { return .white }
+        return Color.white.opacity(0.45)
+    }
+
+    private var indicatorBackground: Material {
+        reduceTransparency ? .regularMaterial : .ultraThinMaterial
+    }
+
+    private var indicatorBackgroundOpacity: Double {
+        reduceTransparency ? 0.08 : 0.12
     }
 
     @ViewBuilder
@@ -85,6 +121,7 @@ struct GymPhotoCarouselView: View {
             switch viewModel.states[index] {
             case .idle, .loading, .none:
                 placeholder
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay { ProgressView().tint(.white).accessibilityIdentifier("gym-photo-loading-\(index)") }
             case .loaded(let photo):
                 Group {
@@ -92,6 +129,7 @@ struct GymPhotoCarouselView: View {
                         // Mock/seed image – deterministic color fallback, real URIs will be googleusercontent and take else branch
                         Rectangle()
                             .fill(Color(hue: Double(index + 1) * 0.2, saturation: 0.55, brightness: 0.85))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .overlay {
                                 VStack(spacing: 6) {
                                     Image(systemName: "photo.on.rectangle")
@@ -107,16 +145,24 @@ struct GymPhotoCarouselView: View {
                             switch phase {
                             case .success(let image):
                                 image.resizable().scaledToFill()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .clipped()
                             case .failure:
                                 errorView(at: index)
                             case .empty:
-                                placeholder.overlay { ProgressView() }
-                            @unknown default:
                                 placeholder
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .overlay { ProgressView().tint(.white) }
+                            @unknown default:
+                                placeholder.frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
                 .overlay(alignment: .bottomLeading) {
                     if let attr = photo.attribution, !photo.imageURL.absoluteString.contains("picsum.photos") {
                         Text(attr)
@@ -133,9 +179,10 @@ struct GymPhotoCarouselView: View {
             case .error:
                 errorView(at: index)
             case .empty:
-                placeholder
+                placeholder.frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .task {
             // Ensure this page's photo is loaded when it becomes visible via paging
@@ -153,12 +200,14 @@ struct GymPhotoCarouselView: View {
     private var placeholder: some View {
         Rectangle()
             .fill(BlocColor.opticBlueTint)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
                 Image(systemName: "building.2.crop.circle")
                     .font(.system(size: 48))
                     .foregroundStyle(.white.opacity(0.6))
                     .accessibilityHidden(true)
             }
+            .clipped()
     }
 
     private func errorView(at index: Int) -> some View {
@@ -179,6 +228,8 @@ struct GymPhotoCarouselView: View {
             }
             .padding()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
         .accessibilityLabel(Text("Photo failed to load"))
     }
 }
