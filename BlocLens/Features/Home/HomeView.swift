@@ -93,7 +93,7 @@ struct HomeView: View {
                     .padding(.bottom, DesignSpacing.large)
                 } else {
                     if !session.authenticationState.isSignedIn {
-                        // Guest: only Welcome, visually centered between nav and tab bar
+                        // Guest: Welcome large section with nearby gym map, centered
                         VStack {
                             Spacer()
                             VStack(alignment: .leading, spacing: DesignSpacing.medium) {
@@ -103,6 +103,7 @@ struct HomeView: View {
                                 Text("Sign in to personalise your home, track projects and get wall updates for your favourite gym.")
                                     .font(DesignTypography.supporting)
                                     .foregroundStyle(DesignColour.textSecondary)
+                                NearbyGymSection(environment: environment)
                                 Button { _ = session.requireAuthentication(for: .account) } label: {
                                     Label("Sign In", systemImage: "person.crop.circle.badge.checkmark")
                                 }
