@@ -45,14 +45,42 @@ final class HomeViewModel: ObservableObject {
     func load(favouriteGymID: GymID? = nil) async {
         state = .loading
         do {
-            async let gymRequest = environment.gymRepository.allGyms()
-            async let routeRequest = environment.routeRepository.allRoutes()
-            async let entryRequest = currentUserEntries()
-            let (gyms, routes, entries) = try await (gymRequest, routeRequest, entryRequest)
+            let gyms: [Gym]
+            let routes: [ClimbingRoute]
+            let entries: [LogbookEntry]
+            do {
+                async let gymRequest = environment.gymRepository.allGyms()
+                async let routeRequest = environment.routeRepository.allRoutes()
+                async let entryRequest = currentUserEntries()
+                (gyms, routes, entries) = try await (gymRequest, routeRequest, entryRequest)
+            } catch {
+                #if DEBUG
+                if environment.dataAvailability == .online {
+                    // Cloud path failed – fallback to fixtures for guest demo
+                    gyms = DevelopmentFixtures.gyms
+                    routes = DevelopmentFixtures.routes
+                    entries = (try? await currentUserEntries()) ?? []
+                } else {
+                    throw error
+                }
+                #else
+                throw error
+                #endif
+            }
             let routesByID = Dictionary(uniqueKeysWithValues: routes.map { ($0.id, $0) })
-            var zones: [WallZone] = []
-            for gym in gyms {
-                zones.append(contentsOf: try await environment.gymRepository.wallZones(gymID: gym.id))
+            let zones: [WallZone]
+            do {
+                zones = try await environment.gymRepository.allWallZones()
+            } catch {
+                #if DEBUG
+                if environment.dataAvailability == .online {
+                    zones = DevelopmentFixtures.wallZones
+                } else {
+                    throw error
+                }
+                #else
+                throw error
+                #endif
             }
             let gymsByID = Dictionary(uniqueKeysWithValues: gyms.map { ($0.id, $0) })
             let zonesByID = Dictionary(uniqueKeysWithValues: zones.map { ($0.id, $0) })

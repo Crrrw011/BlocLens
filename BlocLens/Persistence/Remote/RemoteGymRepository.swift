@@ -13,13 +13,38 @@ actor RemoteGymRepository: GymRepository {
         async let zoneRequest = dataSource.fetchWallZoneSummaries()
         let (records, facilities, zones) = try await (gymRequest, facilityRequest, zoneRequest)
 
+        // Fetch hardSoft bands concurrently with graceful fallback
+        var hardSoftByGymID: [UUID: HardSoftSummary] = [:]
+        let ds = dataSource
+        try await withThrowingTaskGroup(of: (UUID, HardSoftSummary).self) { group in
+            for record in records {
+                let recordID = record.id
+                group.addTask {
+                    do {
+                        let bands = try await ds.fetchHardSoftBands(gymID: recordID)
+                        let overall = try Self.overallHardSoft(from: bands)
+                        return (recordID, overall)
+                    } catch {
+                        return (recordID, .insufficientData)
+                    }
+                }
+            }
+            for try await (gymID, summary) in group {
+                hardSoftByGymID[gymID] = summary
+            }
+        }
+
         var gyms: [Gym] = []
         gyms.reserveCapacity(records.count)
         for record in records {
             try Task.checkCancellation()
-            let bands = try await dataSource.fetchHardSoftBands(gymID: record.id)
-            let overall = try Self.overallHardSoft(from: bands)
-            gyms.append(try Self.domain(record, facilities: facilities, zones: zones, hardSoft: overall))
+            let overall = hardSoftByGymID[record.id] ?? .insufficientData
+            do {
+                gyms.append(try Self.domain(record, facilities: facilities, zones: zones, hardSoft: overall))
+            } catch {
+                // Skip gyms that fail mapping but don't fail whole load
+                continue
+            }
         }
         return gyms.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }

@@ -89,16 +89,16 @@ struct GymPhotoCarouselView: View {
             case .loaded(let photo):
                 Group {
                     if photo.imageURL.absoluteString.contains("picsum.photos") || photo.imageURL.absoluteString.contains("example.com") {
-                        // Mock image – show deterministic color without network
+                        // Mock/seed image – deterministic color fallback, real URIs will be googleusercontent and take else branch
                         Rectangle()
-                            .fill(Color(hue: Double(index) * 0.2, saturation: 0.5, brightness: 0.8))
+                            .fill(Color(hue: Double(index + 1) * 0.2, saturation: 0.55, brightness: 0.85))
                             .overlay {
-                                VStack {
-                                    Image(systemName: "photo")
-                                        .font(.system(size: 32))
-                                        .foregroundStyle(.white.opacity(0.8))
+                                VStack(spacing: 6) {
+                                    Image(systemName: "photo.on.rectangle")
+                                        .font(.system(size: 28))
+                                        .foregroundStyle(.white.opacity(0.85))
                                     if let attr = photo.attribution {
-                                        Text(attr).font(.caption).foregroundStyle(.white)
+                                        Text(attr).font(.caption2.weight(.medium)).foregroundStyle(.white.opacity(0.9))
                                     }
                                 }
                             }
