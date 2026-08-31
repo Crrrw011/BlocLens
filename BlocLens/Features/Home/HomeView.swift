@@ -90,7 +90,12 @@ struct HomeView: View {
 
     private func currentGymHero(gym: Gym) -> some View {
         ZStack(alignment: .bottomLeading) {
-            heroWallFill
+            GymPhotoView(
+                placeID: gym.googlePlaceID,
+                gymName: gym.name,
+                photoService: environment.gymPhotoService,
+                width: 800
+            )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
             floatingCapsules(gym: gym)
                 .padding(.horizontal, DesignSpacing.medium)
@@ -101,13 +106,6 @@ struct HomeView: View {
         .clipped()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: "\(gym.name) \(gym.suburb)"))
-    }
-
-    private var heroWallFill: some View {
-        ZStack {
-            BlocColor.opticBlueTint
-            Rectangle().fill(Color.white.opacity(0.04))
-        }
     }
 
     private func floatingCapsules(gym: Gym) -> some View {

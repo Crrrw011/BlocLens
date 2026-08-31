@@ -96,7 +96,12 @@ struct GymDetailView: View {
 
     private var heroPhotoSection: some View {
         ZStack(alignment: .bottomLeading) {
-            heroWallFill
+            GymPhotoView(
+                placeID: gym.googlePlaceID,
+                gymName: gym.name,
+                photoService: environment.gymPhotoService,
+                width: 1200
+            )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
             floatingCapsules
                 .padding(.horizontal, DesignSpacing.medium)
@@ -107,18 +112,6 @@ struct GymDetailView: View {
         .clipped()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: "\(gym.name) \(gym.suburb)"))
-    }
-
-    private var heroWallFill: some View {
-        ZStack {
-            gymBaseColor
-            Rectangle().fill(Color.white.opacity(0.04))
-        }
-    }
-
-    private var gymBaseColor: Color {
-        // Gym as live place — opticBlueTint base like comp wall; no per-gym photo yet (external-public-link-only).
-        BlocColor.opticBlueTint
     }
 
     private var floatingCapsules: some View {
