@@ -5368,6 +5368,29 @@
         }
       }
     },
+    "Photo of %@" : {
+
+    },
+    "profile.accountAccess" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account access"
+          }
+        }
+      }
+    },
+    "profile.administratorAccess" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Administrator access"
+          }
+        }
+      }
+    },
     "profile.armSpan" : {
       "localizations" : {
         "en-AU" : {
@@ -5452,6 +5475,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "贡献者进度"
+          }
+        }
+      }
+    },
+    "profile.contributors" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contributors"
           }
         }
       }
@@ -5620,6 +5653,16 @@
         }
       }
     },
+    "profile.moderatorAccess" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moderator access"
+          }
+        }
+      }
+    },
     "profile.notProvided" : {
       "localizations" : {
         "en-AU" : {
@@ -5642,66 +5685,6 @@
         }
       }
     },
-    "profile.accountAccess" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account access"
-          }
-        }
-      }
-    },
-    "profile.administratorAccess" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Administrator access"
-          }
-        }
-      }
-    },
-    "profile.contributors" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Contributors"
-          }
-        }
-      }
-    },
-    "profile.moderatorAccess" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Moderator access"
-          }
-        }
-      }
-    },
-    "profile.roleChecksNote" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Role checks come from the authenticated session. Full moderation tools remain on the separate web surface."
-          }
-        }
-      }
-    },
-    "profile.verifiedGymAccess" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verified gym access"
-          }
-        }
-      }
-    },
     "profile.regularGrade" : {
       "localizations" : {
         "en-AU" : {
@@ -5720,6 +5703,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "常爬等级"
+          }
+        }
+      }
+    },
+    "profile.roleChecksNote" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Role checks come from the authenticated session. Full moderation tools remain on the separate web surface."
           }
         }
       }
@@ -5830,6 +5823,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "可信贡献者"
+          }
+        }
+      }
+    },
+    "profile.verifiedGymAccess" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verified gym access"
           }
         }
       }
@@ -7670,16 +7673,6 @@
         }
       }
     },
-    "settings.supportSection" : {
-      "localizations" : {
-        "en-AU" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Support"
-          }
-        }
-      }
-    },
     "settings.privacy" : {
       "localizations" : {
         "en-AU" : {
@@ -7808,6 +7801,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "退出登录"
+          }
+        }
+      }
+    },
+    "settings.supportSection" : {
+      "localizations" : {
+        "en-AU" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support"
           }
         }
       }

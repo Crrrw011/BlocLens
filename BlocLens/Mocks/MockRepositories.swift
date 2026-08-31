@@ -1,5 +1,16 @@
 import Foundation
 
+struct MockGymPhotoService: GymPhotoService, Sendable {
+    var photoToReturn: GymPhoto?
+
+    func fetchPhoto(for placeID: String, width: Int) async throws -> GymPhoto {
+        guard let photo = photoToReturn else {
+            throw RepositoryError.externalServiceError
+        }
+        return photo
+    }
+}
+
 actor MockGymRepository: GymRepository {
     private let gyms: [Gym]
     private let zones: [WallZone]

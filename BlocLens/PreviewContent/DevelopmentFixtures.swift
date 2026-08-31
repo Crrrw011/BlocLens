@@ -44,7 +44,7 @@ nonisolated enum DevelopmentFixtures {
             wallZoneIDs: zoneIDs(for: "urban-climb-west-end"),
             operatingSummary: .developmentFixture,
             dataSourceState: .developmentFixture,
-            googlePlaceID: nil
+            googlePlaceID: "ChIJrTKIuKxRlEwRVOGeuGnCAVA"
         ),
         Gym(
             id: "urban-climb-newstead",
