@@ -9,6 +9,7 @@ struct ProfileEditState {
     var vGrade: VGrade?
     var ydsGrade: YDSGrade?
     var isNotSureYet: Bool
+    var favouriteGymID: GymID?
 
     private static let defaultHeight: Double = 170
     private static let defaultArmSpan: Double = 170
@@ -23,6 +24,7 @@ struct ProfileEditState {
             vGrade = profile.regularGrade
             ydsGrade = profile.ydsGrade
             isNotSureYet = profile.regularGrade == nil && profile.ydsGrade == nil && profile.gradeSystem == nil
+            favouriteGymID = profile.favouriteGymID
         } else {
             heightCentimetres = Self.defaultHeight
             armSpanCentimetres = Self.defaultArmSpan
@@ -32,6 +34,7 @@ struct ProfileEditState {
             vGrade = nil
             ydsGrade = nil
             isNotSureYet = true
+            favouriteGymID = nil
         }
     }
 

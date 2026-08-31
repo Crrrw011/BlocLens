@@ -4,6 +4,7 @@ struct HomeView: View {
     let environment: AppEnvironment
     @ObservedObject var session: AppSession
     @StateObject private var viewModel: HomeViewModel
+    @State private var showsFavouritePicker = false
     @Namespace private var heroNS
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -21,7 +22,18 @@ struct HomeView: View {
                 .navigationDestination(for: WallZone.self) { WallZoneRouteListView(wallZone: $0, environment: environment, session: session) }
                 .navigationDestination(for: ClimbingRoute.self) { RouteDetailView(route: $0, environment: environment, session: session) }
         }
-        .onAppear { Task { await viewModel.load() } }
+        .onAppear { Task { await viewModel.load(favouriteGymID: session.authenticationState.profile?.favouriteGymID) } }
+        .onChange(of: session.authenticationState.profile?.favouriteGymID) { _, newID in
+            Task { await viewModel.load(favouriteGymID: newID) }
+        }
+        .sheet(isPresented: $showsFavouritePicker) {
+            FavouriteGymPickerView(environment: environment, selectedGymID: Binding(
+                get: { session.authenticationState.profile?.favouriteGymID },
+                set: { _ in }
+            )) { gym in
+                Task { await session.updateFavouriteGym(gym.id) }
+            }
+        }
     }
 
     @ViewBuilder
@@ -50,6 +62,17 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: DesignSpacing.large) {
                         if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
                         currentGymTitle(gym: gym)
+                        Button {
+                            if session.authenticationState.isSignedIn {
+                                showsFavouritePicker = true
+                            } else {
+                                _ = session.requireAuthentication(for: .account)
+                            }
+                        } label: {
+                            Label("Change Favourite Gym", systemImage: "pencil.circle")
+                                .font(DesignTypography.supporting.weight(.medium))
+                                .foregroundStyle(BlocColor.opticBlue)
+                        }
                         Divider().overlay(DesignColour.separator.opacity(0.35)).padding(.horizontal, DesignSpacing.medium)
                         currentGymMetadata(gym: gym, data: data)
                         activeProjectsSection(data: data)
@@ -71,8 +94,28 @@ struct HomeView: View {
                 } else {
                     VStack(alignment: .leading, spacing: DesignSpacing.large) {
                         if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
-                        compactEmpty(message: L10n.Home.noFrequentGym, systemImage: "mappin.slash")
-                            .padding(.top, DesignSpacing.medium)
+                        VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+                            Label("Choose your favourite gym", systemImage: "star.circle")
+                                .font(.headline)
+                                .foregroundStyle(DesignColour.textPrimary)
+                            Text("Select a gym to see its wall and reset information on your home screen.")
+                                .font(DesignTypography.supporting)
+                                .foregroundStyle(DesignColour.textSecondary)
+                            Button {
+                                if session.authenticationState.isSignedIn {
+                                    showsFavouritePicker = true
+                                } else {
+                                    _ = session.requireAuthentication(for: .account)
+                                }
+                            } label: {
+                                Label("Select Favourite Gym", systemImage: "mappin.and.ellipse")
+                            }
+                            .buttonStyle(PrimaryButtonStyle())
+                        }
+                        .padding(DesignSpacing.medium)
+                        .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                        .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+                        .padding(.top, DesignSpacing.medium)
                         activeProjectsSection(data: data)
                         freshSetsSection(data: data)
                         recentClimbsSection(data: data)

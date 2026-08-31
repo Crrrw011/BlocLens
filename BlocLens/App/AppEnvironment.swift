@@ -213,6 +213,19 @@ final class AppSession: ObservableObject {
         authenticationState = await authenticationRepository.updateProfileDetails(details)
     }
 
+    func updateFavouriteGym(_ gymID: GymID?) async {
+        let current = authenticationState.profile
+        let details = ProfileDetailsUpdate(
+            heightCentimetres: current?.heightCentimetres,
+            armSpanCentimetres: current?.armSpanCentimetres,
+            regularGrade: current?.regularGrade,
+            gradeSystem: current?.gradeSystem,
+            ydsGrade: current?.ydsGrade,
+            favouriteGymID: gymID
+        )
+        await updateProfileDetails(details)
+    }
+
     func sendEmailOTP(email: String) async {
         authenticationState = await authenticationRepository.sendEmailOTP(email: email)
     }

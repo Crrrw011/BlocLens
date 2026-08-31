@@ -73,10 +73,10 @@ struct ProfileView: View {
         .background(DesignColour.backgroundSecondary)
         .accessibilityIdentifier("profile-signed-in")
         .sheet(isPresented: $editingProfile) {
-            ProfileEditView(session: session)
+            ProfileEditView(environment: environment, session: session)
         }
         .sheet(isPresented: $session.shouldPresentProfileSetup) {
-            ProfileEditView(session: session).interactiveDismissDisabled()
+            ProfileEditView(environment: environment, session: session).interactiveDismissDisabled()
         }
     }
 

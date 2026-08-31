@@ -62,7 +62,35 @@ actor MockAuthenticationRepository: AuthenticationRepository {
     }
 
     func updateProfileDetails(_ details: ProfileDetailsUpdate) -> AuthenticationState {
-        authenticationState = .signedIn(profile)
+        if case .signedIn(let current) = authenticationState {
+            let updated = UserProfile(
+                userID: current.userID,
+                username: current.username,
+                heightCentimetres: details.heightCentimetres ?? current.heightCentimetres,
+                armSpanCentimetres: details.armSpanCentimetres ?? current.armSpanCentimetres,
+                regularGrade: details.regularGrade ?? current.regularGrade,
+                gradeSystem: details.gradeSystem ?? current.gradeSystem,
+                ydsGrade: details.ydsGrade ?? current.ydsGrade,
+                favouriteGymID: details.favouriteGymID ?? current.favouriteGymID,
+                isTrustedContributor: current.isTrustedContributor,
+                helpfulVotes: current.helpfulVotes
+            )
+            authenticationState = .signedIn(updated)
+        } else if case .profileSetup(let current) = authenticationState {
+            let updated = UserProfile(
+                userID: current.userID,
+                username: current.username,
+                heightCentimetres: details.heightCentimetres ?? current.heightCentimetres,
+                armSpanCentimetres: details.armSpanCentimetres ?? current.armSpanCentimetres,
+                regularGrade: details.regularGrade ?? current.regularGrade,
+                gradeSystem: details.gradeSystem ?? current.gradeSystem,
+                ydsGrade: details.ydsGrade ?? current.ydsGrade,
+                favouriteGymID: details.favouriteGymID ?? current.favouriteGymID,
+                isTrustedContributor: current.isTrustedContributor,
+                helpfulVotes: current.helpfulVotes
+            )
+            authenticationState = .profileSetup(updated)
+        }
         return authenticationState
     }
 

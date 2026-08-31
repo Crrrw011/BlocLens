@@ -31,6 +31,7 @@ nonisolated struct ProfileDetailsUpdate: Equatable, Sendable {
     let regularGrade: VGrade?
     let gradeSystem: GradeSystem?
     let ydsGrade: YDSGrade?
+    let favouriteGymID: GymID?
 }
 
 struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
@@ -149,7 +150,8 @@ struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
             "grade_system": details.gradeSystem.map { AnyJSON.string($0.rawValue) } ?? AnyJSON.null,
             "yds_grade": details.gradeSystem == .yds
                 ? (details.ydsGrade.map { AnyJSON.string($0.rawValue) } ?? AnyJSON.null)
-                : AnyJSON.null
+                : AnyJSON.null,
+            "favourite_gym_id": details.favouriteGymID.map { AnyJSON.string($0.rawValue) } ?? AnyJSON.null
         ]
         _ = try await client
             .from("profiles")

@@ -42,7 +42,7 @@ final class HomeViewModel: ObservableObject {
         self.environment = environment
     }
 
-    func load() async {
+    func load(favouriteGymID: GymID? = nil) async {
         state = .loading
         do {
             async let gymRequest = environment.gymRepository.allGyms()
@@ -80,7 +80,7 @@ final class HomeViewModel: ObservableObject {
                 .filter { $0.latestResetDate != nil }
                 .sorted { ($0.latestResetDate ?? .distantPast) > ($1.latestResetDate ?? .distantPast) }
             let data = HomeDashboardData(
-                frequentGym: gyms.first { $0.id == DevelopmentFixtures.mockProfile.favouriteGymID } ?? gyms.first,
+                frequentGym: favouriteGymID.flatMap { id in gyms.first { $0.id == id } },
                 projects: projects,
                 resets: Array(resets.prefix(3)),
                 recentRecords: Array(recent),

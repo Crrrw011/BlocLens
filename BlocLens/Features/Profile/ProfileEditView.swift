@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProfileEditView: View {
+    let environment: AppEnvironment
     @ObservedObject var session: AppSession
     @Environment(\.dismiss) private var dismiss
     @State private var isSaving = false
@@ -14,8 +15,12 @@ struct ProfileEditView: View {
     @State private var vGrade: VGrade?
     @State private var ydsGrade: YDSGrade?
     @State private var isNotSureYet: Bool
+    @State private var favouriteGymID: GymID?
+    @State private var favouriteGymName: String = String(localized: "Not selected")
+    @State private var showsGymPicker = false
 
-    init(session: AppSession) {
+    init(environment: AppEnvironment, session: AppSession) {
+        self.environment = environment
         self.session = session
         let state = ProfileEditState(profile: session.authenticationState.profile)
         _height = State(initialValue: state.heightCentimetres)
@@ -26,6 +31,7 @@ struct ProfileEditView: View {
         _vGrade = State(initialValue: state.vGrade)
         _ydsGrade = State(initialValue: state.ydsGrade)
         _isNotSureYet = State(initialValue: state.isNotSureYet)
+        _favouriteGymID = State(initialValue: state.favouriteGymID)
     }
 
     private var isGradeSet: Bool {
@@ -55,6 +61,23 @@ struct ProfileEditView: View {
                     )
                 } header: {
                     labeledHeader(L10n.ProfileEdit.measurements, icon: "figure.stand")
+                }
+
+                Section {
+                    HStack {
+                        Label {
+                            Text(L10n.Profile.favouriteGym).font(DesignTypography.body)
+                        } icon: {
+                            Image(systemName: "mappin.circle").foregroundStyle(BlocColor.opticBlue)
+                        }
+                        Spacer()
+                        Text(favouriteGymName).font(DesignTypography.supporting).foregroundStyle(.secondary).lineLimit(1)
+                        Button("Select") { showsGymPicker = true }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(BlocColor.opticBlue)
+                    }
+                } header: {
+                    Label { Text(L10n.Profile.favouriteGym) } icon: { Image(systemName: "star.circle") }
                 }
 
                 Section {
@@ -140,6 +163,26 @@ struct ProfileEditView: View {
                     .disabled(isSaving)
                 }
             }
+            .task { await loadFavouriteGymName() }
+            .sheet(isPresented: $showsGymPicker) {
+                FavouriteGymPickerView(environment: environment, selectedGymID: $favouriteGymID) { gym in
+                    favouriteGymID = gym.id
+                    favouriteGymName = gym.name
+                }
+            }
+        }
+    }
+
+    private func loadFavouriteGymName() async {
+        guard let gymID = favouriteGymID else {
+            favouriteGymName = String(localized: "Not selected")
+            return
+        }
+        do {
+            let gyms = try await environment.gymRepository.allGyms()
+            favouriteGymName = gyms.first(where: { $0.id == gymID })?.name ?? gymID.rawValue
+        } catch {
+            favouriteGymName = gymID.rawValue
         }
     }
 
@@ -239,7 +282,8 @@ struct ProfileEditView: View {
             armSpanCentimetres: hasArmSpan ? armSpan : nil,
             regularGrade: useGrade && gradeSystem == .vScale ? vGrade : nil,
             gradeSystem: useGrade ? gradeSystem : nil,
-            ydsGrade: useGrade && gradeSystem == .yds ? ydsGrade : nil
+            ydsGrade: useGrade && gradeSystem == .yds ? ydsGrade : nil,
+            favouriteGymID: favouriteGymID
         )
         await session.updateProfileDetails(details)
         if case .error = session.authenticationState {
