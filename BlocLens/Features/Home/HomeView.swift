@@ -93,39 +93,54 @@ struct HomeView: View {
                     .padding(.bottom, DesignSpacing.large)
                 } else {
                     VStack(alignment: .leading, spacing: DesignSpacing.large) {
+                        // Safe area spacer for Dynamic Island / status bar when no hero image
+                        Color.clear.frame(height: 12).listRowInsets(EdgeInsets())
                         if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
-                        VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-                            Label("Choose your favourite gym", systemImage: "star.circle")
-                                .font(.headline)
-                                .foregroundStyle(DesignColour.textPrimary)
-                            Text("Select a gym to see its wall and reset information on your home screen.")
-                                .font(DesignTypography.supporting)
-                                .foregroundStyle(DesignColour.textSecondary)
-                            Button {
-                                if session.authenticationState.isSignedIn {
-                                    showsFavouritePicker = true
-                                } else {
-                                    _ = session.requireAuthentication(for: .account)
+                        if session.authenticationState.isSignedIn {
+                            VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+                                Label("Choose your favourite gym", systemImage: "star.circle")
+                                    .font(.headline)
+                                    .foregroundStyle(DesignColour.textPrimary)
+                                Text("Select a gym to see its wall and reset information on your home screen.")
+                                    .font(DesignTypography.supporting)
+                                    .foregroundStyle(DesignColour.textSecondary)
+                                Button { showsFavouritePicker = true } label: {
+                                    Label("Select Favourite Gym", systemImage: "mappin.and.ellipse")
                                 }
-                            } label: {
-                                Label("Select Favourite Gym", systemImage: "mappin.and.ellipse")
+                                .buttonStyle(PrimaryButtonStyle())
                             }
-                            .buttonStyle(PrimaryButtonStyle())
+                            .padding(DesignSpacing.medium)
+                            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+                        } else {
+                            VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+                                Label("Welcome to BlocLens", systemImage: "mountain.2.circle")
+                                    .font(.headline)
+                                    .foregroundStyle(DesignColour.textPrimary)
+                                Text("Sign in to personalise your home, track projects and get wall updates for your favourite gym.")
+                                    .font(DesignTypography.supporting)
+                                    .foregroundStyle(DesignColour.textSecondary)
+                                Button { _ = session.requireAuthentication(for: .account) } label: {
+                                    Label("Sign In", systemImage: "person.crop.circle.badge.checkmark")
+                                }
+                                .buttonStyle(PrimaryButtonStyle())
+                            }
+                            .padding(DesignSpacing.medium)
+                            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
                         }
-                        .padding(DesignSpacing.medium)
-                        .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
-                        .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
-                        .padding(.top, DesignSpacing.medium)
                         activeProjectsSection(data: data)
                         freshSetsSection(data: data)
                         recentClimbsSection(data: data)
                     }
                     .padding(.horizontal, DesignSpacing.medium)
+                    .padding(.top, DesignSpacing.large)
                     .padding(.vertical, DesignSpacing.small)
                 }
             }
         }
         .ignoresSafeArea(edges: .top)
+        .safeAreaPadding(.top, 8)
         .background(DesignColour.backgroundSecondary)
     }
 

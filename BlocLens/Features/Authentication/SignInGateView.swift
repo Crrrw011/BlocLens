@@ -137,14 +137,13 @@ struct SignInGateView: View {
     // MARK: - Header
     private var header: some View {
         VStack(spacing: DesignSpacing.small) {
-            ZStack {
-                Circle().fill(.ultraThinMaterial).frame(width: 56, height: 56)
-                    .overlay { Circle().stroke(Color.primary.opacity(0.06), lineWidth: 0.5) }
-                    .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
-                Image(systemName: "mountain.2.circle.fill")
-                    .font(.system(size: 26, weight: .medium))
-                    .foregroundStyle(BlocColor.opticBlue)
-            }
+            Image("BlocLensIcon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 72, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+                .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.primary.opacity(0.06), lineWidth: 0.5) }
             Text(isCreateAccountFlow && authScreen != .main ? "Welcome" : "Welcome Back")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(DesignColour.textPrimary)
