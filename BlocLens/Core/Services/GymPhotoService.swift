@@ -36,15 +36,26 @@ actor RemoteGymPhotoService: GymPhotoService {
             .compactMap { $0["displayName"] as? String }
             .joined(separator: ", ")
 
-        // Media endpoint requires API key — append as query param so AsyncImage can fetch without custom header
-        // The redirect target (lh3.googleusercontent.com) does not require the key
-        var components = URLComponents(string: "https://places.googleapis.com/v1/\(photoName)/media")
-        components?.queryItems = [
+        // Fetch photoUri via skipHttpRedirect to avoid requiring bundle header on AsyncImage
+        var mediaComponents = URLComponents(string: "https://places.googleapis.com/v1/\(photoName)/media")
+        mediaComponents?.queryItems = [
             URLQueryItem(name: "maxWidthPx", value: "\(width)"),
-            URLQueryItem(name: "key", value: client.apiKeyForMediaURL)
+            URLQueryItem(name: "skipHttpRedirect", value: "true")
         ]
-        guard let photoURL = components?.url else {
+        guard let mediaURL = mediaComponents?.url else {
             throw RepositoryError.invalidConfiguration
+        }
+        var mediaRequest = URLRequest(url: mediaURL)
+        mediaRequest.setValue(client.apiKeyForMediaURL, forHTTPHeaderField: "X-Goog-Api-Key")
+        if let bundleID = Bundle.main.bundleIdentifier {
+            mediaRequest.setValue(bundleID, forHTTPHeaderField: "X-Ios-Bundle-Identifier")
+        }
+        let (mediaData, mediaResponse) = try await URLSession.shared.data(for: mediaRequest)
+        guard let http = mediaResponse as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let mediaJson = try JSONSerialization.jsonObject(with: mediaData) as? [String: Any],
+              let photoUri = mediaJson["photoUri"] as? String,
+              let photoURL = URL(string: photoUri) else {
+            throw RepositoryError.decodingFailure
         }
         return GymPhoto(imageURL: photoURL, attribution: attribution, attributionHTML: nil)
     }

@@ -64,7 +64,17 @@ enum DataSourceResolver {
             return .supabase(configuration: config, reason: "Bundled/Persisted Supabase — \(config.mode == .production ? "cloud" : "local")")
         }
         if let persisted = try? PersistedRemoteConfigurationStore.load() {
+            // Filter localhost persisted on physical device (migrating from simulator localhost)
+            #if targetEnvironment(simulator)
             return .supabase(configuration: persisted, reason: "Persisted Supabase — home-screen launch")
+            #else
+            if let host = persisted.projectURL.host?.lowercased(),
+               host == "localhost" || host == "127.0.0.1" || host == "::1" {
+                // Stale localhost persisted — ignore and fall through to mock/error
+            } else {
+                return .supabase(configuration: persisted, reason: "Persisted Supabase — home-screen launch")
+            }
+            #endif
         }
 
         // 5. No config
