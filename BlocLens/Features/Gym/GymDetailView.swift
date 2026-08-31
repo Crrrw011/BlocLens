@@ -95,13 +95,14 @@ struct GymDetailView: View {
     // MARK: - Hero L0 wall as interface
 
     private var heroPhotoSection: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack(alignment: .bottomTrailing) {
             GymPhotoView(
                 placeID: gym.googlePlaceID,
                 gymName: gym.name,
                 photoService: environment.gymPhotoService,
                 width: 1200,
-                aspectRatio: 4 / 3
+                aspectRatio: 4 / 3,
+                cornerRadius: 0
             )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
             floatingCapsules
@@ -116,10 +117,9 @@ struct GymDetailView: View {
 
     private var floatingCapsules: some View {
         HStack(spacing: DesignSpacing.small) {
-            suburbCapsuleSolid
+            Spacer(minLength: 0)
             verifiedCapsuleGlass
             resetCapsuleGlass
-            Spacer(minLength: 0)
         }
     }
 

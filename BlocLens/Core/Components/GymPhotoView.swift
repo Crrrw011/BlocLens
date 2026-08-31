@@ -6,6 +6,7 @@ struct GymPhotoView: View {
     let photoService: any GymPhotoService
     var width: Int = 800
     var aspectRatio: CGFloat = 16 / 9
+    var cornerRadius: CGFloat = BlocRadius.container
 
     @State private var state: PhotoState = .idle
 
@@ -31,7 +32,7 @@ struct GymPhotoView: View {
         }
         .accessibilityLabel(Text("Photo of \(gymName)"))
         .aspectRatio(aspectRatio, contentMode: .fill)
-        .clipShape(RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .task(id: placeID) {
             await loadPhoto()
         }
@@ -69,17 +70,20 @@ struct GymPhotoView: View {
     }
 
     private func attributionOverlay(_ photo: GymPhoto) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
             if let attribution = photo.attribution {
                 Text(attribution)
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .font(.system(size: 8, weight: .regular))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
             }
             Text(L10n.GymPhoto.fromGoogle)
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.8))
+                .font(.system(size: 8, weight: .regular))
+                .foregroundStyle(.white.opacity(0.6))
+                .lineLimit(1)
         }
-        .padding(6)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
     }
 
     private func loadPhoto() async {
