@@ -27,13 +27,14 @@ struct GymPhotoCarouselView: View {
         Group {
             if !viewModel.hasContent {
                 placeholder
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(aspectRatio, contentMode: .fill)
                     .accessibilityLabel(Text("Photo of \(gymName)"))
                     .accessibilityIdentifier("gym-photo-placeholder")
             } else {
                 carouselContent
             }
         }
-        .aspectRatio(aspectRatio, contentMode: .fill)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .task {
             await viewModel.onAppear()
@@ -58,7 +59,9 @@ struct GymPhotoCarouselView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: viewModel.selectedIndex)
-            .frame(height: nil)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            .clipped()
 
             if viewModel.shouldShowIndicator {
                 HStack(spacing: 6) {
@@ -84,20 +87,38 @@ struct GymPhotoCarouselView: View {
                 placeholder
                     .overlay { ProgressView().tint(.white).accessibilityIdentifier("gym-photo-loading-\(index)") }
             case .loaded(let photo):
-                AsyncImage(url: photo.imageURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        errorView(at: index)
-                    case .empty:
-                        placeholder.overlay { ProgressView() }
-                    @unknown default:
-                        placeholder
+                Group {
+                    if photo.imageURL.absoluteString.contains("picsum.photos") || photo.imageURL.absoluteString.contains("example.com") {
+                        // Mock image – show deterministic color without network
+                        Rectangle()
+                            .fill(Color(hue: Double(index) * 0.2, saturation: 0.5, brightness: 0.8))
+                            .overlay {
+                                VStack {
+                                    Image(systemName: "photo")
+                                        .font(.system(size: 32))
+                                        .foregroundStyle(.white.opacity(0.8))
+                                    if let attr = photo.attribution {
+                                        Text(attr).font(.caption).foregroundStyle(.white)
+                                    }
+                                }
+                            }
+                    } else {
+                        AsyncImage(url: photo.imageURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFill()
+                            case .failure:
+                                errorView(at: index)
+                            case .empty:
+                                placeholder.overlay { ProgressView() }
+                            @unknown default:
+                                placeholder
+                            }
+                        }
                     }
                 }
                 .overlay(alignment: .bottomLeading) {
-                    if let attr = photo.attribution {
+                    if let attr = photo.attribution, !photo.imageURL.absoluteString.contains("picsum.photos") {
                         Text(attr)
                             .font(.system(size: 8, weight: .regular))
                             .foregroundStyle(.white.opacity(0.7))
@@ -163,7 +184,7 @@ struct GymPhotoCarouselView: View {
 }
 
 #Preview("Carousel - 1 photo") {
-    let photo = GymPhoto(imageURL: URL(string: "https://example.com/p1.jpg")!, attribution: "Test", attributionHTML: nil)
+    let photo = GymPhoto(imageURL: URL(string: "https://picsum.photos/seed/preview1/800/600")!, attribution: "Test", attributionHTML: nil)
     let loader = MockGymPhotoLoader(photosByPlaceID: ["test-place": [photo]])
     GymPhotoCarouselView(placeID: "test-place", gymName: "Test Gym", loader: loader)
         .frame(height: 200)
@@ -171,7 +192,7 @@ struct GymPhotoCarouselView: View {
 }
 
 #Preview("Carousel - 4 photos") {
-    let photos = (1...4).map { GymPhoto(imageURL: URL(string: "https://example.com/p\($0).jpg")!, attribution: "Attr \($0)", attributionHTML: nil) }
+    let photos = (1...4).map { GymPhoto(imageURL: URL(string: "https://picsum.photos/seed/preview\($0)/800/600")!, attribution: "Attr \($0)", attributionHTML: nil) }
     let loader = MockGymPhotoLoader(photosByPlaceID: ["test-place": photos])
     GymPhotoCarouselView(placeID: "test-place", gymName: "Test Gym", loader: loader)
         .frame(height: 200)
@@ -186,7 +207,7 @@ struct GymPhotoCarouselView: View {
 }
 
 #Preview("Carousel - Error") {
-    let photos = [GymPhoto(imageURL: URL(string: "https://example.com/p1.jpg")!, attribution: nil, attributionHTML: nil)]
+    let photos = [GymPhoto(imageURL: URL(string: "https://picsum.photos/seed/error/800/600")!, attribution: nil, attributionHTML: nil)]
     let loader = MockGymPhotoLoader(photosByPlaceID: ["test-place": photos])
     GymPhotoCarouselView(placeID: "test-place", gymName: "Test Gym", loader: loader)
         .frame(height: 200)

@@ -32,9 +32,11 @@ struct AppEnvironment: Sendable {
         if let gymPhotoLoader {
             loader = gymPhotoLoader
         } else {
-            // Default mock loader with 1 photo for the favourite gym, to keep previews deterministic
-            let defaultPhoto = GymPhoto(imageURL: URL(string: "https://example.com/gym-photo-1.jpg")!, attribution: "Mock", attributionHTML: nil)
-            loader = MockGymPhotoLoader(photosByPlaceID: ["ChIJrTKIuKxRlEwRVOGeuGnCAVA": [defaultPhoto]])
+            // Default mock loader with 4 photos for favourite gym to allow carousel paging
+            let defaultPhotos = (1...4).map { idx in
+                GymPhoto(imageURL: URL(string: "https://picsum.photos/seed/bloclens\(idx)/800/600")!, attribution: "Mock \(idx)", attributionHTML: nil)
+            }
+            loader = MockGymPhotoLoader(photosByPlaceID: ["ChIJrTKIuKxRlEwRVOGeuGnCAVA": defaultPhotos])
         }
         return AppEnvironment(
             gymRepository: MockGymRepository(scenario: scenario),

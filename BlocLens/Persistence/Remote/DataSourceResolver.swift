@@ -48,6 +48,9 @@ enum DataSourceResolver {
         if arguments.contains("--mock-offline-no-cache") {
             return .offlineWithoutCache
         }
+        if arguments.contains("--mock-authenticated") {
+            return .mock(reason: "LaunchArgument --mock-authenticated")
+        }
 
         // 3. Explicit remote launch arguments (Debug)
         if arguments.contains("--cloud-supabase") {
