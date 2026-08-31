@@ -9,12 +9,14 @@ nonisolated struct GooglePlaceResult: Equatable, Sendable {
 }
 
 nonisolated protocol GooglePlacesClient: Sendable {
+    var apiKeyForMediaURL: String { get }
     func searchText(_ query: String) async throws -> [GooglePlaceResult]
     func fetchPlaceDetails(placeID: String, fields: String) async throws -> [String: Any]
 }
 
 struct RemoteGooglePlacesClient: GooglePlacesClient, Sendable {
     let apiKey: String
+    var apiKeyForMediaURL: String { apiKey }
     private let endpoint = URL(string: "https://places.googleapis.com/v1/places:searchText")!
 
     func searchText(_ query: String) async throws -> [GooglePlaceResult] {
@@ -88,6 +90,7 @@ struct RemoteGooglePlacesClient: GooglePlacesClient, Sendable {
 }
 
 struct NoopGooglePlacesClient: GooglePlacesClient, Sendable {
+    var apiKeyForMediaURL: String { "" }
     func searchText(_ query: String) async throws -> [GooglePlaceResult] {
         []
     }

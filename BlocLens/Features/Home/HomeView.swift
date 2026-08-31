@@ -94,7 +94,8 @@ struct HomeView: View {
                 placeID: gym.googlePlaceID,
                 gymName: gym.name,
                 photoService: environment.gymPhotoService,
-                width: 800
+                width: 800,
+                aspectRatio: 4 / 3
             )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
             floatingCapsules(gym: gym)
@@ -471,16 +472,14 @@ struct HomeView: View {
                 .textCase(.uppercase)
                 .foregroundStyle(DesignColour.textTertiary)
             if !session.authenticationState.isSignedIn {
-                VStack(alignment: .leading, spacing: DesignSpacing.small) {
-                    Label(L10n.Home.privateLogbookMessage, systemImage: "lock.fill")
-                        .font(DesignTypography.supporting)
-                        .foregroundStyle(DesignColour.textSecondary)
-                    Button(L10n.Home.privateLogbookAction) { _ = session.requireAuthentication(for: .account) }
-                        .buttonStyle(CompactActionButtonStyle())
-                }
-                .padding(DesignSpacing.medium)
-                .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
-                .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+                // Guest already sees sign-in prompt in Active Projects — don't duplicate
+                Label(L10n.Home.privateLogbookMessage, systemImage: "lock.fill")
+                    .font(DesignTypography.supporting)
+                    .foregroundStyle(DesignColour.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DesignSpacing.medium)
+                    .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+                    .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
             } else if data.recentRecords.isEmpty {
                 Text(L10n.Home.noProjects)
                     .font(DesignTypography.supporting)

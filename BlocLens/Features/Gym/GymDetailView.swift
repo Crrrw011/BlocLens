@@ -100,7 +100,8 @@ struct GymDetailView: View {
                 placeID: gym.googlePlaceID,
                 gymName: gym.name,
                 photoService: environment.gymPhotoService,
-                width: 1200
+                width: 1200,
+                aspectRatio: 4 / 3
             )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
             floatingCapsules

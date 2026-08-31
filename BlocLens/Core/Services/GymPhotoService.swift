@@ -36,7 +36,14 @@ actor RemoteGymPhotoService: GymPhotoService {
             .compactMap { $0["displayName"] as? String }
             .joined(separator: ", ")
 
-        guard let photoURL = URL(string: "https://places.googleapis.com/v1/\(photoName)/media?maxWidthPx=\(width)") else {
+        // Media endpoint requires API key — append as query param so AsyncImage can fetch without custom header
+        // The redirect target (lh3.googleusercontent.com) does not require the key
+        var components = URLComponents(string: "https://places.googleapis.com/v1/\(photoName)/media")
+        components?.queryItems = [
+            URLQueryItem(name: "maxWidthPx", value: "\(width)"),
+            URLQueryItem(name: "key", value: client.apiKeyForMediaURL)
+        ]
+        guard let photoURL = components?.url else {
             throw RepositoryError.invalidConfiguration
         }
         return GymPhoto(imageURL: photoURL, attribution: attribution, attributionHTML: nil)
