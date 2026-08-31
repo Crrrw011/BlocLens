@@ -28,15 +28,13 @@ struct GymDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                heroPhotoSection
-                VStack(alignment: .leading, spacing: BlocSpacing.sectionGap) {
+                VStack(alignment: .leading, spacing: DesignSpacing.medium) {
                     titleGroup
-                    Divider().overlay(DesignColour.separator.opacity(0.6))
-                    compactMetadataRow
+                    brandFacilitiesRow
+                    gymPhotoCarousel
+                    wallZonesAndRoutesSection
                     stateSection
                     freshSetsSection
-                    wallZonesAndRoutesSection
-                    facilitiesSection
                     contactSection
                     if session.isContributionPromptVisible("gym-\(gym.id.rawValue)") {
                         ContributionPromptView(
@@ -57,7 +55,6 @@ struct GymDetailView: View {
                 .padding(.bottom, DesignSpacing.large)
             }
         }
-        .ignoresSafeArea(edges: .top)
         .navigationTitle(L10n.Gym.detailTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -92,27 +89,51 @@ struct GymDetailView: View {
         }
     }
 
-    // MARK: - Hero L0 wall as interface
+    // MARK: - Gym Photo Carousel (shared, max 4, lazy)
 
-    private var heroPhotoSection: some View {
+    private var gymPhotoCarousel: some View {
         ZStack(alignment: .bottomTrailing) {
-            GymPhotoView(
+            GymPhotoCarouselView(
                 placeID: gym.googlePlaceID,
                 gymName: gym.name,
-                photoService: environment.gymPhotoService,
+                loader: environment.gymPhotoLoader,
                 width: 1200,
                 aspectRatio: 4 / 3,
                 cornerRadius: 0
             )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
+                .allowsHitTesting(false)
             floatingCapsules
                 .padding(.horizontal, DesignSpacing.medium)
                 .padding(.bottom, DesignSpacing.medium)
+                .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity)
-        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: "\(gym.name) \(gym.suburb)"))
+        .accessibilityIdentifier("gym-detail-carousel")
+    }
+
+    private var brandFacilitiesRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DesignSpacing.small) {
+                Text(verbatim: gym.brandName)
+                    .font(DesignTypography.supporting.weight(.semibold))
+                    .foregroundStyle(DesignColour.textSecondary)
+                    .lineLimit(1)
+                Spacer(minLength: DesignSpacing.small)
+                FacilityIconsRow(gym: gym)
+            }
+            VStack(alignment: .leading, spacing: DesignSpacing.small) {
+                Text(verbatim: gym.brandName)
+                    .font(DesignTypography.supporting.weight(.semibold))
+                    .foregroundStyle(DesignColour.textSecondary)
+                FacilityIconsRow(gym: gym)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("brand-facilities-row")
     }
 
     private var floatingCapsules: some View {
@@ -193,10 +214,11 @@ struct GymDetailView: View {
         VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
             HStack(alignment: .firstTextBaseline, spacing: DesignSpacing.small) {
                 Text(verbatim: gym.name)
-                    .font(.largeTitle.weight(.bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(DesignColour.textPrimary)
                     .minimumScaleFactor(0.85)
                     .lineLimit(2)
+                    .accessibilityIdentifier("gym-detail-name")
                 if gym.isVerified {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(BlocColor.opticBlue)
@@ -204,45 +226,7 @@ struct GymDetailView: View {
                 }
             }
             .accessibilityIdentifier("hero-location")
-            HStack(spacing: DesignSpacing.small) {
-                Label(gym.brandName, systemImage: "building.2")
-                Text(verbatim: "·")
-                Text(verbatim: "\(gym.suburb), \(gym.state)")
-                    .foregroundStyle(DesignColour.textSecondary)
-                if gym.betaCount > 0 {
-                    Text(verbatim: "·")
-                    Label("\(gym.betaCount)", systemImage: "link")
-                        .foregroundStyle(DesignColour.textSecondary)
-                }
-            }
-            .font(DesignTypography.supporting)
-            .foregroundStyle(DesignColour.textSecondary)
-            .lineLimit(1)
-            if let reset = gym.latestResetDate {
-                Text(reset.formatted(date: .abbreviated, time: .omitted))
-                    .font(BlocTypography.caption)
-                    .foregroundStyle(DesignColour.textTertiary)
-            }
-            Label(L10n.Gym.developmentFixture, systemImage: "hammer")
-                .font(BlocTypography.caption)
-                .foregroundStyle(DesignColour.warning)
         }
-    }
-
-    // MARK: - Compact metadata row
-
-    private var compactMetadataRow: some View {
-        let brand = gym.brandName
-        let location = "\(gym.suburb), \(gym.state)"
-        let zones = viewModel.freshZones.isEmpty ? gym.wallZoneIDs.count : viewModel.freshZones.count
-        let beta = gym.betaCount
-        let hardSoft = String(localized: L10n.hardSoft(gym.overallHardSoftSummary))
-        return Text(verbatim: "\(brand) · \(location) · \(zones) zones · \(beta) beta · \(hardSoft)")
-            .font(BlocTypography.metadata)
-            .foregroundStyle(DesignColour.textSecondary)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .accessibilityIdentifier("hero-metadata")
     }
 
     // MARK: - State (Hard/Soft + Operating)
@@ -512,24 +496,6 @@ struct GymDetailView: View {
                 .padding(.bottom, DesignSpacing.small)
             }
         }
-        .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
-    }
-
-    // MARK: - Facilities
-
-    private var facilitiesSection: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.small) {
-            Text(L10n.Gym.facilities)
-                .font(DesignTypography.supporting.weight(.semibold))
-                .foregroundStyle(DesignColour.textSecondary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), alignment: .leading)], alignment: .leading, spacing: DesignSpacing.small) {
-                ForEach(gym.facilities, id: \.self) { facility in
-                    FacilityChip(facility: facility)
-                }
-            }
-        }
-        .padding(DesignSpacing.medium)
         .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
     }

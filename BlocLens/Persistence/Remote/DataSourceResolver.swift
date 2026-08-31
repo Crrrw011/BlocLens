@@ -25,6 +25,16 @@ enum DataSourceResolver {
             return .mock(reason: "Preview — Mock")
         }
 
+        // 1b. XCTest: force Mock unless explicit remote requested (prevents cloud fallback breaking UI tests)
+        if isTest && !arguments.contains("--cloud-supabase") && !arguments.contains("--local-supabase") {
+            // Allow explicit mock scenario arguments to still be handled, but default to loaded mock
+            if arguments.contains("--mock-empty") || arguments.contains("--mock-error") || arguments.contains("--mock-offline-cached") || arguments.contains("--mock-offline-no-cache") {
+                // Fall through to explicit handling below
+            } else {
+                return .mock(reason: "Test — Mock")
+            }
+        }
+
         // 2. Explicit Mock launch arguments (Debug only, but check regardless)
         if arguments.contains("--mock-empty") {
             return .mock(reason: "LaunchArgument --mock-empty")

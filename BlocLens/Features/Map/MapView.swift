@@ -6,12 +6,16 @@ struct MapView: View {
     @ObservedObject var session: AppSession
 
     @StateObject private var viewModel: MapViewModel
+    @StateObject private var locationService = LocationService()
     @State private var cameraPosition: MapCameraPosition
     @State private var path = NavigationPath()
     @State private var selectedGym: Gym?
     @State private var showsSearch = false
     @State private var showsFilters = false
-    @State private var showsNearbyMessage = false
+    @State private var showsLocationDeniedAlert = false
+    @State private var showsLocationErrorAlert = false
+    @State private var pendingMyLocation = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(environment: AppEnvironment, session: AppSession) {
         self.environment = environment
@@ -45,6 +49,34 @@ struct MapView: View {
         .task(id: session.authenticationState.isSignedIn) {
             await viewModel.load()
         }
+        .task {
+            locationService.requestAuthorizationIfNeeded()
+        }
+        .alert("Location Access Needed", isPresented: $showsLocationDeniedAlert) {
+            Button("Open Settings") { locationService.openAppSettings() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Please enable location access in Settings to use My Location.")
+        }
+        .alert("Location Error", isPresented: $showsLocationErrorAlert) {
+            Button("Try again") { locationService.requestLocation() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(locationService.errorMessage ?? "Unable to get your location. Please try again.")
+        }
+        .onReceive(locationService.$authorizationState) { state in
+            if state == .denied || state == .restricted {
+                showsLocationDeniedAlert = true
+            } else if state == .authorized {
+                // If we were waiting for location after a tap, the userLocation change will handle camera
+            }
+        }
+        .onReceive(locationService.$userLocation) { loc in
+            if let loc, pendingMyLocation, locationService.authorizationState == .authorized {
+                moveCameraToInclude(userLocation: loc)
+                pendingMyLocation = false
+            }
+        }
         .sheet(isPresented: $showsSearch) {
             LocalSearchView(environment: environment, session: session) { result in
                 showsSearch = false
@@ -65,11 +97,6 @@ struct MapView: View {
             MapFilterView(options: $viewModel.filterOptions) {
                 viewModel.applyFilters()
             }
-        }
-        .alert(L10n.Map.locationUnavailableTitle, isPresented: $showsNearbyMessage) {
-            Button(L10n.Common.ok, role: .cancel) {}
-        } message: {
-            Text(L10n.Map.locationUnavailableMessage)
         }
     }
 
@@ -114,13 +141,19 @@ struct MapView: View {
                     Button {
                         selectedGym = gym
                     } label: {
-                        Image(systemName: selectedGym?.id == gym.id ? "mountain.2.circle.fill" : "mountain.2.circle")
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(selectedGym?.id == gym.id ? .white : BlocColor.opticBlue)
-                            .frame(width: 44, height: 44)
-                            .background(selectedGym?.id == gym.id ? BlocColor.opticBlue : DesignColour.surfaceElevated, in: Circle())
-                            .overlay { Circle().stroke(BlocColor.opticBlue.opacity(0.45), lineWidth: selectedGym?.id == gym.id ? 2 : 1) }
-                            .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+                        ZStack {
+                            Circle().fill(.white).frame(width: 36, height: 36).shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(.red)
+                                .overlay {
+                                    if selectedGym?.id == gym.id {
+                                        Circle().stroke(BlocColor.opticBlue, lineWidth: 2).frame(width: 36, height: 36)
+                                    }
+                                }
+                        }
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                     }
                     .accessibilityLabel(gym.name)
                     .accessibilityIdentifier("gym-annotation-\(gym.id.rawValue)")
@@ -129,30 +162,40 @@ struct MapView: View {
         }
         .mapStyle(.standard)
         .safeAreaInset(edge: .top) {
-            VStack(spacing: DesignSpacing.small) {
-                if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
-                floatingSearchBar
+            if isOffline {
+                OfflineBanner(message: L10n.State.offlineCachedMessage)
+                    .padding(.horizontal, DesignSpacing.medium)
+                    .padding(.top, DesignSpacing.small)
             }
-            .padding(.horizontal, DesignSpacing.medium)
-            .padding(.top, DesignSpacing.small)
         }
         .safeAreaInset(edge: .bottom) {
-            if let selectedGym {
-                GymPreviewCard(
-                    gym: selectedGym,
-                    openGym: { path.append(selectedGym) },
-                    close: { self.selectedGym = nil }
-                )
-                .padding(.horizontal, DesignSpacing.medium)
-                .padding(.bottom, DesignSpacing.small)
+            VStack(spacing: DesignSpacing.small) {
+                if let selectedGym {
+                    GymPreviewCard(
+                        gym: selectedGym,
+                        openGym: { path.append(selectedGym) },
+                        close: { self.selectedGym = nil }
+                    )
+                }
+                bottomControlBar
             }
+            .padding(.horizontal, DesignSpacing.medium)
+            .padding(.bottom, DesignSpacing.small)
         }
     }
 
-    // MARK: - Floating search / filters — map is interface
+    // MARK: - Bottom control bar — Filters | Search | My Location
 
-    private var floatingSearchBar: some View {
+    private var bottomControlBar: some View {
         HStack(spacing: DesignSpacing.small) {
+            Button { showsFilters = true } label: {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.body.weight(.medium))
+            }
+            .buttonStyle(IconButtonStyle())
+            .accessibilityLabel("Filters")
+            .accessibilityIdentifier("map-filter-button")
+
             Button { showsSearch = true } label: {
                 HStack(spacing: DesignSpacing.small) {
                     Image(systemName: "magnifyingglass")
@@ -163,7 +206,7 @@ struct MapView: View {
                 }
                 .foregroundStyle(DesignColour.textSecondary)
                 .padding(.horizontal, DesignSpacing.compact)
-                .frame(minHeight: 44)
+                .frame(maxWidth: .infinity, minHeight: 44)
                 .background(Color(uiColor: .systemBackground), in: Capsule())
                 .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
                 .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
@@ -172,21 +215,63 @@ struct MapView: View {
             .accessibilityLabel(L10n.Search.title)
             .accessibilityIdentifier("map-search-button")
 
-            FilterPill(title: L10n.MapFilter.title, activeCount: viewModel.filterOptions.activeCount) {
-                showsFilters = true
-            }
-            .accessibilityIdentifier("map-filter-button")
-
-            Spacer(minLength: 0)
-
-            Button { showsNearbyMessage = true } label: {
-                Image(systemName: "location")
+            Button { handleMyLocationTap() } label: {
+                Image(systemName: "location.fill")
+                    .font(.body.weight(.medium))
             }
             .buttonStyle(IconButtonStyle())
-            .accessibilityLabel(L10n.Map.nearbyGyms)
+            .accessibilityLabel("My Location")
+            .accessibilityIdentifier("map-my-location-button")
         }
         .padding(DesignSpacing.small)
         .blocGlass(interactive: true)
+    }
+
+    private func handleMyLocationTap() {
+        let state = locationService.authorizationState
+        switch state {
+        case .notDetermined:
+            pendingMyLocation = true
+            locationService.requestAuthorizationIfNeeded()
+        case .authorized:
+            if let loc = locationService.userLocation {
+                moveCameraToInclude(userLocation: loc)
+                pendingMyLocation = false
+            } else {
+                pendingMyLocation = true
+                locationService.requestLocation()
+            }
+        case .denied, .restricted:
+            showsLocationDeniedAlert = true
+        case .transientError:
+            showsLocationErrorAlert = true
+        }
+    }
+
+    private func moveCameraToInclude(userLocation: CLLocation) {
+        guard let nearest = nearestGym(to: userLocation) else { return }
+        let gymCoord = CLLocationCoordinate2D(latitude: nearest.coordinate.latitude, longitude: nearest.coordinate.longitude)
+        let userCoord = userLocation.coordinate
+        let centerLat = (userCoord.latitude + gymCoord.latitude) / 2
+        let centerLon = (userCoord.longitude + gymCoord.longitude) / 2
+        let latDelta = abs(userCoord.latitude - gymCoord.latitude) * 2.4 + 0.02
+        let lonDelta = abs(userCoord.longitude - gymCoord.longitude) * 2.4 + 0.02
+        let region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon), span: MKCoordinateSpan(latitudeDelta: max(latDelta, 0.02), longitudeDelta: max(lonDelta, 0.02)))
+        let newPosition: MapCameraPosition = .region(region)
+        if reduceMotion {
+            cameraPosition = newPosition
+        } else {
+            withAnimation(.easeInOut(duration: 0.6)) { cameraPosition = newPosition }
+        }
+    }
+
+    private func nearestGym(to location: CLLocation) -> Gym? {
+        guard case .loaded(let gyms) = viewModel.state else { return nil }
+        return gyms.min(by: { a, b in
+            let la = CLLocation(latitude: a.coordinate.latitude, longitude: a.coordinate.longitude)
+            let lb = CLLocation(latitude: b.coordinate.latitude, longitude: b.coordinate.longitude)
+            return location.distance(from: la) < location.distance(from: lb)
+        })
     }
 }
 

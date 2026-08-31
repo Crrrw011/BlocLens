@@ -35,22 +35,16 @@ struct WallZoneRouteListView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                heroPhotoSection
-                VStack(alignment: .leading, spacing: BlocSpacing.sectionGap) {
-                    titleGroup
-                    Divider().overlay(DesignColour.separator.opacity(0.6))
-                    compactMetadataRow
-                    filterBar
-                    routeContent
-                }
-                .padding(.horizontal, DesignSpacing.medium)
-                .padding(.top, DesignSpacing.medium)
-                .padding(.bottom, DesignSpacing.large)
+            VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+                titleGroup
+                filterBar
+                routeContent
             }
+            .padding(.horizontal, DesignSpacing.medium)
+            .padding(.top, DesignSpacing.medium)
+            .padding(.bottom, DesignSpacing.large)
         }
-        .ignoresSafeArea(edges: .top)
-        .navigationTitle(wallZone.name)
+        .navigationTitle("Zone Detail")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -109,85 +103,74 @@ struct WallZoneRouteListView: View {
         .task { await viewModel.load() }
     }
 
-    // MARK: - Hero L0
+    // MARK: - Zone header: WallName + Active/Inactive + Reset (same area)
 
-    private var heroPhotoSection: some View {
-        ZStack(alignment: .bottomLeading) {
-            heroWallFill
-            LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
-            floatingCapsules
-                .padding(.horizontal, DesignSpacing.medium)
-                .padding(.bottom, DesignSpacing.medium)
+    private var titleGroup: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            // Reading order must be WallName -> Active/Inactive -> Reset even when wrapping
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DesignSpacing.small) {
+                    Text(verbatim: wallZone.name)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(DesignColour.textPrimary)
+                        .lineLimit(1)
+                        .accessibilityIdentifier("zone-wall-name")
+                    statusBadge
+                    resetBadge
+                }
+                VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
+                    HStack(spacing: DesignSpacing.small) {
+                        Text(verbatim: wallZone.name)
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(DesignColour.textPrimary)
+                            .lineLimit(2)
+                        statusBadge
+                    }
+                    resetBadge
+                }
+            }
+            if !wallZone.locationDescription.isEmpty {
+                Text(verbatim: wallZone.locationDescription)
+                    .font(DesignTypography.supporting)
+                    .foregroundStyle(DesignColour.textSecondary)
+                    .lineLimit(2)
+                    .accessibilityIdentifier("zone-location")
+            }
         }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(4 / 3, contentMode: .fit)
-        .clipped()
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "\(wallZone.name) \(String(localized: L10n.wallKind(wallZone.wallKind)))"))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("zone-header")
     }
 
-    private var heroWallFill: some View {
-        ZStack {
-            wallBaseColor
-            Rectangle().fill(Color.white.opacity(0.04))
+    private var statusBadge: some View {
+        Label {
+            Text(wallZone.availability == .active ? "Active" : "Inactive")
+                .font(BlocTypography.status)
+        } icon: {
+            Image(systemName: wallZone.availability == .active ? "checkmark.circle.fill" : "xmark.circle.fill")
         }
+        .font(BlocTypography.status)
+        .foregroundStyle(wallZone.availability == .active ? DesignColour.success : DesignColour.error)
+        .padding(.horizontal, 8)
+        .frame(minHeight: 24)
+        .background(
+            (wallZone.availability == .active ? DesignColour.success : DesignColour.error).opacity(0.12),
+            in: Capsule()
+        )
+        .overlay { Capsule().stroke(wallZone.availability == .active ? DesignColour.success : DesignColour.error, lineWidth: 1) }
+        .accessibilityLabel(Text(wallZone.availability == .active ? "Active" : "Inactive"))
+        .accessibilityIdentifier("zone-status")
     }
 
-    private var wallBaseColor: Color {
-        switch wallZone.wallKind {
-        case .compWall: BlocColor.opticBlueTint
-        case .sprayWall: Color(uiColor: .tertiarySystemBackground)
-        case .regularSetWall: Color(uiColor: .secondarySystemBackground)
-        }
+    private var resetBadge: some View {
+        Label(resetText, systemImage: "arrow.clockwise")
+            .font(BlocTypography.caption)
+            .foregroundStyle(DesignColour.textSecondary)
+            .lineLimit(1)
+            .accessibilityLabel(Text(resetText))
+            .accessibilityIdentifier("zone-reset")
     }
 
-    private var floatingCapsules: some View {
-        HStack(spacing: DesignSpacing.small) {
-            wallKindCapsuleSolid
-            statusCapsuleGlass
-            resetCapsuleGlass
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var wallKindCapsuleSolid: some View {
-        Text(L10n.wallKind(wallZone.wallKind))
-            .font(BlocTypography.grade)
-            .foregroundStyle(Color(uiColor: .label))
-            .padding(.horizontal, 14)
-            .frame(minHeight: 32)
-            .background(Color(uiColor: .systemBackground), in: Capsule())
-            .overlay { Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5) }
-            .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
-            .matchedGeometryEffect(id: "hero-grade-\(wallZone.id.rawValue)", in: heroNS, isSource: !reduceMotion)
-            .accessibilityIdentifier("hero-wallKind")
-    }
-
-    private var statusCapsuleGlass: some View {
-        Label(L10n.wallAvailability(wallZone.availability), systemImage: wallZone.availability == .active ? "checkmark.circle" : "pause.circle")
-            .font(BlocTypography.status)
-            .foregroundStyle(.white)
-            .padding(.horizontal, BlocSpacing.compact)
-            .frame(minHeight: 28)
-            .background(glassCapsuleBackground)
-            .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
-            .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
-            .accessibilityIdentifier("hero-status")
-    }
-
-    private var resetCapsuleGlass: some View {
-        Label(resetCapsuleText, systemImage: "arrow.clockwise")
-            .font(BlocTypography.status)
-            .foregroundStyle(.white)
-            .padding(.horizontal, BlocSpacing.compact)
-            .frame(minHeight: 28)
-            .background(glassCapsuleBackground)
-            .overlay { Capsule().stroke(.white.opacity(0.18), lineWidth: 0.5) }
-            .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
-            .accessibilityIdentifier("hero-reset")
-    }
-
-    private var resetCapsuleText: String {
+    private var resetText: String {
         if let reset = wallZone.latestResetDate {
             let days = Calendar.current.dateComponents([.day], from: reset, to: Date()).day ?? 0
             if days == 0 { return "Reset today" }
@@ -198,92 +181,101 @@ struct WallZoneRouteListView: View {
         return "Reset —"
     }
 
-    @ViewBuilder
-    private var glassCapsuleBackground: some View {
-        if reduceTransparency {
-            Capsule().fill(Color(uiColor: .secondarySystemBackground))
-        } else if #available(iOS 26.0, *) {
-            Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(BlocColor.opticBlueTint.opacity(0.12)) }
-                .glassEffect(.regular.tint(BlocColor.opticBlueTint).interactive(false), in: Capsule())
-        } else {
-            Capsule().fill(.ultraThinMaterial).overlay { Capsule().fill(Color.black.opacity(0.18)) }
-        }
-    }
-
-    // MARK: - Title group no card
-
-    private var titleGroup: some View {
-        VStack(alignment: .leading, spacing: DesignSpacing.xSmall) {
-            Text(verbatim: wallZone.name)
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(DesignColour.textPrimary)
-                .minimumScaleFactor(0.85)
-                .lineLimit(1)
-                .accessibilityIdentifier("hero-location")
-            HStack(spacing: DesignSpacing.small) {
-                Label(wallZone.locationDescription, systemImage: "mappin")
-                    .lineLimit(1)
-                if !wallZone.locationDescription.isEmpty {
-                    Text(verbatim: "·")
-                }
-                Text(L10n.wallKind(wallZone.wallKind))
-                    .font(BlocTypography.status)
-                    .foregroundStyle(BlocColor.opticBlue)
-            }
-            .font(DesignTypography.supporting)
-            .foregroundStyle(DesignColour.textSecondary)
-            .lineLimit(1)
-            if let reset = wallZone.latestResetDate {
-                Text(reset.formatted(date: .abbreviated, time: .omitted))
-                    .font(BlocTypography.caption)
-                    .foregroundStyle(DesignColour.textTertiary)
-            }
-        }
-    }
-
-    // MARK: - Compact metadata row
-
-    private var compactMetadataRow: some View {
-        // ponytail: 25° hardcoded, replace with wallZone.angle when model adds it
-        let kind = String(localized: L10n.wallKind(wallZone.wallKind))
-        let material = String(localized: L10n.surfaceMaterial(wallZone.surfaceMaterial))
-        return Text(verbatim: "\(kind) · \(material) · 25° · \(wallZone.routeCount) routes · \(wallZone.betaCount) beta")
-            .font(BlocTypography.metadata)
-            .foregroundStyle(DesignColour.textSecondary)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .accessibilityIdentifier("hero-metadata")
-    }
-
-    // MARK: - Filter bar
+    // MARK: - Filter bar: Has Beta -> All Grades -> Newest
 
     private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ViewThatFits(in: .horizontal) {
             HStack(spacing: DesignSpacing.small) {
-            if viewModel.options.activeFilterCount > 0 {
-                StatusChip(
-                    title: L10n.Filter.active,
-                    systemImage: "line.3.horizontal.decrease.circle.fill",
-                    colour: DesignColour.brandPrimary
-                )
+                hasBetaToggle
+                gradeMenu
+                sortMenu
             }
-            Picker(L10n.Filter.grade, selection: $viewModel.options.gradeBand) {
-                ForEach(GradeBand.allCases, id: \.self) { band in
-                    Text(L10n.gradeBand(band)).tag(band)
+            VStack(alignment: .leading, spacing: DesignSpacing.small) {
+                HStack(spacing: DesignSpacing.small) {
+                    hasBetaToggle
+                    gradeMenu
                 }
-            }
-            .pickerStyle(.menu)
-            Toggle(L10n.Filter.hasBeta, isOn: $viewModel.options.hasBeta)
-                .toggleStyle(.button)
-                .buttonStyle(CompactActionButtonStyle())
-            Picker(L10n.Filter.sort, selection: $viewModel.options.sort) {
-                ForEach(RouteSort.allCases, id: \.self) { sort in
-                    Text(L10n.routeSort(sort)).tag(sort)
-                }
-            }
-            .pickerStyle(.menu)
+                sortMenu
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("filter-bar")
+    }
+
+    private var hasBetaToggle: some View {
+        Toggle(isOn: $viewModel.options.hasBeta) {
+            Label {
+                Text("Has Beta")
+                    .font(DesignTypography.supporting.weight(.semibold))
+            } icon: {
+                Image(systemName: viewModel.options.hasBeta ? "checkmark.circle.fill" : "circle")
+            }
+        }
+        .toggleStyle(.button)
+        .buttonStyle(CompactActionButtonStyle())
+        .accessibilityLabel(Text("Has Beta"))
+        .accessibilityValue(Text(viewModel.options.hasBeta ? "On" : "Off"))
+        .accessibilityAddTraits(viewModel.options.hasBeta ? .isSelected : [])
+        .accessibilityIdentifier("filter-has-beta")
+        .frame(minHeight: 44)
+    }
+
+    private var gradeMenu: some View {
+        Menu {
+            ForEach(GradeBand.allCases, id: \.self) { band in
+                Button {
+                    viewModel.options.gradeBand = band
+                } label: {
+                    HStack {
+                        Text(L10n.gradeBand(band))
+                        if viewModel.options.gradeBand == band { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(viewModel.options.gradeBand == .all ? "All Grades" : String(localized: L10n.gradeBand(viewModel.options.gradeBand)))
+                    .font(DesignTypography.supporting.weight(.semibold))
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+            }
+            .foregroundStyle(DesignColour.brandPrimary)
+            .padding(.horizontal, DesignSpacing.medium)
+            .frame(minHeight: 44)
+            .background(DesignColour.brandTint, in: Capsule())
+        }
+        .accessibilityLabel(Text("Grade filter"))
+        .accessibilityValue(Text(viewModel.options.gradeBand == .all ? "All Grades" : String(localized: L10n.gradeBand(viewModel.options.gradeBand))))
+        .accessibilityIdentifier("filter-grade")
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            ForEach(RouteSort.allCases, id: \.self) { sort in
+                Button {
+                    viewModel.options.sort = sort
+                } label: {
+                    HStack {
+                        Text(L10n.routeSort(sort))
+                        if viewModel.options.sort == sort { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(viewModel.options.sort == .newest ? "Newest" : String(localized: L10n.routeSort(viewModel.options.sort)))
+                    .font(DesignTypography.supporting.weight(.semibold))
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+            }
+            .foregroundStyle(DesignColour.brandPrimary)
+            .padding(.horizontal, DesignSpacing.medium)
+            .frame(minHeight: 44)
+            .background(DesignColour.brandTint, in: Capsule())
+        }
+        .accessibilityLabel(Text("Sort"))
+        .accessibilityValue(Text(String(localized: L10n.routeSort(viewModel.options.sort))))
+        .accessibilityIdentifier("filter-sort")
     }
 
     // MARK: - Route content

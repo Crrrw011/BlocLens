@@ -58,26 +58,52 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if let gym = data.frequentGym {
-                    currentGymHero(gym: gym)
-                    VStack(alignment: .leading, spacing: DesignSpacing.large) {
-                        if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
-                        currentGymTitle(gym: gym)
-                        Button {
-                            if session.authenticationState.isSignedIn {
-                                showsFavouritePicker = true
-                            } else {
-                                _ = session.requireAuthentication(for: .account)
-                            }
-                        } label: {
-                            Label("Change Favourite Gym", systemImage: "pencil.circle")
-                                .font(DesignTypography.supporting.weight(.medium))
-                                .foregroundStyle(BlocColor.opticBlue)
+                    VStack(alignment: .leading, spacing: DesignSpacing.medium) {
+                        // Gym Name - adaptive single/two line, tappable, 44pt
+                        NavigationLink(value: gym) {
+                            GymNameTitleContent(gym: gym)
                         }
-                        Divider().overlay(DesignColour.separator.opacity(0.35)).padding(.horizontal, DesignSpacing.medium)
-                        currentGymMetadata(gym: gym, data: data)
-                        activeProjectsSection(data: data)
-                        freshSetsSection(data: data)
-                        recentClimbsSection(data: data)
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("home-gym-name-link")
+                        .padding(.horizontal, DesignSpacing.medium)
+                        .padding(.top, DesignSpacing.small)
+                        // Gym photo carousel - shared, max 4, lazy
+                        currentGymHero(gym: gym)
+                            .padding(.horizontal, DesignSpacing.medium)
+                        // Gym basic info - brand, address, beta (kept but not duplicated)
+                        NavigationLink(value: gym) {
+                            HStack(spacing: DesignSpacing.small) {
+                                Label(gym.brandName, systemImage: "building.2")
+                                Text(verbatim: "·")
+                                Text(verbatim: "\(gym.suburb), \(gym.state)")
+                                if gym.betaCount > 0 {
+                                    Text(verbatim: "·")
+                                    Label("\(gym.betaCount)", systemImage: "link")
+                                }
+                            }
+                            .font(DesignTypography.supporting)
+                            .foregroundStyle(DesignColour.textSecondary)
+                            .lineLimit(1)
+                            .padding(.horizontal, DesignSpacing.medium)
+                        }
+                        .buttonStyle(.plain)
+                        VStack(alignment: .leading, spacing: DesignSpacing.large) {
+                            if isOffline { OfflineBanner(message: L10n.State.offlineCachedMessage) }
+                            Button {
+                                if session.authenticationState.isSignedIn {
+                                    showsFavouritePicker = true
+                                } else {
+                                    _ = session.requireAuthentication(for: .account)
+                                }
+                            } label: {
+                                Label("Change Favourite Gym", systemImage: "pencil.circle")
+                                    .font(DesignTypography.supporting.weight(.medium))
+                                    .foregroundStyle(BlocColor.opticBlue)
+                            }
+                            activeProjectsSection(data: data)
+                            freshSetsSection(data: data)
+                            recentClimbsSection(data: data)
+                        }
                         if session.isContributionPromptVisible("home-route-accuracy") {
                             ContributionPromptView(
                                 title: L10n.Home.contributionTitle,
@@ -96,10 +122,13 @@ struct HomeView: View {
                         // Guest: Welcome large section with nearby gym map, centered
                         VStack {
                             Spacer()
-                            VStack(alignment: .leading, spacing: DesignSpacing.medium) {
-                                Label("Welcome to BlocLens", systemImage: "mountain.2.circle")
-                                    .font(.headline)
+                            VStack(alignment: .leading, spacing: DesignSpacing.large) {
+                                Text("Welcome to BlocLens")
+                                    .font(.system(size: 34, weight: .bold, design: .rounded))
                                     .foregroundStyle(DesignColour.textPrimary)
+                                    .minimumScaleFactor(0.7)
+                                    .lineLimit(2)
+                                    .accessibilityAddTraits(.isHeader)
                                 Text("Sign in to personalise your home, track projects and get wall updates for your favourite gym.")
                                     .font(DesignTypography.supporting)
                                     .foregroundStyle(DesignColour.textSecondary)
@@ -109,9 +138,6 @@ struct HomeView: View {
                                 }
                                 .buttonStyle(PrimaryButtonStyle())
                             }
-                            .padding(DesignSpacing.medium)
-                            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
-                            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
                             .padding(.horizontal, DesignSpacing.medium)
                             Spacer()
                         }
@@ -148,39 +174,40 @@ struct HomeView: View {
                 }
             }
         }
-        .ignoresSafeArea(edges: .top)
-        .safeAreaPadding(.top, 8)
         .background(DesignColour.backgroundSecondary)
     }
 
     // MARK: - Current Gym hero wall as interface
 
     private func currentGymHero(gym: Gym) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            GymPhotoView(
+        ZStack(alignment: .bottomTrailing) {
+            GymPhotoCarouselView(
                 placeID: gym.googlePlaceID,
                 gymName: gym.name,
-                photoService: environment.gymPhotoService,
+                loader: environment.gymPhotoLoader,
                 width: 800,
-                aspectRatio: 4 / 3
+                aspectRatio: 4 / 3,
+                cornerRadius: 0
             )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
+                .allowsHitTesting(false)
             floatingCapsules(gym: gym)
                 .padding(.horizontal, DesignSpacing.medium)
                 .padding(.bottom, DesignSpacing.medium)
+                .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity)
-        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: "\(gym.name) \(gym.suburb)"))
+        .accessibilityIdentifier("home-gym-carousel")
     }
 
     private func floatingCapsules(gym: Gym) -> some View {
         HStack(spacing: DesignSpacing.small) {
-            suburbCapsule(gym: gym)
+            Spacer(minLength: 0)
             verifiedCapsule(gym: gym)
             resetCapsule(gym: gym)
-            Spacer(minLength: 0)
         }
     }
 

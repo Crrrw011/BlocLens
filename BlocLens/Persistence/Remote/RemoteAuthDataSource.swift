@@ -141,7 +141,7 @@ struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
     }
 
     func updateProfileDetails(_ details: ProfileDetailsUpdate, userID: UUID) async throws {
-        var values: [String: AnyJSON] = [
+        let values: [String: AnyJSON] = [
             "height_cm": details.heightCentimetres.map { AnyJSON.double($0) } ?? AnyJSON.null,
             "arm_span_cm": details.armSpanCentimetres.map { AnyJSON.double($0) } ?? AnyJSON.null,
             "regular_grade": details.gradeSystem == .vScale

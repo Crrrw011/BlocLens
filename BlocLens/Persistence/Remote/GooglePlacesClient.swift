@@ -27,9 +27,6 @@ struct RemoteGooglePlacesClient: GooglePlacesClient, Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
-        if let bundleID = Bundle.main.bundleIdentifier {
-            request.setValue(bundleID, forHTTPHeaderField: "X-Ios-Bundle-Identifier")
-        }
         request.setValue(
             "places.id,places.displayName,places.formattedAddress,places.location",
             forHTTPHeaderField: "X-Goog-FieldMask"
@@ -79,9 +76,6 @@ struct RemoteGooglePlacesClient: GooglePlacesClient, Sendable {
         }
         var request = URLRequest(url: url)
         request.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
-        if let bundleID = Bundle.main.bundleIdentifier {
-            request.setValue(bundleID, forHTTPHeaderField: "X-Ios-Bundle-Identifier")
-        }
         request.setValue(fields, forHTTPHeaderField: "X-Goog-FieldMask")
 
         let (data, response) = try await URLSession.shared.data(for: request)

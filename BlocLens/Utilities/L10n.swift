@@ -17,6 +17,7 @@ enum L10n {
         static let selected: LocalizedStringResource = "common.selected"
         static let notSelected: LocalizedStringResource = "common.notSelected"
         static let all: LocalizedStringResource = "common.all"
+        static let openSettings: LocalizedStringResource = "common.openSettings"
     }
 
     enum Tab {
@@ -70,6 +71,10 @@ enum L10n {
         static let locationUnavailableMessage: LocalizedStringResource = "map.locationUnavailable.message"
         static let emptyFixtureTitle: LocalizedStringResource = "map.emptyFixture.title"
         static let emptyFixtureMessage: LocalizedStringResource = "map.emptyFixture.message"
+        static let myLocation: LocalizedStringResource = "map.myLocation"
+        static let locationAccessNeeded: LocalizedStringResource = "map.locationAccessNeeded"
+        static let locationDeniedMessage: LocalizedStringResource = "map.locationDeniedMessage"
+        static let locationErrorTitle: LocalizedStringResource = "map.locationErrorTitle"
     }
 
     enum MapFilter {

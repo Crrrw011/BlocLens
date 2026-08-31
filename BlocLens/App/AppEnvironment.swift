@@ -15,6 +15,7 @@ struct AppEnvironment: Sendable {
     let languagePreferenceStore: any LanguagePreferenceStore
     let googlePlacesClient: any GooglePlacesClient
     let gymPhotoService: any GymPhotoService
+    let gymPhotoLoader: any GymPhotoLoader
     let currentUserID: @Sendable () -> UserID?
     let dataAvailability: DataAvailability
 
@@ -24,9 +25,18 @@ struct AppEnvironment: Sendable {
         isOnboardingComplete: Bool = true,
         authenticationState: AuthenticationState = .guest,
         onboardingStore: (any OnboardingStore)? = nil,
-        languagePreferenceStore: any LanguagePreferenceStore = InMemoryLanguagePreferenceStore()
+        languagePreferenceStore: any LanguagePreferenceStore = InMemoryLanguagePreferenceStore(),
+        gymPhotoLoader: (any GymPhotoLoader)? = nil
     ) -> AppEnvironment {
-        AppEnvironment(
+        let loader: any GymPhotoLoader
+        if let gymPhotoLoader {
+            loader = gymPhotoLoader
+        } else {
+            // Default mock loader with 1 photo for the favourite gym, to keep previews deterministic
+            let defaultPhoto = GymPhoto(imageURL: URL(string: "https://example.com/gym-photo-1.jpg")!, attribution: "Mock", attributionHTML: nil)
+            loader = MockGymPhotoLoader(photosByPlaceID: ["ChIJrTKIuKxRlEwRVOGeuGnCAVA": [defaultPhoto]])
+        }
+        return AppEnvironment(
             gymRepository: MockGymRepository(scenario: scenario),
             routeRepository: MockRouteRepository(scenario: scenario),
             betaRepository: MockBetaRepository(scenario: scenario),
@@ -46,6 +56,7 @@ struct AppEnvironment: Sendable {
             languagePreferenceStore: languagePreferenceStore,
             googlePlacesClient: NoopGooglePlacesClient(),
             gymPhotoService: NoopGymPhotoService(),
+            gymPhotoLoader: loader,
             currentUserID: { DevelopmentFixtures.currentUserID },
             dataAvailability: scenario == .offlineWithCache ? .offlineCached : .online
         )
@@ -96,6 +107,7 @@ struct AppEnvironment: Sendable {
             languagePreferenceStore: InMemoryLanguagePreferenceStore(),
             googlePlacesClient: placesClient,
             gymPhotoService: RemoteGymPhotoService(client: placesClient),
+            gymPhotoLoader: RemoteGymPhotoLoader(client: placesClient),
             currentUserID: {
                 client.auth.currentUser.map {
                     UserID(rawValue: RemoteIdentifier.domainString($0.id))
