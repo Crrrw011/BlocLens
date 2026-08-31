@@ -69,12 +69,15 @@ struct GymPhotoView: View {
     }
 
     private func attributionOverlay(_ photo: GymPhoto) -> some View {
-        HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             if let attribution = photo.attribution {
                 Text(attribution)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.8))
             }
+            Text(L10n.GymPhoto.fromGoogle)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.8))
         }
         .padding(6)
     }

@@ -69,7 +69,9 @@ struct RemoteGooglePlacesClient: GooglePlacesClient, Sendable {
         guard !apiKey.isEmpty, apiKey != "YOUR_GOOGLE_PLACES_API_KEY" else {
             throw RepositoryError.invalidConfiguration
         }
-        let url = URL(string: "https://places.googleapis.com/v1/places/\(placeID)?fields=\(fields)")!
+        guard let url = URL(string: "https://places.googleapis.com/v1/places/\(placeID)?fields=\(fields)") else {
+            throw RepositoryError.invalidConfiguration
+        }
         var request = URLRequest(url: url)
         request.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
         request.setValue(fields, forHTTPHeaderField: "X-Goog-FieldMask")
