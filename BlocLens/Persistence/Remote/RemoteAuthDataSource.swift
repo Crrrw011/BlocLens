@@ -146,10 +146,11 @@ struct SupabaseAuthDataSource: RemoteAuthDataSource, Sendable {
             "regular_grade": details.gradeSystem == .vScale
                 ? (details.regularGrade.map { AnyJSON.integer($0.rawValue) } ?? AnyJSON.null)
                 : AnyJSON.null,
-            "grade_system": AnyJSON.string(details.gradeSystem?.rawValue ?? ""),
-            "yds_grade": AnyJSON.string(details.ydsGrade?.rawValue ?? "")
+            "grade_system": details.gradeSystem.map { AnyJSON.string($0.rawValue) } ?? AnyJSON.null,
+            "yds_grade": details.gradeSystem == .yds
+                ? (details.ydsGrade.map { AnyJSON.string($0.rawValue) } ?? AnyJSON.null)
+                : AnyJSON.null
         ]
-        if details.gradeSystem != .yds { values["yds_grade"] = AnyJSON.null }
         _ = try await client
             .from("profiles")
             .update(values, returning: .minimal)

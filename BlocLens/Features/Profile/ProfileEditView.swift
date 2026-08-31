@@ -41,13 +41,6 @@ struct ProfileEditView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(L10n.ProfileEdit.subtitle)
-                        .font(DesignTypography.body)
-                        .foregroundStyle(DesignColour.secondaryText)
-                }
-                .listRowBackground(Color.clear)
-
-                Section {
                     measurementToggle(
                         title: L10n.ProfileEdit.height,
                         icon: "ruler",
@@ -70,29 +63,50 @@ struct ProfileEditView: View {
                         Text(L10n.ProfileEdit.yds).tag(GradeSystem?.some(.yds))
                     }
                     .pickerStyle(.segmented)
+                    .disabled(isNotSureYet)
+                    .opacity(isNotSureYet ? 0.4 : 1)
                     .onChange(of: gradeSystem) { _, newValue in
                         if newValue != nil { isNotSureYet = false }
                     }
 
                     if gradeSystem == .vScale {
-                        vGradeNotSurePicker(selection: $vGrade, isNotSureYet: $isNotSureYet)
+                        wheelPicker(selection: $vGrade)
+                            .disabled(isNotSureYet)
+                            .opacity(isNotSureYet ? 0.4 : 1)
                     } else if gradeSystem == .yds {
-                        ydsGradeNotSurePicker(selection: $ydsGrade, isNotSureYet: $isNotSureYet)
+                        wheelPicker(selection: $ydsGrade)
+                            .disabled(isNotSureYet)
+                            .opacity(isNotSureYet ? 0.4 : 1)
                     }
 
                     Button {
                         withAnimation {
-                            isNotSureYet = true
-                            gradeSystem = nil
-                            vGrade = nil
-                            ydsGrade = nil
+                            isNotSureYet.toggle()
+                            if isNotSureYet {
+                                gradeSystem = nil
+                                vGrade = nil
+                                ydsGrade = nil
+                            } else {
+                                gradeSystem = .vScale
+                            }
                         }
                     } label: {
-                        Label(L10n.ProfileEdit.notSureYet, systemImage: "questionmark.circle")
-                            .font(DesignTypography.supporting)
-                            .foregroundStyle(isNotSureYet ? BlocColor.opticBlue : DesignColour.secondaryText)
+                        HStack {
+                            Label(L10n.ProfileEdit.notSureYet, systemImage: isNotSureYet ? "checkmark.circle.fill" : "circle")
+                                .font(DesignTypography.supporting)
+                                .foregroundStyle(isNotSureYet ? BlocColor.opticBlue : DesignColour.primaryText)
+                            Spacer()
+                            if isNotSureYet {
+                                Image(systemName: "checkmark")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(BlocColor.opticBlue)
+                            }
+                        }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityAddTraits(isNotSureYet ? .isSelected : [])
+                    .accessibilityLabel(L10n.ProfileEdit.notSureYet)
                 } header: {
                     labeledHeader(L10n.ProfileEdit.regularGrade, icon: "gauge.with.needle")
                 } footer: {
