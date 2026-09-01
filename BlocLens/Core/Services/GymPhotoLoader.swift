@@ -6,10 +6,12 @@ nonisolated protocol GymPhotoLoader: Sendable {
     func loadPhoto(for placeID: String, at index: Int, width: Int) async throws -> GymPhoto
     func availablePhotoCount(for placeID: String) async throws -> Int
     func cachedPhoto(for placeID: String, at index: Int) async -> GymPhoto?
+    func refreshPhotoCount(for placeID: String) async throws -> Int
 }
 
 extension GymPhotoLoader {
     func cachedPhoto(for placeID: String, at index: Int) async -> GymPhoto? { nil }
+    func refreshPhotoCount(for placeID: String) async throws -> Int { try await availablePhotoCount(for: placeID) }
 }
 
 // MARK: - Cache Actor
@@ -31,8 +33,23 @@ actor GymPhotoCache {
     }
 
     func storePhotoNames(_ names: [String], placeID: String) {
+        let old = photoNamesByPlaceID[placeID]
         photoNamesByPlaceID[placeID] = names
         photoCountCache[placeID] = min(names.count, 4)
+        // Auto-compact: if photo list changed (e.g. one deleted, new one appended to keep 4),
+        // invalidate cached GymPhotos whose index no longer maps to same name.
+        if let old, old != names {
+            for i in 0..<4 {
+                let k = key(placeID: placeID, index: i)
+                if i >= names.count {
+                    cachedPhotos.removeValue(forKey: k)
+                } else if i < old.count, i < names.count, old[i] != names[i] {
+                    // Shift invalidates all from changed index onward
+                    for j in i..<4 { cachedPhotos.removeValue(forKey: key(placeID: placeID, index: j)) }
+                    break
+                }
+            }
+        }
     }
 
     func photoNames(placeID: String) -> [String]? {
@@ -41,6 +58,13 @@ actor GymPhotoCache {
 
     func photoCount(placeID: String) -> Int? {
         photoCountCache[placeID]
+    }
+
+    func invalidatePhotoNames(placeID: String) {
+        photoNamesByPlaceID.removeValue(forKey: placeID)
+        photoCountCache.removeValue(forKey: placeID)
+        // Clear cached photos for this place so next load re-maps indices
+        for i in 0..<4 { cachedPhotos.removeValue(forKey: key(placeID: placeID, index: i)) }
     }
 
     func inFlightTask(placeID: String, index: Int) -> Task<GymPhoto, Error>? {
@@ -78,7 +102,17 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
     }
 
     func availablePhotoCount(for placeID: String) async throws -> Int {
+        // Always refresh when called after a deletion; cache is used only for fast path.
+        // To keep 4 when one of the first 4 is deleted but a 5th exists, we fetch fresh.
+        // We keep cached for performance but allow explicit invalidation.
         if let cached = await cache.photoCount(placeID: placeID) { return cached }
+        let names = try await fetchPhotoNames(placeID: placeID)
+        await cache.storePhotoNames(names, placeID: placeID)
+        return min(names.count, 4)
+    }
+
+    func refreshPhotoCount(for placeID: String) async throws -> Int {
+        await cache.invalidatePhotoNames(placeID: placeID)
         let names = try await fetchPhotoNames(placeID: placeID)
         await cache.storePhotoNames(names, placeID: placeID)
         return min(names.count, 4)
@@ -92,34 +126,47 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
         }
         let task = Task<GymPhoto, Error> {
             try Task.checkCancellation()
-            let names = try await fetchPhotoNamesIfNeeded(placeID: placeID)
+            var names = try await fetchPhotoNamesIfNeeded(placeID: placeID)
             guard index < names.count else { throw RepositoryError.notFound }
-            let photoName = names[index]
-            // Fetch media
-            var mediaComponents = URLComponents(string: "https://places.googleapis.com/v1/\(photoName)/media")
-            mediaComponents?.queryItems = [
-                URLQueryItem(name: "maxWidthPx", value: "\(width)"),
-                URLQueryItem(name: "skipHttpRedirect", value: "true")
-            ]
-            guard let mediaURL = mediaComponents?.url else { throw RepositoryError.invalidConfiguration }
-            var mediaRequest = URLRequest(url: mediaURL)
-            mediaRequest.setValue(client.apiKeyForMediaURL, forHTTPHeaderField: "X-Goog-Api-Key")
-            if let bundleID = Bundle.main.bundleIdentifier {
-                mediaRequest.setValue(bundleID, forHTTPHeaderField: "X-Ios-Bundle-Identifier")
+            var photoName = names[index]
+            // Fetch media with one retry on invalidation (handles deletion of one of the 4)
+            func fetchMedia(_ name: String) async throws -> GymPhoto {
+                var mediaComponents = URLComponents(string: "https://places.googleapis.com/v1/\(name)/media")
+                mediaComponents?.queryItems = [
+                    URLQueryItem(name: "maxWidthPx", value: "\(width)"),
+                    URLQueryItem(name: "skipHttpRedirect", value: "true")
+                ]
+                guard let mediaURL = mediaComponents?.url else { throw RepositoryError.invalidConfiguration }
+                var mediaRequest = URLRequest(url: mediaURL)
+                mediaRequest.setValue(client.apiKeyForMediaURL, forHTTPHeaderField: "X-Goog-Api-Key")
+                if let bundleID = Bundle.main.bundleIdentifier {
+                    mediaRequest.setValue(bundleID, forHTTPHeaderField: "X-Ios-Bundle-Identifier")
+                }
+                let (mediaData, mediaResponse) = try await URLSession.shared.data(for: mediaRequest)
+                try Task.checkCancellation()
+                guard let http = mediaResponse as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+                      let mediaJson = try JSONSerialization.jsonObject(with: mediaData) as? [String: Any],
+                      let photoUri = mediaJson["photoUri"] as? String,
+                      let photoURL = URL(string: photoUri) else {
+                    throw RepositoryError.decodingFailure
+                }
+                let attribution = await attributionForPhoto(at: index, placeID: placeID)
+                let photo = GymPhoto(imageURL: photoURL, attribution: attribution, attributionHTML: nil)
+                await cache.storePhoto(photo, placeID: placeID, index: index)
+                return photo
             }
-            let (mediaData, mediaResponse) = try await URLSession.shared.data(for: mediaRequest)
-            try Task.checkCancellation()
-            guard let http = mediaResponse as? HTTPURLResponse, (200..<300).contains(http.statusCode),
-                  let mediaJson = try JSONSerialization.jsonObject(with: mediaData) as? [String: Any],
-                  let photoUri = mediaJson["photoUri"] as? String,
-                  let photoURL = URL(string: photoUri) else {
-                throw RepositoryError.decodingFailure
+            do {
+                return try await fetchMedia(photoName)
+            } catch {
+                // Stale place_id or deleted photo among first 4 -> refresh names and retry once to auto-refill to 4
+                // This covers "user deletes one of the 4, new one auto补全"
+                await cache.invalidatePhotoNames(placeID: placeID)
+                names = try await fetchPhotoNames(placeID: placeID)
+                await cache.storePhotoNames(names, placeID: placeID)
+                guard index < names.count else { throw RepositoryError.notFound }
+                photoName = names[index]
+                return try await fetchMedia(photoName)
             }
-            // Attribution from first fetch? Use cached attributions if available, else nil
-            let attribution = await attributionForPhoto(at: index, placeID: placeID)
-            let photo = GymPhoto(imageURL: photoURL, attribution: attribution, attributionHTML: nil)
-            await cache.storePhoto(photo, placeID: placeID, index: index)
-            return photo
         }
         await cache.setInFlight(task, placeID: placeID, index: index)
         do {

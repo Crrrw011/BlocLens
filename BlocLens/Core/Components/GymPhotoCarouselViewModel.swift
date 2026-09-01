@@ -79,10 +79,9 @@ final class GymPhotoCarouselViewModel: ObservableObject {
         states[index] = .loading
         // Cancel previous task for this index if any
         loadTasks[index]?.cancel()
-        let task = Task {
+        let task = Task { @MainActor in
             do {
                 let photo = try await loader.loadPhoto(for: placeID, at: index, width: 800)
-                // Check cancellation
                 try Task.checkCancellation()
                 states[index] = .loaded(photo)
             } catch is CancellationError {
@@ -90,6 +89,24 @@ final class GymPhotoCarouselViewModel: ObservableObject {
             } catch {
                 if Task.isCancelled {
                     states[index] = .idle
+                } else if let repoError = error as? RepositoryError, repoError == .notFound {
+                    // Auto-refill: photo at this index was deleted, refresh count and retry once
+                    do {
+                        let freshCount = try await loader.refreshPhotoCount(for: placeID)
+                        self.availableCount = min(freshCount, self.maxPhotos)
+                        if index < freshCount {
+                            states[index] = .idle
+                            let retryPhoto = try await loader.loadPhoto(for: placeID, at: index, width: 800)
+                            states[index] = .loaded(retryPhoto)
+                            for i in (index+1)..<self.availableCount {
+                                if case .error = states[i] { states[i] = .idle }
+                            }
+                        } else {
+                            states[index] = .empty
+                        }
+                    } catch {
+                        states[index] = .error(error.localizedDescription)
+                    }
                 } else {
                     states[index] = .error(error.localizedDescription)
                 }
