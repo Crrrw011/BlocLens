@@ -1,11 +1,23 @@
 import SwiftUI
 
+// MARK: - Shared Metrics (single source of truth for visual ratio)
+
+enum GymPhotoCarouselMetrics {
+    static let aspectRatio: CGFloat = 16.0 / 10.0 // width : height = 16 : 10 ≈ 1.6
+    static let indicatorBottomPadding: CGFloat = 12
+}
+
+enum GymPhotoCarouselStyle {
+    case home
+    case detail
+}
+
 struct GymPhotoCarouselView: View {
     let placeID: String?
     let gymName: String
     let loader: any GymPhotoLoader
     var width: Int = 800
-    var aspectRatio: CGFloat = 16 / 9
+    var aspectRatio: CGFloat = GymPhotoCarouselMetrics.aspectRatio
     var cornerRadius: CGFloat = BlocRadius.container
     var onTap: (() -> Void)? = nil
 
@@ -28,7 +40,7 @@ struct GymPhotoCarouselView: View {
         return viewModel.displayCount
     }
 
-    init(placeID: String?, gymName: String, loader: any GymPhotoLoader, width: Int = 800, aspectRatio: CGFloat = 16/9, cornerRadius: CGFloat = BlocRadius.container, onTap: (() -> Void)? = nil) {
+    init(placeID: String?, gymName: String, loader: any GymPhotoLoader, width: Int = 800, aspectRatio: CGFloat = GymPhotoCarouselMetrics.aspectRatio, cornerRadius: CGFloat = BlocRadius.container, onTap: (() -> Void)? = nil) {
         self.placeID = placeID
         self.gymName = gymName
         self.loader = loader
@@ -48,37 +60,50 @@ struct GymPhotoCarouselView: View {
         !reduceMotion && viewModel.displayCount > 1
     }
 
-    var body: some View {
-        GeometryReader { geo in
-            let pointWidth = geo.size.width
-            let pixelWidth = Int(pointWidth * displayScale)
-            let bucket = GymPhotoBucket.bucket(for: pixelWidth)
-            Group {
-                if !viewModel.hasContent {
-                    placeholder
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .accessibilityLabel(Text("Photo of \(gymName)"))
-                        .accessibilityIdentifier("gym-photo-placeholder")
-                } else {
-                    carouselContent
-                }
+    @ViewBuilder
+    private var carouselContainer: some View {
+        Group {
+            if !viewModel.hasContent {
+                placeholder
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityLabel(Text("Photo of \(gymName)"))
+                    .accessibilityIdentifier("gym-photo-placeholder")
+            } else {
+                carouselContent
             }
-            .aspectRatio(aspectRatio, contentMode: .fit)
-            .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .task(id: bucket) {
-                await viewModel.initialLoad(width: bucket)
-                if viewModel.displayCount > 0 {
-                    virtualIndex = middleStart
-                    viewModel.selectedIndex = actualIndex
-                    Task { await viewModel.onSelectedIndexChanged(actualIndex) }
-                    if shouldAutoPlay { startAuto() }
-                }
-            }
-            .onAppear { containerWidth = pointWidth }
-            .onChange(of: pointWidth) { _, newW in containerWidth = newW }
         }
-        .frame(height: nil)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let pointWidth = proxy.size.width
+            let bucket = GymPhotoBucket.bucket(for: Int(pointWidth * displayScale))
+            carouselContainer
+                .task(id: bucket) {
+                    await viewModel.initialLoad(width: bucket)
+                    if viewModel.displayCount > 0 {
+                        virtualIndex = middleStart
+                        viewModel.selectedIndex = actualIndex
+                        Task { await viewModel.onSelectedIndexChanged(actualIndex) }
+                        if shouldAutoPlay { startAuto() }
+                    }
+                }
+                .onAppear { containerWidth = pointWidth }
+                .onChange(of: pointWidth) { _, new in containerWidth = new }
+        }
+        .aspectRatio(GymPhotoCarouselMetrics.aspectRatio, contentMode: .fit)
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .accessibilityIdentifier("gym-photo-carousel")
+        .overlay(alignment: .bottom) {
+            if viewModel.shouldShowIndicator {
+                pageIndicator
+                    .padding(.bottom, GymPhotoCarouselMetrics.indicatorBottomPadding)
+                    .allowsHitTesting(false)
+            }
+        }
         .onDisappear {
             viewModel.onDisappear()
             stopAuto()
@@ -92,14 +117,10 @@ struct GymPhotoCarouselView: View {
             guard viewModel.displayCount > 0 else { return }
             let actual = ((newVirtual % viewModel.displayCount) + viewModel.displayCount) % viewModel.displayCount
             viewModel.selectedIndex = actual
-            // Use current bucket for width
-            let pixelWidth = Int(containerWidth * displayScale)
-            let bucket = GymPhotoBucket.bucket(for: pixelWidth)
             Task { await viewModel.onSelectedIndexChanged(actual) }
-            // Seamless recenter when hitting buffer edges
             if newVirtual <= 0 || newVirtual >= bufferedCount - 1 {
                 Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 750_000_000) // after 0.72s animation
+                    try? await Task.sleep(nanoseconds: 750_000_000)
                     if virtualIndex == newVirtual {
                         withAnimation(nil) {
                             virtualIndex = middleStart + actual
@@ -107,8 +128,6 @@ struct GymPhotoCarouselView: View {
                     }
                 }
             } else if newVirtual < middleStart || newVirtual >= middleStart + viewModel.displayCount {
-                // Also recenter when drifting out of middle copy after many swipes
-                // Keep within middle copy for long-term stability
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 750_000_000)
                     if virtualIndex == newVirtual {
@@ -147,11 +166,9 @@ struct GymPhotoCarouselView: View {
                     return false
                 }()
                 if !isReady {
-                    // Ensure next is requested, but don't slide into blank
                     Task { await viewModel.onSelectedIndexChanged(nextActual) }
                     continue
                 }
-                // Smooth horizontal slide 0.72s natural ease
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.72)) {
                     virtualIndex += 1
                 }
@@ -181,20 +198,10 @@ struct GymPhotoCarouselView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.72), value: virtualIndex)
-            .overlay(alignment: .bottom) {
-                if viewModel.shouldShowIndicator {
-                    pageIndicator
-                        .padding(.bottom, 12)
-                        .allowsHitTesting(false)
-                }
-            }
             .simultaneousGesture(DragGesture(minimumDistance: 10).onChanged { _ in
-                // Pause auto while user drags
                 stopAuto()
             }.onEnded { _ in
-                // Resume after drag
                 if shouldAutoPlay {
-                    // Small delay to avoid immediate jump
                     Task { @MainActor in
                         try? await Task.sleep(nanoseconds: 500_000_000)
                         startAuto()
@@ -308,8 +315,7 @@ struct GymPhotoCarouselView: View {
                             }
                         }
                 } else if photo.imageURL.scheme == "memory" {
-                    // Memory-only Google: try to load from memory cache via loader
-                    AsyncImage(url: photo.imageURL) { _ in Color.clear } // fallback, will be replaced by memory check
+                    AsyncImage(url: photo.imageURL) { _ in Color.clear }
                         .task {
                             if let name = photo.photoName, let img = await loader.cachedImage(for: name) {
                                 memoryImage = img
@@ -377,7 +383,7 @@ struct GymPhotoCarouselView: View {
     let photo = GymPhoto(imageURL: URL(string: "https://picsum.photos/seed/preview1/800/600")!, attribution: "Test", attributionHTML: nil)
     let loader = MockGymPhotoLoader(photosByPlaceID: ["test-place": [photo]])
     GymPhotoCarouselView(placeID: "test-place", gymName: "Test Gym", loader: loader)
-        .frame(height: 200)
+        .frame(width: 360)
         .padding()
 }
 
@@ -385,14 +391,14 @@ struct GymPhotoCarouselView: View {
     let photos = (1...4).map { GymPhoto(imageURL: URL(string: "https://picsum.photos/seed/preview\($0)/800/600")!, attribution: "Attr \($0)", attributionHTML: nil) }
     let loader = MockGymPhotoLoader(photosByPlaceID: ["test-place": photos])
     GymPhotoCarouselView(placeID: "test-place", gymName: "Test Gym", loader: loader)
-        .frame(height: 200)
+        .frame(width: 360)
         .padding()
 }
 
 #Preview("Carousel - Loading") {
     let loader = MockGymPhotoLoader(photosByPlaceID: ["test-place": []], delayNanoseconds: 2_000_000_000)
     GymPhotoCarouselView(placeID: "test-place", gymName: "Test Gym", loader: loader)
-        .frame(height: 200)
+        .frame(width: 360)
         .padding()
 }
 
@@ -400,13 +406,13 @@ struct GymPhotoCarouselView: View {
     let photos = [GymPhoto(imageURL: URL(string: "https://picsum.photos/seed/error/800/600")!, attribution: nil, attributionHTML: nil)]
     let loader = MockGymPhotoLoader(photosByPlaceID: ["test-place": photos])
     GymPhotoCarouselView(placeID: "test-place", gymName: "Test Gym", loader: loader)
-        .frame(height: 200)
+        .frame(width: 360)
         .padding()
 }
 
 #Preview("Carousel - Empty") {
     let loader = MockGymPhotoLoader(photosByPlaceID: [:])
     GymPhotoCarouselView(placeID: nil, gymName: "No Place", loader: loader)
-        .frame(height: 200)
+        .frame(width: 360)
         .padding()
 }

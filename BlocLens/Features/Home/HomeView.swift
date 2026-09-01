@@ -186,14 +186,14 @@ struct HomeView: View {
                 gymName: gym.name,
                 loader: environment.gymPhotoLoader,
                 width: 800,
-                aspectRatio: 16 / 9,
+                aspectRatio: GymPhotoCarouselMetrics.aspectRatio,
                 cornerRadius: 0
             )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
                 .allowsHitTesting(false)
             floatingCapsules(gym: gym)
                 .padding(.horizontal, DesignSpacing.medium)
-                .padding(.bottom, DesignSpacing.medium)
+                .padding(.bottom, DesignSpacing.xLarge)
                 .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity)

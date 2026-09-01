@@ -58,7 +58,7 @@ final class GymPhotoCarouselViewModel: ObservableObject {
 
     func loadIfNeeded(index: Int, width: Int? = nil) async {
         let w = width.map { GymPhotoBucket.bucket(for: $0) } ?? lastWidth
-        if let width { lastWidth = w }
+        if width != nil { lastWidth = w }
         guard let placeID else { return }
         guard index >= 0 && index < maxPhotos else { return }
         if availableCount == 0 {

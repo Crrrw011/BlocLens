@@ -97,15 +97,15 @@ struct GymDetailView: View {
                 placeID: gym.googlePlaceID,
                 gymName: gym.name,
                 loader: environment.gymPhotoLoader,
-                width: 1200,
-                aspectRatio: 16 / 9,
+                width: 800,
+                aspectRatio: GymPhotoCarouselMetrics.aspectRatio,
                 cornerRadius: 0
             )
             LinearGradient(colors: [.clear, Color.black.opacity(0.30)], startPoint: .top, endPoint: .bottom)
                 .allowsHitTesting(false)
             floatingCapsules
                 .padding(.horizontal, DesignSpacing.medium)
-                .padding(.bottom, DesignSpacing.medium)
+                .padding(.bottom, DesignSpacing.xLarge)
                 .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity)

@@ -181,7 +181,7 @@ actor GymPhotoMemoryImageCache {
     }
     func set(_ image: UIImage, forKey key: String) {
         let v = GymPhotoVariantKey(sourceID: key, pixelWidthBucket: 1280)
-        Task { await self.set(image, for: v) }
+        set(image, for: v)
     }
     func clear() { cache.removeAll(); order.removeAll() }
 }
@@ -243,7 +243,6 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
     func loadPhoto(for placeID: String, at index: Int, width: Int) async throws -> GymPhoto {
         if index < 0 || index >= 4 { throw RepositoryError.invalidInput }
         let bucket = GymPhotoBucket.bucket(for: width)
-        let variantForIndex = GymPhotoVariantKey(sourceID: "\(placeID)#\(index)", pixelWidthBucket: bucket)
         // Variant-aware memory hit (exact or larger)
         // We still keep placeID#index cache for quick, but also check variant image cache
         if let cached = await cache.cachedPhoto(placeID: placeID, index: index) {
