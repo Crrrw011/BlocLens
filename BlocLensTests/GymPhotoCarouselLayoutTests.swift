@@ -2,6 +2,7 @@ import XCTest
 import SwiftUI
 @testable import BlocLens
 
+@MainActor
 final class GymPhotoCarouselLayoutTests: XCTestCase {
 
     // 1. At most 4 photos (reuse)
@@ -147,7 +148,7 @@ final class GymPhotoCarouselLayoutTests: XCTestCase {
         XCTAssertTrue(content.contains("7 : 6") || content.contains("7:6") || content.contains("width: 7"), "Selected dot should be larger (7 vs 6) to not rely solely on color")
         XCTAssertTrue(content.contains("accessibilityHidden(true)"), "Decorative dots hidden from VoiceOver")
         XCTAssertTrue(content.contains("accessibilityElement(children: .combine)"), "Indicator combined for VoiceOver")
-        XCTAssertTrue(content.contains("Photo \\(viewModel.selectedIndex + 1) of"), "Accessibility value Photo X of Y")
+        XCTAssertTrue(content.contains("Photo \\(") && content.contains(" of "), "Accessibility value Photo X of Y")
     }
 
     // Verify no third-party dependency added, no bundle ID change

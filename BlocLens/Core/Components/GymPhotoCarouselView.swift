@@ -17,8 +17,14 @@ struct GymPhotoCarouselView: View {
     @State private var virtualIndex: Int = 500
     @State private var autoTask: Task<Void, Never>?
 
-    // Large virtual count for infinite looping (500*2)
-    private let virtualCount = 1000
+    private var bufferedCount: Int {
+        guard viewModel.displayCount > 1 else { return viewModel.displayCount }
+        return viewModel.displayCount * 3
+    }
+    private var middleStart: Int {
+        guard viewModel.displayCount > 0 else { return 0 }
+        return viewModel.displayCount
+    }
 
     init(placeID: String?, gymName: String, loader: any GymPhotoLoader, width: Int = 800, aspectRatio: CGFloat = 16/9, cornerRadius: CGFloat = BlocRadius.container, onTap: (() -> Void)? = nil) {
         self.placeID = placeID
@@ -56,10 +62,8 @@ struct GymPhotoCarouselView: View {
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .task {
             await viewModel.onAppear()
-            // Align virtual index to first photo after count is known
             if viewModel.displayCount > 0 {
-                virtualIndex = 500 - (500 % viewModel.displayCount)
-                // Sync viewModel selected for indicator/tests
+                virtualIndex = middleStart
                 viewModel.selectedIndex = actualIndex
                 Task { await viewModel.onSelectedIndexChanged(actualIndex) }
                 if shouldAutoPlay { startAuto() }
@@ -71,13 +75,36 @@ struct GymPhotoCarouselView: View {
         }
         .onChange(of: viewModel.displayCount) { _, newCount in
             if newCount > 0 {
-                virtualIndex = 500 - (500 % newCount)
+                virtualIndex = newCount // middleStart for new count
             }
         }
         .onChange(of: virtualIndex) { _, newVirtual in
+            guard viewModel.displayCount > 0 else { return }
             let actual = ((newVirtual % viewModel.displayCount) + viewModel.displayCount) % viewModel.displayCount
             viewModel.selectedIndex = actual
             Task { await viewModel.onSelectedIndexChanged(actual) }
+            // Seamless recenter when hitting buffer edges
+            if newVirtual <= 0 || newVirtual >= bufferedCount - 1 {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 750_000_000) // after 0.72s animation
+                    if virtualIndex == newVirtual {
+                        withAnimation(nil) {
+                            virtualIndex = middleStart + actual
+                        }
+                    }
+                }
+            } else if newVirtual < middleStart || newVirtual >= middleStart + viewModel.displayCount {
+                // Also recenter when drifting out of middle copy after many swipes
+                // Keep within middle copy for long-term stability
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 750_000_000)
+                    if virtualIndex == newVirtual {
+                        withAnimation(nil) {
+                            virtualIndex = middleStart + actual
+                        }
+                    }
+                }
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
@@ -99,9 +126,20 @@ struct GymPhotoCarouselView: View {
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
                 if Task.isCancelled { break }
                 if reduceMotion { continue }
-                // Only auto when scene is active and content exists
                 if viewModel.displayCount <= 1 { continue }
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.35)) {
+                let nextActual = ((virtualIndex + 1) % viewModel.displayCount + viewModel.displayCount) % viewModel.displayCount
+                let nextState = viewModel.states[nextActual]
+                let isReady: Bool = {
+                    if case .loaded = nextState { return true }
+                    return false
+                }()
+                if !isReady {
+                    // Ensure next is requested, but don't slide into blank
+                    Task { await viewModel.onSelectedIndexChanged(nextActual) }
+                    continue
+                }
+                // Smooth horizontal slide 0.72s natural ease
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.72)) {
                     virtualIndex += 1
                 }
             }
@@ -116,20 +154,20 @@ struct GymPhotoCarouselView: View {
     @ViewBuilder
     private var carouselContent: some View {
         if viewModel.displayCount == 1 {
-            // Single photo: no paging, no auto
             photoPage(at: 0)
                 .accessibilityIdentifier("gym-photo-page-0")
         } else {
             TabView(selection: $virtualIndex) {
-                ForEach(0..<virtualCount, id: \.self) { vIdx in
+                ForEach(0..<bufferedCount, id: \.self) { vIdx in
                     let actual = ((vIdx % viewModel.displayCount) + viewModel.displayCount) % viewModel.displayCount
                     photoPage(at: actual)
                         .tag(vIdx)
                         .accessibilityIdentifier("gym-photo-page-\(actual)")
+                        .accessibilityHidden(vIdx != virtualIndex)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: virtualIndex)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.72), value: virtualIndex)
             .overlay(alignment: .bottom) {
                 if viewModel.shouldShowIndicator {
                     pageIndicator

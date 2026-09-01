@@ -318,6 +318,13 @@ private struct SettingsView: View {
     @State private var showsDeleteError = false
     @State private var showsExportSheet = false
     @State private var showsPasswordSheet = false
+    @State private var cacheSizeText: String = "0 B"
+    @State private var cacheSizeBytes: Int = 0
+    @State private var isLoadingCacheSize = true
+    @State private var isClearingCache = false
+    @State private var showsClearCacheConfirmation = false
+    @State private var showsClearCacheError = false
+    @State private var clearCacheErrorMessage: String = ""
 
     var body: some View {
         ScrollView {
@@ -328,6 +335,7 @@ private struct SettingsView: View {
                 notificationsCard
                 supportSection
                 exportCard
+                cacheCard
                 accountActionsCard
                 #if DEBUG
                 developmentCard
@@ -341,6 +349,7 @@ private struct SettingsView: View {
         .navigationTitle(L10n.Settings.title)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadNotificationPreferences() }
+        .task { await refreshCacheSize() }
         .sheet(isPresented: $showsExportSheet) { LogbookExportView(environment: environment) }
         .sheet(isPresented: $showsPasswordSheet) { ChangePasswordView(session: session) }
         .confirmationDialog(
@@ -357,6 +366,21 @@ private struct SettingsView: View {
             Button(L10n.Common.ok, role: .cancel) {}
         } message: {
             Text(L10n.Settings.deleteAccountFailedMessage)
+        }
+        .confirmationDialog(
+            L10n.Settings.clearImageCacheConfirmTitle,
+            isPresented: $showsClearCacheConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.Settings.clear, role: .destructive) { Task { await clearImageCache() } }
+            Button(L10n.Common.cancel, role: .cancel) {}
+        } message: {
+            Text(L10n.Settings.clearImageCacheConfirmMessage)
+        }
+        .alert(L10n.Settings.clearImageCacheErrorTitle, isPresented: $showsClearCacheError) {
+            Button(L10n.Common.ok, role: .cancel) {}
+        } message: {
+            Text(verbatim: clearCacheErrorMessage)
         }
     }
 
@@ -478,6 +502,54 @@ private struct SettingsView: View {
         .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
     }
 
+    private var cacheCard: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.small) {
+            Text(L10n.Settings.imageCache)
+                .font(.system(size: 11, weight: .bold)).tracking(0.08).textCase(.uppercase).foregroundStyle(DesignColour.textTertiary)
+            VStack(spacing: 0) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.Settings.clearImageCache)
+                            .font(DesignTypography.supporting.weight(.medium)).foregroundStyle(DesignColour.textPrimary)
+                        if isLoadingCacheSize {
+                            ProgressView().scaleEffect(0.7).frame(height: 14)
+                        } else {
+                            Text(verbatim: cacheSizeText)
+                                .font(DesignTypography.supporting).foregroundStyle(DesignColour.textSecondary)
+                                .accessibilityLabel(Text("Cache size \(cacheSizeText)"))
+                        }
+                    }
+                    Spacer(minLength: DesignSpacing.small)
+                    Button {
+                        if cacheSizeBytes > 0 {
+                            showsClearCacheConfirmation = true
+                        }
+                    } label: {
+                        if isClearingCache {
+                            ProgressView().tint(DesignColour.textSecondary)
+                        } else {
+                            Text(L10n.Settings.clear)
+                                .font(DesignTypography.supporting.weight(.semibold))
+                                .foregroundStyle(cacheSizeBytes == 0 ? DesignColour.textTertiary : DesignColour.error)
+                        }
+                    }
+                    .frame(minWidth: 60, minHeight: 44)
+                    .disabled(isClearingCache || isLoadingCacheSize || cacheSizeBytes == 0)
+                    .accessibilityLabel(Text(L10n.Settings.clearImageCache))
+                    .accessibilityValue(Text(cacheSizeText))
+                    .accessibilityHint(Text("Removes cached gym photos"))
+                    .accessibilityIdentifier("settings-clear-cache-button")
+                }
+                .padding(.vertical, DesignSpacing.small).padding(.horizontal, DesignSpacing.medium)
+                .contentShape(Rectangle())
+            }
+            .background(DesignColour.surfacePrimary, in: RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: BlocRadius.container, style: .continuous).stroke(DesignColour.separator.opacity(0.5), lineWidth: 0.5) }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("settings-cache-section")
+    }
+
     private var accountActionsCard: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.small) {
             VStack(spacing: 0) {
@@ -524,6 +596,31 @@ private struct SettingsView: View {
         guard session.authenticationState.isSignedIn else { return }
         guard let stored = try? await environment.roleRepository.notificationPreferences() else { return }
         preferences = Dictionary(uniqueKeysWithValues: stored.map { ($0.category, $0.isEnabled) })
+    }
+
+    @MainActor
+    private func refreshCacheSize() async {
+        isLoadingCacheSize = true
+        defer { isLoadingCacheSize = false }
+        // Off-main calculation inside loader's actor
+        let size = await environment.gymPhotoLoader.diskCacheSize()
+        let formatted = await environment.gymPhotoLoader.formattedDiskCacheSize()
+        cacheSizeBytes = size
+        cacheSizeText = formatted
+    }
+
+    @MainActor
+    private func clearImageCache() async {
+        isClearingCache = true
+        defer { isClearingCache = false }
+        do {
+            try await environment.gymPhotoLoader.clearCache()
+            await refreshCacheSize()
+        } catch {
+            clearCacheErrorMessage = error.localizedDescription
+            showsClearCacheError = true
+            await refreshCacheSize()
+        }
     }
 
     private func binding(_ category: NotificationCategory) -> Binding<Bool> {

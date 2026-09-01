@@ -420,6 +420,12 @@ enum L10n {
         static let deleteAccountFailedMessage: LocalizedStringResource = "settings.deleteAccount.failedMessage"
         static let placeholderMessage: LocalizedStringResource = "settings.placeholderMessage"
         static let supportSection: LocalizedStringResource = "settings.supportSection"
+        static let clearImageCache: LocalizedStringResource = "settings.clearImageCache"
+        static let imageCache: LocalizedStringResource = "settings.imageCache"
+        static let clear: LocalizedStringResource = "settings.clear"
+        static let clearImageCacheConfirmTitle: LocalizedStringResource = "settings.clearImageCache.confirmTitle"
+        static let clearImageCacheConfirmMessage: LocalizedStringResource = "settings.clearImageCache.confirmMessage"
+        static let clearImageCacheErrorTitle: LocalizedStringResource = "settings.clearImageCache.errorTitle"
     }
 
     enum State {

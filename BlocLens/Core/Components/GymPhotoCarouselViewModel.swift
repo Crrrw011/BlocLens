@@ -20,6 +20,7 @@ final class GymPhotoCarouselViewModel: ObservableObject {
     let loader: any GymPhotoLoader
     let maxPhotos = 4
     private var loadTasks: [Int: Task<Void, Never>] = [:]
+    private var preloadTasks: [Int: Task<Void, Never>] = [:]
 
     init(placeID: String?, gymName: String, loader: any GymPhotoLoader) {
         self.placeID = placeID
@@ -115,6 +116,28 @@ final class GymPhotoCarouselViewModel: ObservableObject {
         loadTasks[index] = task
         await task.value
         loadTasks[index] = nil
+        // Preload adjacent only if this was the currently selected page (avoid chain)
+        if case .loaded = states[index], index == selectedIndex {
+            preloadAdjacent(for: index)
+        }
+    }
+
+    private func preloadAdjacent(for index: Int) {
+        guard availableCount > 1 else { return }
+        // Only preload immediate neighbors of the *current* index, not of preloads themselves
+        guard index == selectedIndex else { return }
+        for adj in [index - 1, index + 1] {
+            guard adj >= 0 && adj < availableCount else { continue }
+            if case .loaded = states[adj] { continue }
+            if case .loading = states[adj] { continue }
+            if loadTasks[adj] != nil { continue }
+            if preloadTasks[adj] != nil { continue }
+            let t = Task(priority: .utility) { @MainActor in
+                await self.loadIfNeeded(index: adj)
+                self.preloadTasks[adj] = nil
+            }
+            preloadTasks[adj] = t
+        }
     }
 
     func retry(index: Int) async {
@@ -133,6 +156,8 @@ final class GymPhotoCarouselViewModel: ObservableObject {
     func cancelAll() {
         for (_, task) in loadTasks { task.cancel() }
         loadTasks.removeAll()
+        for (_, task) in preloadTasks { task.cancel() }
+        preloadTasks.removeAll()
         Task {
             if let loader = loader as? MockGymPhotoLoader {
                 await loader.cancelAll()

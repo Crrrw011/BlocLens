@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - GymPhotoLoader Abstraction
 
@@ -7,11 +10,22 @@ nonisolated protocol GymPhotoLoader: Sendable {
     func availablePhotoCount(for placeID: String) async throws -> Int
     func cachedPhoto(for placeID: String, at index: Int) async -> GymPhoto?
     func refreshPhotoCount(for placeID: String) async throws -> Int
+    func diskCacheSize() async -> Int
+    func formattedDiskCacheSize() async -> String
+    func clearCache() async throws
 }
 
 extension GymPhotoLoader {
     func cachedPhoto(for placeID: String, at index: Int) async -> GymPhoto? { nil }
     func refreshPhotoCount(for placeID: String) async throws -> Int { try await availablePhotoCount(for: placeID) }
+    func diskCacheSize() async -> Int { 0 }
+    func formattedDiskCacheSize() async -> String {
+        let size = await diskCacheSize()
+        let f = ByteCountFormatter()
+        f.countStyle = .file
+        return f.string(fromByteCount: Int64(size))
+    }
+    func clearCache() async throws {}
 }
 
 // MARK: - Cache Actor
@@ -89,6 +103,14 @@ actor GymPhotoCache {
         inFlight[k]?.cancel()
         inFlight.removeValue(forKey: k)
     }
+
+    func clearAll() {
+        photoNamesByPlaceID.removeAll()
+        cachedPhotos.removeAll()
+        photoCountCache.removeAll()
+        for t in inFlight.values { t.cancel() }
+        inFlight.removeAll()
+    }
 }
 
 // MARK: - Remote Loader
@@ -96,9 +118,11 @@ actor GymPhotoCache {
 actor RemoteGymPhotoLoader: GymPhotoLoader {
     private let client: GooglePlacesClient
     private let cache = GymPhotoCache()
+    private let diskCache: GymPhotoDiskCache
 
-    init(client: GooglePlacesClient) {
+    init(client: GooglePlacesClient, diskCache: GymPhotoDiskCache? = nil) {
         self.client = client
+        self.diskCache = diskCache ?? GymPhotoDiskCache()
     }
 
     func availablePhotoCount(for placeID: String) async throws -> Int {
@@ -129,8 +153,15 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
             var names = try await fetchPhotoNamesIfNeeded(placeID: placeID)
             guard index < names.count else { throw RepositoryError.notFound }
             var photoName = names[index]
-            // Fetch media with one retry on invalidation (handles deletion of one of the 4)
             func fetchMedia(_ name: String) async throws -> GymPhoto {
+                // Disk hit: Memory->Disk->Remote order, disk contains image bytes keyed by photoName
+                if let _ = await diskCache.data(forPhotoName: name) {
+                    let fileURL = await diskCache.fileURL(forPhotoName: name)
+                    let attribution = await attributionForPhoto(at: index, placeID: placeID)
+                    let photo = GymPhoto(imageURL: fileURL, attribution: attribution, attributionHTML: nil)
+                    await cache.storePhoto(photo, placeID: placeID, index: index)
+                    return photo
+                }
                 var mediaComponents = URLComponents(string: "https://places.googleapis.com/v1/\(name)/media")
                 mediaComponents?.queryItems = [
                     URLQueryItem(name: "maxWidthPx", value: "\(width)"),
@@ -150,16 +181,25 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
                       let photoURL = URL(string: photoUri) else {
                     throw RepositoryError.decodingFailure
                 }
+                // Download image bytes for disk cache (validates decodable image, avoids HTML error)
+                let (imageData, imageResponse) = try await URLSession.shared.data(from: photoURL)
+                try Task.checkCancellation()
+                guard let http2 = imageResponse as? HTTPURLResponse, (200..<300).contains(http2.statusCode), !imageData.isEmpty else {
+                    throw RepositoryError.decodingFailure
+                }
+                #if canImport(UIKit)
+                guard UIImage(data: imageData) != nil else { throw RepositoryError.decodingFailure }
+                #endif
+                await diskCache.store(data: imageData, forPhotoName: name)
+                let fileURL = await diskCache.fileURL(forPhotoName: name)
                 let attribution = await attributionForPhoto(at: index, placeID: placeID)
-                let photo = GymPhoto(imageURL: photoURL, attribution: attribution, attributionHTML: nil)
+                let photo = GymPhoto(imageURL: fileURL, attribution: attribution, attributionHTML: nil)
                 await cache.storePhoto(photo, placeID: placeID, index: index)
                 return photo
             }
             do {
                 return try await fetchMedia(photoName)
             } catch {
-                // Stale place_id or deleted photo among first 4 -> refresh names and retry once to auto-refill to 4
-                // This covers "user deletes one of the 4, new one auto补全"
                 await cache.invalidatePhotoNames(placeID: placeID)
                 names = try await fetchPhotoNames(placeID: placeID)
                 await cache.storePhotoNames(names, placeID: placeID)
@@ -189,6 +229,19 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
 
     func cancelAll() async {
         await cache.cancelAll()
+    }
+
+    func diskCacheSize() async -> Int {
+        await diskCache.totalSize()
+    }
+
+    func formattedDiskCacheSize() async -> String {
+        await diskCache.formattedSize()
+    }
+
+    func clearCache() async throws {
+        await cache.clearAll()
+        try await diskCache.clear()
     }
 
     private func fetchPhotoNamesIfNeeded(placeID: String) async throws -> [String] {
