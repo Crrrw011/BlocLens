@@ -42,6 +42,51 @@ actor GymPhotoDiskCache {
         fileURL(forKey: Self.key(for: name))
     }
 
+    // Variant-aware
+    static func key(for variant: GymPhotoVariantKey) -> String {
+        Self.key(for: "\(variant.sourceID)#\(variant.pixelWidthBucket)")
+    }
+    func fileURL(for variant: GymPhotoVariantKey) -> URL {
+        fileURL(forKey: Self.key(for: variant))
+    }
+    func data(for variant: GymPhotoVariantKey) async -> Data? {
+        let url = fileURL(for: variant)
+        guard fileManager.fileExists(atPath: url.path) else { return nil }
+        if let attrs = try? fileManager.attributesOfItem(atPath: url.path),
+           let mod = attrs[.modificationDate] as? Date,
+           Date().timeIntervalSince(mod) > Self.ttl {
+            try? fileManager.removeItem(at: url)
+            return nil
+        }
+        guard let data = try? Data(contentsOf: url), !data.isEmpty else {
+            try? fileManager.removeItem(at: url)
+            return nil
+        }
+        #if canImport(UIKit)
+        if UIImage(data: data) == nil {
+            try? fileManager.removeItem(at: url)
+            return nil
+        }
+        #endif
+        try? fileManager.setAttributes([.modificationDate: Date()], ofItemAtPath: url.path)
+        return data
+    }
+    func store(data: Data, for variant: GymPhotoVariantKey) async {
+        guard !data.isEmpty else { return }
+        #if canImport(UIKit)
+        guard UIImage(data: data) != nil else { return }
+        #endif
+        let url = fileURL(for: variant)
+        let tmp = directory.appendingPathComponent(UUID().uuidString).appendingPathExtension("tmp")
+        do {
+            try data.write(to: tmp, options: .atomic)
+            if fileManager.fileExists(atPath: url.path) { try fileManager.removeItem(at: url) }
+            try fileManager.moveItem(at: tmp, to: url)
+            try fileManager.setAttributes([.modificationDate: Date()], ofItemAtPath: url.path)
+            await evictIfNeeded()
+        } catch { try? fileManager.removeItem(at: tmp) }
+    }
+
     // MARK: - Read
     func data(forPhotoName name: String) async -> Data? {
         let url = fileURL(forPhotoName: name)

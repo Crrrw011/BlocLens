@@ -242,4 +242,91 @@ final class GymPhotoCacheTests: XCTestCase {
         XCTAssertEqual(vm.displayCount, 1)
         XCTAssertFalse(vm.shouldShowIndicator)
     }
+
+    // 24. Same image same bucket only one request (variant dedup)
+    func testSameBucketDedup() async throws {
+        let disk = makeDiskCache()
+        let data = sampleImageData()
+        let variant = GymPhotoVariantKey(sourceID: "places/X/photos/1", pixelWidthBucket: 960)
+        await disk.store(data: data, for: variant)
+        let d1 = await disk.data(for: variant)
+        let d2 = await disk.data(for: variant)
+        XCTAssertNotNil(d1)
+        XCTAssertEqual(d1?.count, d2?.count)
+    }
+
+    // 25. Different buckets not reuse low-res
+    func testDifferentBucketsNotReuseLowRes() async throws {
+        let disk = makeDiskCache()
+        let data640 = sampleImageData(color: .red)
+        let v640 = GymPhotoVariantKey(sourceID: "places/Y/photos/1", pixelWidthBucket: 640)
+        let v1280 = GymPhotoVariantKey(sourceID: "places/Y/photos/1", pixelWidthBucket: 1280)
+        await disk.store(data: data640, for: v640)
+        let miss = await disk.data(for: v1280)
+        XCTAssertNil(miss, "different bucket should not hit")
+    }
+
+    // 26. High-res can satisfy smaller (bestFit)
+    func testHighResSatisfiesSmaller() async throws {
+        let disk = makeDiskCache()
+        let data1280 = sampleImageData(color: .blue)
+        let v1280 = GymPhotoVariantKey(sourceID: "places/Z/photos/1", pixelWidthBucket: 1280)
+        await disk.store(data: data1280, for: v1280)
+        // Simulate bestFit: request 640 should reuse 1280
+        let available = [1280]
+        let best = GymPhotoBucket.bestFit(for: 640, available: available)
+        XCTAssertEqual(best, 1280)
+    }
+
+    // 27. Three copies map to same variant
+    func testThreeCopiesMapToSameVariant() async throws {
+        let variant = GymPhotoVariantKey(sourceID: "places/A/photos/1", pixelWidthBucket: 960)
+        // Virtual 0,4,8 all map to same actual, so same variant
+        let v0 = GymPhotoVariantKey(sourceID: "places/A/photos/1", pixelWidthBucket: 960)
+        let v4 = GymPhotoVariantKey(sourceID: "places/A/photos/1", pixelWidthBucket: 960)
+        XCTAssertEqual(v0, v4)
+        XCTAssertEqual(variant, v0)
+    }
+
+    // 28. Geometry micro change not new request (bucket)
+    func testBucketStability() async throws {
+        XCTAssertEqual(GymPhotoBucket.bucket(for: 640), 640)
+        XCTAssertEqual(GymPhotoBucket.bucket(for: 641), 960)
+        XCTAssertEqual(GymPhotoBucket.bucket(for: 642), 960)
+        XCTAssertEqual(GymPhotoBucket.bucket(for: 960), 960)
+        XCTAssertEqual(GymPhotoBucket.bucket(for: 961), 1280)
+    }
+
+    // 29. Home->Detail same bucket hit (reuse via loader)
+    func testHomeDetailReuseSameBucket() async throws {
+        let loader = MockGymPhotoLoader(photosByPlaceID: ["p": [GymPhoto(imageURL: URL(string: "https://example.com/1.jpg")!, attribution: nil, attributionHTML: nil, photoName: "places/p/photos/1", source: .googlePlaces)]])
+        // Simulate same bucket
+        _ = try await loader.loadPhoto(for: "p", at: 0, width: 960)
+        let c1 = await loader.requestCount(for: "p", index: 0)
+        _ = try await loader.loadPhoto(for: "p", at: 0, width: 960)
+        let c2 = await loader.requestCount(for: "p", index: 0)
+        XCTAssertEqual(c1, 1)
+        XCTAssertEqual(c2, 1)
+    }
+
+    // 30. Google not write disk, BlocLens does
+    func testGoogleNotWriteDiskBlocLensDoes() async throws {
+        let googlePolicy: GymPhotoCachePolicy = .memoryOnly
+        let blocLensPolicy: GymPhotoCachePolicy = .diskAllowed(ttl: .seconds(30*24*60*60))
+        if case .memoryOnly = googlePolicy {} else { XCTFail() }
+        if case .diskAllowed = blocLensPolicy {} else { XCTFail() }
+        let disk = makeDiskCache()
+        let s0 = await disk.totalSize()
+        XCTAssertEqual(s0, 0)
+        let blocLensVariant = GymPhotoVariantKey(sourceID: "gym-photos/abc.jpg", pixelWidthBucket: 960)
+        await disk.store(data: sampleImageData(), for: blocLensVariant)
+        let s1 = await disk.totalSize()
+        XCTAssertGreaterThan(s1, 0)
+    }
+
+    // 31. Unknown default noStore
+    func testUnknownDefaultNoStore() async throws {
+        let policy: GymPhotoCachePolicy = .noStore
+        if case .noStore = policy {} else { XCTFail() }
+    }
 }

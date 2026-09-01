@@ -58,7 +58,7 @@ struct RemoteRepositoryTests {
     }
 
     @Test func missingEnvironmentConfigurationReturnsNil() throws {
-        #expect(try LocalEnvironmentConfiguration.make(environment: [:]) == nil)
+        #expect(try LocalEnvironmentConfiguration.make(environment: [:], infoDictionary: [:]) == nil)
     }
 
     // MARK: - Error mapping

@@ -14,8 +14,10 @@ struct GymPhotoCarouselView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.displayScale) private var displayScale
     @State private var virtualIndex: Int = 500
     @State private var autoTask: Task<Void, Never>?
+    @State private var containerWidth: CGFloat = 0
 
     private var bufferedCount: Int {
         guard viewModel.displayCount > 1 else { return viewModel.displayCount }
@@ -47,28 +49,36 @@ struct GymPhotoCarouselView: View {
     }
 
     var body: some View {
-        Group {
-            if !viewModel.hasContent {
-                placeholder
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityLabel(Text("Photo of \(gymName)"))
-                    .accessibilityIdentifier("gym-photo-placeholder")
-            } else {
-                carouselContent
+        GeometryReader { geo in
+            let pointWidth = geo.size.width
+            let pixelWidth = Int(pointWidth * displayScale)
+            let bucket = GymPhotoBucket.bucket(for: pixelWidth)
+            Group {
+                if !viewModel.hasContent {
+                    placeholder
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityLabel(Text("Photo of \(gymName)"))
+                        .accessibilityIdentifier("gym-photo-placeholder")
+                } else {
+                    carouselContent
+                }
             }
-        }
-        .aspectRatio(aspectRatio, contentMode: .fit)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .task {
-            await viewModel.onAppear()
-            if viewModel.displayCount > 0 {
-                virtualIndex = middleStart
-                viewModel.selectedIndex = actualIndex
-                Task { await viewModel.onSelectedIndexChanged(actualIndex) }
-                if shouldAutoPlay { startAuto() }
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .task(id: bucket) {
+                await viewModel.initialLoad(width: bucket)
+                if viewModel.displayCount > 0 {
+                    virtualIndex = middleStart
+                    viewModel.selectedIndex = actualIndex
+                    Task { await viewModel.onSelectedIndexChanged(actualIndex) }
+                    if shouldAutoPlay { startAuto() }
+                }
             }
+            .onAppear { containerWidth = pointWidth }
+            .onChange(of: pointWidth) { _, newW in containerWidth = newW }
         }
+        .frame(height: nil)
         .onDisappear {
             viewModel.onDisappear()
             stopAuto()
@@ -82,6 +92,9 @@ struct GymPhotoCarouselView: View {
             guard viewModel.displayCount > 0 else { return }
             let actual = ((newVirtual % viewModel.displayCount) + viewModel.displayCount) % viewModel.displayCount
             viewModel.selectedIndex = actual
+            // Use current bucket for width
+            let pixelWidth = Int(containerWidth * displayScale)
+            let bucket = GymPhotoBucket.bucket(for: pixelWidth)
             Task { await viewModel.onSelectedIndexChanged(actual) }
             // Seamless recenter when hitting buffer edges
             if newVirtual <= 0 || newVirtual >= bufferedCount - 1 {
@@ -245,58 +258,18 @@ struct GymPhotoCarouselView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay { ProgressView().tint(.white).accessibilityIdentifier("gym-photo-loading-\(index)") }
             case .loaded(let photo):
-                Group {
-                    if photo.imageURL.absoluteString.contains("picsum.photos") || photo.imageURL.absoluteString.contains("example.com") {
-                        // Mock/seed image – deterministic color fallback, real URIs will be googleusercontent and take else branch
-                        Rectangle()
-                            .fill(Color(hue: Double(index + 1) * 0.2, saturation: 0.55, brightness: 0.85))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .overlay {
-                                VStack(spacing: 6) {
-                                    Image(systemName: "photo.on.rectangle")
-                                        .font(.system(size: 28))
-                                        .foregroundStyle(.white.opacity(0.85))
-                                    if let attr = photo.attribution {
-                                        Text(attr).font(.caption2.weight(.medium)).foregroundStyle(.white.opacity(0.9))
-                                    }
-                                }
-                            }
-                    } else {
-                        AsyncImage(url: photo.imageURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable().scaledToFill()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .clipped()
-                            case .failure:
-                                errorView(at: index)
-                            case .empty:
-                                placeholder
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .overlay { ProgressView().tint(.white) }
-                            @unknown default:
-                                placeholder.frame(maxWidth: .infinity, maxHeight: .infinity)
-                            }
+                CachedGymPhotoView(photo: photo, loader: loader, index: index)
+                    .overlay(alignment: .bottomLeading) {
+                        if let attr = photo.attribution, !photo.imageURL.absoluteString.contains("picsum.photos") {
+                            Text(attr)
+                                .font(.system(size: 8, weight: .regular))
+                                .foregroundStyle(.white.opacity(0.7))
+                                .lineLimit(1)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 4)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipped()
                     }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
-                .overlay(alignment: .bottomLeading) {
-                    if let attr = photo.attribution, !photo.imageURL.absoluteString.contains("picsum.photos") {
-                        Text(attr)
-                            .font(.system(size: 8, weight: .regular))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .lineLimit(1)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                    }
-                }
-                .onTapGesture {
-                    onTap?()
-                }
+                    .onTapGesture { onTap?() }
             case .error:
                 errorView(at: index)
             case .empty:
@@ -305,6 +278,62 @@ struct GymPhotoCarouselView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
+    }
+
+    private struct CachedGymPhotoView: View {
+        let photo: GymPhoto
+        let loader: any GymPhotoLoader
+        let index: Int
+        @State private var memoryImage: UIImage?
+        var body: some View {
+            Group {
+                if let img = memoryImage {
+                    Image(uiImage: img).resizable().scaledToFill()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                } else if photo.imageURL.absoluteString.hasPrefix("file://") {
+                    AsyncImage(url: photo.imageURL) { phase in
+                        switch phase {
+                        case .success(let image): image.resizable().scaledToFill().frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                        case .failure: Color.clear
+                        case .empty: ProgressView().tint(.white)
+                        @unknown default: Color.clear
+                        }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                } else if photo.imageURL.absoluteString.contains("picsum.photos") || photo.imageURL.absoluteString.contains("example.com") {
+                    Rectangle().fill(Color(hue: Double(index + 1) * 0.2, saturation: 0.55, brightness: 0.85))
+                        .overlay {
+                            VStack(spacing: 6) {
+                                Image(systemName: "photo.on.rectangle").font(.system(size: 28)).foregroundStyle(.white.opacity(0.85))
+                                if let attr = photo.attribution { Text(attr).font(.caption2.weight(.medium)).foregroundStyle(.white.opacity(0.9)) }
+                            }
+                        }
+                } else if photo.imageURL.scheme == "memory" {
+                    // Memory-only Google: try to load from memory cache via loader
+                    AsyncImage(url: photo.imageURL) { _ in Color.clear } // fallback, will be replaced by memory check
+                        .task {
+                            if let name = photo.photoName, let img = await loader.cachedImage(for: name) {
+                                memoryImage = img
+                            }
+                        }
+                } else {
+                    AsyncImage(url: photo.imageURL) { phase in
+                        switch phase {
+                        case .success(let image): image.resizable().scaledToFill().frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                        case .failure: Color.clear
+                        case .empty: ProgressView().tint(.white)
+                        @unknown default: Color.clear
+                        }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                }
+            }
+            .task {
+                if let name = photo.photoName, let img = await loader.cachedImage(for: name) {
+                    memoryImage = img
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+        }
     }
 
     private var placeholder: some View {

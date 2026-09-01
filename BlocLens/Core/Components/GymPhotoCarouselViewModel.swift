@@ -36,7 +36,10 @@ final class GymPhotoCarouselViewModel: ObservableObject {
     var hasContent: Bool { displayCount > 0 }
     var shouldShowIndicator: Bool { displayCount > 1 }
 
-    func initialLoad() async {
+    private var lastWidth: Int = 800
+
+    func initialLoad(width: Int? = nil) async {
+        if let w = width { lastWidth = GymPhotoBucket.bucket(for: w) }
         guard let placeID else {
             availableCount = 0
             return
@@ -44,21 +47,20 @@ final class GymPhotoCarouselViewModel: ObservableObject {
         do {
             let count = try await loader.availablePhotoCount(for: placeID)
             availableCount = min(count, maxPhotos)
-            if availableCount == 0 {
-                // Empty state handled by view
-                return
-            }
-            // Only load first image initially
-            await loadIfNeeded(index: 0)
+            if availableCount == 0 { return }
+            await loadIfNeeded(index: 0, width: lastWidth)
         } catch {
             availableCount = 0
         }
     }
 
-    func loadIfNeeded(index: Int) async {
+    func initialLoad() async { await initialLoad(width: nil) }
+
+    func loadIfNeeded(index: Int, width: Int? = nil) async {
+        let w = width.map { GymPhotoBucket.bucket(for: $0) } ?? lastWidth
+        if let width { lastWidth = w }
         guard let placeID else { return }
         guard index >= 0 && index < maxPhotos else { return }
-        // Lazy initialise availableCount if not yet loaded
         if availableCount == 0 {
             do {
                 let count = try await loader.availablePhotoCount(for: placeID)
@@ -69,11 +71,10 @@ final class GymPhotoCarouselViewModel: ObservableObject {
             }
         }
         guard index < availableCount else { return }
-        // Return if already loaded or loading
         if case .loaded = states[index] { return }
         if case .loading = states[index] { return }
-        // Check cache synchronously
         if let cached = await loader.cachedPhoto(for: placeID, at: index) {
+            // If cached is for different bucket, check if we can reuse larger
             states[index] = .loaded(cached)
             return
         }
@@ -82,7 +83,7 @@ final class GymPhotoCarouselViewModel: ObservableObject {
         loadTasks[index]?.cancel()
         let task = Task { @MainActor in
             do {
-                let photo = try await loader.loadPhoto(for: placeID, at: index, width: 800)
+                let photo = try await loader.loadPhoto(for: placeID, at: index, width: w)
                 try Task.checkCancellation()
                 states[index] = .loaded(photo)
             } catch is CancellationError {
@@ -91,13 +92,12 @@ final class GymPhotoCarouselViewModel: ObservableObject {
                 if Task.isCancelled {
                     states[index] = .idle
                 } else if let repoError = error as? RepositoryError, repoError == .notFound {
-                    // Auto-refill: photo at this index was deleted, refresh count and retry once
                     do {
                         let freshCount = try await loader.refreshPhotoCount(for: placeID)
                         self.availableCount = min(freshCount, self.maxPhotos)
                         if index < freshCount {
                             states[index] = .idle
-                            let retryPhoto = try await loader.loadPhoto(for: placeID, at: index, width: 800)
+                            let retryPhoto = try await loader.loadPhoto(for: placeID, at: index, width: w)
                             states[index] = .loaded(retryPhoto)
                             for i in (index+1)..<self.availableCount {
                                 if case .error = states[i] { states[i] = .idle }

@@ -2,6 +2,40 @@ import Foundation
 #if canImport(UIKit)
 import UIKit
 #endif
+import ImageIO
+
+nonisolated enum GymPhotoCachePolicy: Sendable, Equatable {
+    case memoryOnly
+    case diskAllowed(ttl: Duration)
+    case noStore
+}
+
+nonisolated enum GymPhotoSource: String, Sendable {
+    case googlePlaces
+    case blocLens
+    case authorisedExternal
+    case unknown
+}
+
+nonisolated struct GymPhotoVariantKey: Hashable, Sendable {
+    let sourceID: String // photoName or storage path
+    let pixelWidthBucket: Int
+}
+
+nonisolated enum GymPhotoBucket {
+    static let buckets = [640, 960, 1280, 1600]
+    static func bucket(for pixelWidth: Int) -> Int {
+        let clamped = min(max(pixelWidth, 320), 2000)
+        for b in buckets { if clamped <= b { return b } }
+        return buckets.last!
+    }
+    static func bestFit(for target: Int, available: [Int]) -> Int? {
+        if available.contains(target) { return target }
+        let larger = available.filter { $0 >= target }.sorted()
+        if let first = larger.first { return first }
+        return available.sorted().last
+    }
+}
 
 // MARK: - GymPhotoLoader Abstraction
 
@@ -13,6 +47,7 @@ nonisolated protocol GymPhotoLoader: Sendable {
     func diskCacheSize() async -> Int
     func formattedDiskCacheSize() async -> String
     func clearCache() async throws
+    func cachedImage(for photoName: String) async -> UIImage?
 }
 
 extension GymPhotoLoader {
@@ -26,6 +61,7 @@ extension GymPhotoLoader {
         return f.string(fromByteCount: Int64(size))
     }
     func clearCache() async throws {}
+    func cachedImage(for photoName: String) async -> UIImage? { nil }
 }
 
 // MARK: - Cache Actor
@@ -113,16 +149,78 @@ actor GymPhotoCache {
     }
 }
 
+// MARK: - Memory Image Cache (decoded, LRU, max 20 images ~4*5 gyms, variant-aware)
+
+actor GymPhotoMemoryImageCache {
+    private var cache: [GymPhotoVariantKey: UIImage] = [:]
+    private var order: [GymPhotoVariantKey] = []
+    private let maxCount = 20
+    func image(for variant: GymPhotoVariantKey) -> UIImage? { cache[variant] }
+    // Best-fit reuse: exact or larger, else largest smaller
+    func bestImage(for variant: GymPhotoVariantKey) -> UIImage? {
+        if let exact = cache[variant] { return exact }
+        let candidates = cache.keys.filter { $0.sourceID == variant.sourceID }
+        if let bestKey = GymPhotoBucket.bestFit(for: variant.pixelWidthBucket, available: candidates.map { $0.pixelWidthBucket }),
+           let key = candidates.first(where: { $0.pixelWidthBucket == bestKey }) {
+            return cache[key]
+        }
+        return nil
+    }
+    func set(_ image: UIImage, for variant: GymPhotoVariantKey) {
+        cache[variant] = image
+        order.removeAll { $0 == variant }
+        order.append(variant)
+        while cache.count > maxCount, let oldest = order.first {
+            cache.removeValue(forKey: oldest)
+            order.removeFirst()
+        }
+    }
+    // Legacy string key for tests
+    func image(forKey key: String) -> UIImage? {
+        cache.first { $0.key.sourceID == key }?.value
+    }
+    func set(_ image: UIImage, forKey key: String) {
+        let v = GymPhotoVariantKey(sourceID: key, pixelWidthBucket: 1280)
+        Task { await self.set(image, for: v) }
+    }
+    func clear() { cache.removeAll(); order.removeAll() }
+}
+
 // MARK: - Remote Loader
 
 actor RemoteGymPhotoLoader: GymPhotoLoader {
     private let client: GooglePlacesClient
     private let cache = GymPhotoCache()
     private let diskCache: GymPhotoDiskCache
+    private let memoryImageCache = GymPhotoMemoryImageCache()
 
     init(client: GooglePlacesClient, diskCache: GymPhotoDiskCache? = nil) {
         self.client = client
         self.diskCache = diskCache ?? GymPhotoDiskCache()
+        // Clear memory on pressure
+        Task { @MainActor in
+            NotificationCenter.default.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: nil) { _ in
+                Task { await self.memoryImageCache.clear() }
+            }
+        }
+    }
+
+    nonisolated private func policy(for photoName: String) -> GymPhotoCachePolicy {
+        if photoName.hasPrefix("places/") { return .memoryOnly }
+        return .diskAllowed(ttl: .seconds(30*24*60*60))
+    }
+
+    nonisolated private func downsample(data: Data, toPixelWidth: Int) -> Data? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: toPixelWidth,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        let uiImage = UIImage(cgImage: cgImage)
+        return uiImage.jpegData(compressionQuality: 0.85) ?? uiImage.pngData()
     }
 
     func availablePhotoCount(for placeID: String) async throws -> Int {
@@ -144,7 +242,19 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
 
     func loadPhoto(for placeID: String, at index: Int, width: Int) async throws -> GymPhoto {
         if index < 0 || index >= 4 { throw RepositoryError.invalidInput }
-        if let cached = await cache.cachedPhoto(placeID: placeID, index: index) { return cached }
+        let bucket = GymPhotoBucket.bucket(for: width)
+        let variantForIndex = GymPhotoVariantKey(sourceID: "\(placeID)#\(index)", pixelWidthBucket: bucket)
+        // Variant-aware memory hit (exact or larger)
+        // We still keep placeID#index cache for quick, but also check variant image cache
+        if let cached = await cache.cachedPhoto(placeID: placeID, index: index) {
+            // If cached photo's bucket matches or larger, reuse
+            if let cachedName = cached.photoName, let img = await memoryImageCache.bestImage(for: GymPhotoVariantKey(sourceID: cachedName, pixelWidthBucket: bucket)) {
+                _ = img // keep
+                return cached
+            } else if cached.photoName == nil {
+                return cached
+            }
+        }
         if let task = await cache.inFlightTask(placeID: placeID, index: index) {
             return try await task.value
         }
@@ -154,13 +264,36 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
             guard index < names.count else { throw RepositoryError.notFound }
             var photoName = names[index]
             func fetchMedia(_ name: String) async throws -> GymPhoto {
-                // Disk hit: Memory->Disk->Remote order, disk contains image bytes keyed by photoName
-                if let _ = await diskCache.data(forPhotoName: name) {
-                    let fileURL = await diskCache.fileURL(forPhotoName: name)
-                    let attribution = await attributionForPhoto(at: index, placeID: placeID)
-                    let photo = GymPhoto(imageURL: fileURL, attribution: attribution, attributionHTML: nil)
-                    await cache.storePhoto(photo, placeID: placeID, index: index)
-                    return photo
+                let policy = policy(for: name)
+                let variant = GymPhotoVariantKey(sourceID: name, pixelWidthBucket: bucket)
+                if let img = await memoryImageCache.bestImage(for: variant) {
+                    _ = img
+                    if case .diskAllowed = policy, let _ = await diskCache.data(for: variant) {
+                        let fileURL = await diskCache.fileURL(for: variant)
+                        let attr = await attributionForPhoto(at: index, placeID: placeID)
+                        let photo = GymPhoto(imageURL: fileURL, attribution: attr, attributionHTML: nil, photoName: name, source: .googlePlaces)
+                        await cache.storePhoto(photo, placeID: placeID, index: index)
+                        return photo
+                    } else if case .memoryOnly = policy {
+                        let attr = await attributionForPhoto(at: index, placeID: placeID)
+                        let photo = GymPhoto(imageURL: URL(string: "memory://\(name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name)")!, attribution: attr, attributionHTML: nil, photoName: name, source: .googlePlaces)
+                        await cache.storePhoto(photo, placeID: placeID, index: index)
+                        return photo
+                    }
+                }
+                if case .diskAllowed = policy {
+                    if let _ = await diskCache.data(for: variant) {
+                        let fileURL = await diskCache.fileURL(for: variant)
+                        let attr = await attributionForPhoto(at: index, placeID: placeID)
+                        let photo = GymPhoto(imageURL: fileURL, attribution: attr, attributionHTML: nil, photoName: name, source: .blocLens)
+                        await cache.storePhoto(photo, placeID: placeID, index: index)
+                        if let data = await diskCache.data(for: variant), let img = UIImage(data: data) {
+                            await memoryImageCache.set(img, for: variant)
+                        }
+                        return photo
+                    }
+                } else if case .memoryOnly = policy {
+                    // For memoryOnly, check if we have file from previous diskAllowed run (should not happen) – treat as miss
                 }
                 var mediaComponents = URLComponents(string: "https://places.googleapis.com/v1/\(name)/media")
                 mediaComponents?.queryItems = [
@@ -181,21 +314,35 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
                       let photoURL = URL(string: photoUri) else {
                     throw RepositoryError.decodingFailure
                 }
-                // Download image bytes for disk cache (validates decodable image, avoids HTML error)
-                let (imageData, imageResponse) = try await URLSession.shared.data(from: photoURL)
+                let (imageDataRaw, imageResponse) = try await URLSession.shared.data(from: photoURL)
                 try Task.checkCancellation()
-                guard let http2 = imageResponse as? HTTPURLResponse, (200..<300).contains(http2.statusCode), !imageData.isEmpty else {
+                guard let http2 = imageResponse as? HTTPURLResponse, (200..<300).contains(http2.statusCode), !imageDataRaw.isEmpty else {
                     throw RepositoryError.decodingFailure
                 }
+                let targetBucket = bucket
+                let targetData: Data = {
+                    if let down = downsample(data: imageDataRaw, toPixelWidth: targetBucket) { return down }
+                    return imageDataRaw
+                }()
                 #if canImport(UIKit)
-                guard UIImage(data: imageData) != nil else { throw RepositoryError.decodingFailure }
+                guard let uiImage = UIImage(data: targetData) else { throw RepositoryError.decodingFailure }
+                let variantForStore = GymPhotoVariantKey(sourceID: name, pixelWidthBucket: targetBucket)
+                await memoryImageCache.set(uiImage, for: variantForStore)
                 #endif
-                await diskCache.store(data: imageData, forPhotoName: name)
-                let fileURL = await diskCache.fileURL(forPhotoName: name)
-                let attribution = await attributionForPhoto(at: index, placeID: placeID)
-                let photo = GymPhoto(imageURL: fileURL, attribution: attribution, attributionHTML: nil)
-                await cache.storePhoto(photo, placeID: placeID, index: index)
-                return photo
+                if case .diskAllowed = policy {
+                    let v = GymPhotoVariantKey(sourceID: name, pixelWidthBucket: targetBucket)
+                    await diskCache.store(data: targetData, for: v)
+                    let fileURL = await diskCache.fileURL(for: v)
+                    let attr = await attributionForPhoto(at: index, placeID: placeID)
+                    let photo = GymPhoto(imageURL: fileURL, attribution: attr, attributionHTML: nil, photoName: name, source: .blocLens)
+                    await cache.storePhoto(photo, placeID: placeID, index: index)
+                    return photo
+                } else {
+                    let attr = await attributionForPhoto(at: index, placeID: placeID)
+                    let photo = GymPhoto(imageURL: photoURL, attribution: attr, attributionHTML: nil, photoName: name, source: .googlePlaces)
+                    await cache.storePhoto(photo, placeID: placeID, index: index)
+                    return photo
+                }
             }
             do {
                 return try await fetchMedia(photoName)
@@ -241,7 +388,20 @@ actor RemoteGymPhotoLoader: GymPhotoLoader {
 
     func clearCache() async throws {
         await cache.clearAll()
+        await memoryImageCache.clear()
         try await diskCache.clear()
+    }
+
+    func cachedImage(for photoName: String) async -> UIImage? {
+        // Try exact, then best-fit larger
+        if let img = await memoryImageCache.image(forKey: photoName) { return img }
+        // Try variant best fit
+        let buckets = GymPhotoBucket.buckets
+        for b in buckets {
+            let v = GymPhotoVariantKey(sourceID: photoName, pixelWidthBucket: b)
+            if let img = await memoryImageCache.image(for: v) { return img }
+        }
+        return nil
     }
 
     private func fetchPhotoNamesIfNeeded(placeID: String) async throws -> [String] {
@@ -359,6 +519,8 @@ actor MockGymPhotoLoader: GymPhotoLoader {
     func resetCounts() {
         requestCounts.removeAll()
     }
+
+    func cachedImage(for photoName: String) async -> UIImage? { nil }
 }
 
 // MARK: - Shared GymPhotoCache for cross-view reuse (injected via AppEnvironment)

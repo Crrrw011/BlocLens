@@ -4,6 +4,16 @@ nonisolated struct GymPhoto: Equatable, Sendable {
     let imageURL: URL
     let attribution: String?
     let attributionHTML: String?
+    let photoName: String?
+    let source: GymPhotoSource?
+
+    init(imageURL: URL, attribution: String? = nil, attributionHTML: String? = nil, photoName: String? = nil, source: GymPhotoSource? = nil) {
+        self.imageURL = imageURL
+        self.attribution = attribution
+        self.attributionHTML = attributionHTML
+        self.photoName = photoName
+        self.source = source
+    }
 }
 
 nonisolated protocol GymPhotoService: Sendable {
