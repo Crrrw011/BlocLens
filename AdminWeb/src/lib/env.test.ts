@@ -1,58 +1,84 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createBrowserClientSpy = vi.fn();
+const originalSupabaseURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const originalSupabasePublishableKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 vi.mock("@supabase/ssr", () => ({
   createBrowserClient: createBrowserClientSpy,
 }));
 
-beforeAll(() => {
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "local-publishable-key");
+function setPublicEnvironment(
+  url: string | undefined,
+  publishableKey: string | undefined,
+) {
+  if (url === undefined) {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  } else {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = url;
+  }
+
+  if (publishableKey === undefined) {
+    delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  } else {
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = publishableKey;
+  }
+}
+
+function restorePublicEnvironment() {
+  setPublicEnvironment(originalSupabaseURL, originalSupabasePublishableKey);
+}
+
+async function importEnvironment() {
+  vi.resetModules();
+  return import("./env");
+}
+
+afterEach(() => {
+  restorePublicEnvironment();
+  vi.resetModules();
 });
 
-describe("parsePublicEnvironment", () => {
-  it("accepts a Supabase URL and publishable key", async () => {
-    const { parsePublicEnvironment } = await import("./env");
+describe("env", () => {
+  it("exports only the parsed environment", async () => {
+    setPublicEnvironment("http://127.0.0.1:54321", "local-publishable-key");
 
-    expect(
-      parsePublicEnvironment({
-        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
-        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "local-publishable-key",
-      }),
-    ).toEqual({
+    const environment = await importEnvironment();
+
+    expect(Object.keys(environment)).toEqual(["env"]);
+  });
+
+  it("accepts a Supabase URL and publishable key", async () => {
+    setPublicEnvironment("http://127.0.0.1:54321", "local-publishable-key");
+
+    const { env } = await importEnvironment();
+
+    expect(env).toEqual({
       NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "local-publishable-key",
     });
   });
 
   it("rejects a missing Supabase URL", async () => {
-    const { parsePublicEnvironment } = await import("./env");
+    setPublicEnvironment(undefined, "local-publishable-key");
 
-    expect(() =>
-      parsePublicEnvironment({
-        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "local-publishable-key",
-      }),
-    ).toThrow(/NEXT_PUBLIC_SUPABASE_URL/);
+    await expect(importEnvironment()).rejects.toThrow(/NEXT_PUBLIC_SUPABASE_URL/);
   });
 
   it("rejects a missing Supabase publishable key", async () => {
-    const { parsePublicEnvironment } = await import("./env");
+    setPublicEnvironment("http://127.0.0.1:54321", undefined);
 
-    expect(() =>
-      parsePublicEnvironment({
-        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
-      }),
-    ).toThrow(/NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
+    await expect(importEnvironment()).rejects.toThrow(
+      /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/,
+    );
   });
 });
 
 describe("createBrowserClient", () => {
   beforeEach(() => {
     createBrowserClientSpy.mockReset();
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "local-publishable-key");
-    vi.resetModules();
+    setPublicEnvironment("http://127.0.0.1:54321", "local-publishable-key");
   });
 
   it("uses only validated public configuration", async () => {
