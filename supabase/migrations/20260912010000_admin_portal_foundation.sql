@@ -171,6 +171,7 @@ set search_path = ''
 as $$
 declare
   event_id uuid;
+  existing_event public.admin_audit_events%rowtype;
 begin
   insert into public.admin_audit_events (
     actor_id,
@@ -199,10 +200,39 @@ begin
   returning id into event_id;
 
   if event_id is null then
-    select audit.id
-    into event_id
+    select audit.*
+    into existing_event
     from public.admin_audit_events as audit
     where audit.idempotency_key = append_admin_audit.idempotency_key;
+
+    if row(
+      existing_event.actor_id,
+      existing_event.action_key,
+      existing_event.target_type,
+      existing_event.target_id,
+      existing_event.reason,
+      existing_event.outcome,
+      existing_event.before_summary,
+      existing_event.after_summary,
+      existing_event.correlation_id
+    ) is not distinct from row(
+      append_admin_audit.actor_id,
+      append_admin_audit.action_key,
+      append_admin_audit.target_type,
+      append_admin_audit.target_id,
+      append_admin_audit.reason,
+      append_admin_audit.outcome,
+      coalesce(append_admin_audit.before_summary, '{}'::jsonb),
+      coalesce(append_admin_audit.after_summary, '{}'::jsonb),
+      append_admin_audit.correlation_id
+    ) then
+      return existing_event.id;
+    end if;
+
+    raise exception using
+      errcode = '23505',
+      message = 'idempotency key is already associated with a different audit event',
+      constraint = 'admin_audit_events_idempotency_key_key';
   end if;
 
   return event_id;

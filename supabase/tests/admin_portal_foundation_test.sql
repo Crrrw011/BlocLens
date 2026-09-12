@@ -86,6 +86,20 @@ select ok(
   'bootstrap Administrator receives the protected administrator-management capability'
 );
 
+insert into public.app_user_roles (user_id, role)
+values ('90000000-0000-4000-8000-000000000002', 'admin');
+
+set local role authenticated;
+set local request.jwt.claim.sub to '90000000-0000-4000-8000-000000000002';
+create temp table _ordinary_administrator_access as
+  select * from public.current_staff_access();
+reset role;
+
+select ok(
+  not (select can_manage_administrators from _ordinary_administrator_access),
+  'an ordinary Administrator lacks the bootstrap administrator-management capability'
+);
+
 -- Invitation records store a fixed-width digest, never a raw invitation token.
 insert into public.staff_invitations (
   id, email, role, token_digest, invited_by, expires_at
@@ -180,6 +194,7 @@ reset role;
 select ok(true, 'even an authenticated Administrator cannot read invitation digests');
 
 -- Audit rows are append-only to browser roles and summaries are size-bounded.
+create temp table _initial_audit_append as
 select private.append_admin_audit(
   '90000000-0000-4000-8000-000000000007',
   'staff.invitation.created',
@@ -191,8 +206,73 @@ select private.append_admin_audit(
   '{"role":"moderator"}'::jsonb,
   '93000000-0000-4000-8000-000000000001',
   '94000000-0000-4000-8000-000000000001'
+) as event_id;
+
+create temp table _identical_audit_replay as
+select private.append_admin_audit(
+  '90000000-0000-4000-8000-000000000007',
+  'staff.invitation.created',
+  'staff_invitation',
+  '92000000-0000-4000-8000-000000000001',
+  'Invite a Moderator for local verification',
+  'succeeded',
+  '{}'::jsonb,
+  '{"role":"moderator"}'::jsonb,
+  '93000000-0000-4000-8000-000000000001',
+  '94000000-0000-4000-8000-000000000001'
+) as event_id;
+
+select ok(
+  (select event_id is not null from _initial_audit_append),
+  'the first audit append returns a non-null event UUID'
+);
+select is(
+  (select event_id from _identical_audit_replay),
+  (select event_id from _initial_audit_append),
+  'an equivalent audit replay returns the original event UUID'
+);
+select is(
+  (
+    select count(*)
+    from public.admin_audit_events
+    where idempotency_key = '94000000-0000-4000-8000-000000000001'
+  ),
+  1::bigint,
+  'an equivalent audit replay leaves exactly one event row'
 );
 
+select throws_ok(
+  $$select private.append_admin_audit(
+      '90000000-0000-4000-8000-000000000007',
+      'staff.invitation.revoked',
+      'staff_invitation',
+      '92000000-0000-4000-8000-000000000001',
+      'Conflicting reuse must not be silently accepted',
+      'succeeded',
+      '{}'::jsonb,
+      '{"role":"moderator"}'::jsonb,
+      '93000000-0000-4000-8000-000000000001',
+      '94000000-0000-4000-8000-000000000001'
+    )$$,
+  '23505',
+  null,
+  'conflicting reuse of an audit idempotency key is rejected'
+);
+select is(
+  (
+    select count(*)
+    from public.admin_audit_events
+    where idempotency_key = '94000000-0000-4000-8000-000000000001'
+      and action_key = 'staff.invitation.created'
+  ),
+  1::bigint,
+  'a conflicting audit replay preserves the original event'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'public.admin_audit_events', 'INSERT'),
+  'authenticated clients lack audit INSERT privilege'
+);
 select ok(
   not has_table_privilege('authenticated', 'public.admin_audit_events', 'UPDATE'),
   'authenticated clients lack audit UPDATE privilege'
@@ -212,6 +292,32 @@ select ok(
 
 set local role authenticated;
 set local request.jwt.claim.sub to '90000000-0000-4000-8000-000000000007';
+do $$
+begin
+  insert into public.admin_audit_events (
+    actor_id,
+    action_key,
+    target_type,
+    target_id,
+    reason,
+    outcome,
+    correlation_id,
+    idempotency_key
+  ) values (
+    '90000000-0000-4000-8000-000000000007',
+    'audit.forged',
+    'staff_invitation',
+    '92000000-0000-4000-8000-000000000001',
+    'Browser-forged audit row',
+    'succeeded',
+    '93000000-0000-4000-8000-000000000009',
+    '94000000-0000-4000-8000-000000000009'
+  );
+  raise exception 'expected audit insert to be rejected';
+exception
+  when insufficient_privilege then null;
+end;
+$$;
 do $$
 begin
   update public.admin_audit_events
@@ -254,6 +360,23 @@ select is(
   (select row_count from _ordinary_user_audit),
   0::bigint,
   'ordinary authenticated users see no audit events'
+);
+
+update public.app_user_roles
+set revoked_at = now()
+where user_id = '90000000-0000-4000-8000-000000000006'
+  and role = 'moderator';
+
+set local role authenticated;
+set local request.jwt.claim.sub to '90000000-0000-4000-8000-000000000006';
+create temp table _revoked_staff_audit as
+  select count(*) as row_count from public.admin_audit_events;
+reset role;
+
+select is(
+  (select row_count from _revoked_staff_audit),
+  0::bigint,
+  'revoked staff cannot read audit events'
 );
 
 select throws_ok(
