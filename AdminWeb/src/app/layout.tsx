@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { messages } from "@/localization/messages";
+
 import "./globals.css";
 
 const geist = Geist({
@@ -14,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BlocLens Operations",
+  title: messages.en.metadata.operationsTitle,
 };
 
 export default function RootLayout({
