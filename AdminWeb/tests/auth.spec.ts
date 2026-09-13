@@ -113,7 +113,8 @@ test("does not reveal whether a password reset email exists", async ({ page }) =
 
 test("signs out only the browser session", async ({ page }) => {
   await signIn(page, "fixture-admin@bloclens.invalid");
-  await page.getByRole("button", { name: messages.en.auth.portal.signOut }).click();
+  await page.getByRole("button", { name: messages.en.shell.accountMenu }).click();
+  await page.getByRole("menuitem", { name: messages.en.auth.portal.signOut }).click();
 
   await expect(page).toHaveURL(/\/sign-in$/);
 });
