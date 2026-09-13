@@ -1,10 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import type { ActionState } from "@/lib/auth/access";
+import { getAdminOrigin } from "@/lib/auth/admin-origin";
 import { createServerClient } from "@/lib/supabase/server";
 import { messages } from "@/localization/messages";
 
@@ -19,23 +19,6 @@ const passwordSchema = z
     path: ["passwordConfirmation"],
   });
 
-const updatePasswordPath = "/update-password";
-
-async function passwordRecoveryRedirect(): Promise<string | undefined> {
-  const requestHeaders = await headers();
-  const origin = requestHeaders.get("origin");
-
-  if (!origin) {
-    return undefined;
-  }
-
-  try {
-    return new URL(updatePasswordPath, origin).toString();
-  } catch {
-    return undefined;
-  }
-}
-
 export async function requestPasswordReset(formData: FormData): Promise<ActionState> {
   const email = emailSchema.safeParse(formData.get("email"));
 
@@ -44,10 +27,10 @@ export async function requestPasswordReset(formData: FormData): Promise<ActionSt
   }
 
   const supabase = await createServerClient();
-  const redirectTo = await passwordRecoveryRedirect();
+  const redirectTo = new URL("/update-password", getAdminOrigin()).toString();
 
   await supabase.auth.resetPasswordForEmail(email.data, {
-    ...(redirectTo ? { redirectTo } : {}),
+    redirectTo,
   });
 
   return { status: "success" };

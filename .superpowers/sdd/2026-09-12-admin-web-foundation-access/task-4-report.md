@@ -78,3 +78,73 @@ The host has no `npm` executable, so checks used the already-installed bundled N
 - Confirmed no private/server key reaches `AdminWeb/src`, and no sign-up route or link was added.
 - Confirmed no temporary `.env.local`, generated `.next`, Playwright local config, report output, or test server process is included in the commit.
 - The local redirect allow-list covers local integration testing. Production deployments must separately configure their canonical HTTPS `/update-password` URL in their Supabase Auth redirect allow-list, as is standard deployment configuration.
+
+## Fix round 1 - reviewer findings
+
+### Result
+
+- Restored the shared Supabase `[auth] enable_signup = true` setting. This preserves the iOS application's existing `auth.signUp` flow; the AdminWeb portal remains closed because it provides no registration route or link and all portal access requires an active staff role.
+- Added `await requireStaff()` to `/overview` as a data/page boundary, while retaining the portal layout guard. This prevents a partial Next.js RSC request from receiving protected page data after a staff role is revoked.
+- Replaced the caller-controlled `Origin` header recovery redirect with the non-public, server-only `ADMIN_ORIGIN` setting. The helper accepts only a bare HTTP(S) origin (no credentials, path, query, or fragment) and always appends `/update-password`.
+- Added a local production browser test that creates a disposable Auth user, requests recovery through the UI, retrieves its own Mailpit message, follows the recovery URL/session, confirms a matching new password, signs in using that password, and deletes the disposable user in `finally`.
+
+### TDD evidence
+
+#### RED
+
+1. The new canonical-origin unit test initially failed because `admin-origin.ts` did not exist:
+
+```text
+Error: Failed to resolve import "./admin-origin" from "src/lib/auth/admin-origin.test.ts".
+```
+
+2. The initial recovery action test failed when the former request-header implementation called `headers()` outside a request scope:
+
+```text
+Error: `headers` was called outside a request scope
+```
+
+3. Against a clean local production build, the new partial-RSC test revoked the Moderator role and received a Flight response containing `"Overview"` with no `/access-denied` redirect. This demonstrated that the layout-only guard did not protect the page payload. The test restored the role through its `finally` block.
+
+#### GREEN
+
+- `vitest run src/lib/auth/admin-origin.test.ts 'src/app/(auth)/password-actions.test.ts'`: 2 files, 11 tests passed.
+- Production-mode partial-RSC revocation test: passed after adding the `/overview` boundary guard; response contains `/access-denied` and does not contain the Overview payload. The Moderator fixture is restored in `finally`.
+- Full Mailpit recovery test: passed with a unique disposable local Auth user; password update and subsequent sign-in used the recovered password, and `auth.admin.deleteUser` removed the user in `finally`.
+
+### Verification commands and results
+
+| Command | Result |
+| --- | --- |
+| `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset` | Passed before this round's local tests; restored the shared `enable_signup = true` fixture configuration. |
+| Focused Vitest canonical-origin/password-action command | Passed, 2 files / 11 tests. |
+| `playwright test tests/auth.spec.ts` against the local production server | Passed, 8/8: existing auth coverage plus no-registration UI, partial-RSC role revocation, and disposable-user Mailpit recovery. |
+| `vitest run` | Passed, 6 files / 25 tests. |
+| `tsc --noEmit` | Passed. |
+| `eslint .` | Passed. |
+| `NEXT_TELEMETRY_DISABLED=1 next build` | Passed; `/overview` remains dynamic. |
+| `git diff --check` | Passed. |
+| Signup source scan (`rg -i 'sign[ -]?up' AdminWeb/src`) | No matches: AdminWeb exposes no signup route/link/source text. |
+| Browser/server boundary scan (`rg 'ADMIN_ORIGIN' AdminWeb/src/lib/supabase AdminWeb/src/app`) | No matches: browser and app modules do not import the server-only setting. |
+| Secret scan (`rg -i 'service_role|supabase_secret|sb_secret|eyJhbGciOi' AdminWeb/src`) | No matches. |
+| Local fixture cleanup queries | Passed: seeded Moderator `revoked_at is null`; disposable `recovery-%@bloclens.invalid` Auth-user count is `0`. |
+
+### Visual and accessibility checks
+
+This fix round changes no visual layout, interactive controls, or English copy. The existing responsive/dark-mode/focus review above remains applicable. The recovery browser test locates labelled password fields (using an exact accessible label where one label is a textual suffix of the other), submits the native form, and verifies the post-update access-denied state. Existing minimum target sizes, explicit focus styles, error alerts, and text-based generic reset acknowledgement are unchanged.
+
+### Files changed in fix round 1
+
+- `supabase/config.toml`
+- `AdminWeb/.env.example`
+- `AdminWeb/src/lib/auth/admin-origin.ts` and `admin-origin.test.ts`
+- `AdminWeb/src/app/(auth)/password-actions.ts` and its focused tests
+- `AdminWeb/src/app/(portal)/overview/page.tsx`
+- `AdminWeb/tests/auth.spec.ts`
+
+### Self-review and residual concerns
+
+- The prior report's statement that shared signup was disabled is superseded: it is now explicitly enabled for iOS compatibility. Closed AdminWeb registration is verified at the UI/source level and remains protected by staff authorisation.
+- The direct local database command in the partial-RSC test is deliberately scoped to the named local `supabase_db_BlocLens` Docker container because the project's service role lacks table UPDATE grants. It changes only the seeded Moderator's `revoked_at` and always restores it in `finally`.
+- Mailpit messages remain in the local mailbox, but the test uses a UUID email address and deletes its Auth user; no shared login fixture or password is altered.
+- Production deployment must set `ADMIN_ORIGIN` to its canonical HTTPS admin origin and allow-list the corresponding exact `/update-password` URL in Supabase Auth.

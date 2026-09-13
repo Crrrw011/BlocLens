@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const resetPasswordForEmail = vi.fn();
 const updateUser = vi.fn();
+const getAdminOrigin = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn(async () => ({
@@ -9,8 +10,8 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-vi.mock("next/headers", () => ({
-  headers: vi.fn(async () => new Headers({ origin: "http://127.0.0.1:3000" })),
+vi.mock("@/lib/auth/admin-origin", () => ({
+  getAdminOrigin,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -24,6 +25,7 @@ describe("requestPasswordReset", () => {
     vi.resetModules();
     resetPasswordForEmail.mockReset();
     updateUser.mockReset();
+    getAdminOrigin.mockReset();
   });
 
   it("uses the same successful response when the email is malformed", async () => {
@@ -37,6 +39,7 @@ describe("requestPasswordReset", () => {
 
   it("does not reveal whether a valid email has an account", async () => {
     resetPasswordForEmail.mockResolvedValue({ error: new Error("unknown user") });
+    getAdminOrigin.mockReturnValue("http://127.0.0.1:3000");
     const { requestPasswordReset } = await import("./password-actions");
     const formData = new FormData();
     formData.set("email", "staff@bloclens.invalid");
@@ -45,6 +48,7 @@ describe("requestPasswordReset", () => {
     expect(resetPasswordForEmail).toHaveBeenCalledWith("staff@bloclens.invalid", {
       redirectTo: "http://127.0.0.1:3000/update-password",
     });
+    expect(getAdminOrigin).toHaveBeenCalledOnce();
   });
 });
 
@@ -53,6 +57,7 @@ describe("updatePassword", () => {
     vi.resetModules();
     resetPasswordForEmail.mockReset();
     updateUser.mockReset();
+    getAdminOrigin.mockReset();
   });
 
   it("rejects a password confirmation mismatch without updating the user", async () => {
