@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef } from "react";
 
 import type { StaffAccess } from "@/lib/auth/access";
 import { en } from "@/lib/messages/en";
@@ -43,6 +44,7 @@ type IconRailProps = Readonly<{
 
 export function IconRail({ access, signOutAction }: IconRailProps) {
   const pathname = usePathname();
+  const signOutFormRef = useRef<HTMLFormElement>(null);
   const roleLabel = en.shell.roles[access.role];
   const initials = roleLabel.slice(0, 2).toUpperCase();
 
@@ -115,15 +117,19 @@ export function IconRail({ access, signOutAction }: IconRailProps) {
               </DropdownMenu.Label>
               <div className="rail-menu__message">{roleLabel}</div>
               {signOutAction ? (
-                <form action={signOutAction}>
-                  <button
-                    className="rail-menu__action focus-ring"
-                    type="submit"
-                    role="menuitem"
+                <form ref={signOutFormRef} action={signOutAction}>
+                  <DropdownMenu.Item
+                    asChild
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      signOutFormRef.current?.requestSubmit();
+                    }}
                   >
-                    <SignOut aria-hidden="true" size={18} />
-                    {en.auth.portal.signOut}
-                  </button>
+                    <button className="rail-menu__action focus-ring" type="button">
+                      <SignOut aria-hidden="true" size={18} />
+                      {en.auth.portal.signOut}
+                    </button>
+                  </DropdownMenu.Item>
                 </form>
               ) : null}
             </DropdownMenu.Content>

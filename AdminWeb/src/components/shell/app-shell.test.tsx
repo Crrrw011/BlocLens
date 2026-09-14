@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -66,6 +66,25 @@ describe("AppShell", () => {
     expect(overview).toHaveFocus();
     expect(overview).toHaveClass("focus-ring");
   });
+
+  it("registers sign out as a keyboard-activatable account-menu item", async () => {
+    const signOutAction = vi.fn(async () => undefined);
+    render(
+      <AppShell access={administrator} signOutAction={signOutAction}>
+        Workspace
+      </AppShell>,
+    );
+
+    const accountMenu = screen.getByRole("button", { name: "Open account menu" });
+    accountMenu.focus();
+    fireEvent.keyDown(accountMenu, { key: "Enter", code: "Enter" });
+
+    const signOut = await screen.findByRole("menuitem", { name: "Sign out" });
+    expect(signOut).toHaveFocus();
+
+    fireEvent.keyDown(signOut, { key: "Enter", code: "Enter" });
+    await waitFor(() => expect(signOutAction).toHaveBeenCalledOnce());
+  });
 });
 
 function InspectorHarness() {
@@ -90,13 +109,13 @@ function InspectorHarness() {
 }
 
 describe("Inspector", () => {
-  it("restores focus to its trigger when closed", () => {
+  it("restores focus to its trigger when closed", async () => {
     render(<InspectorHarness />);
 
     const trigger = screen.getByRole("button", { name: "Open details" });
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("button", { name: "Close details" }));
 
-    expect(trigger).toHaveFocus();
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });

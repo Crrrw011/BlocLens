@@ -1,9 +1,11 @@
 "use client";
 
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "@phosphor-icons/react";
-import { useEffect, useId, useRef } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
 import { en } from "@/lib/messages/en";
+import { LayerContext } from "@/components/ui/layer-context";
 
 type InspectorProps = Readonly<{
   open: boolean;
@@ -14,6 +16,28 @@ type InspectorProps = Readonly<{
   footer?: React.ReactNode;
 }>;
 
+const overlayMediaQuery = "(max-width: 1279px)";
+
+function subscribeToOverlayMode(onChange: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => undefined;
+  }
+
+  const mediaQuery = window.matchMedia(overlayMediaQuery);
+  mediaQuery.addEventListener("change", onChange);
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
+
+function getOverlayMode() {
+  return typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(overlayMediaQuery).matches;
+}
+
+function clearBackgroundInert() {
+  document.querySelector<HTMLElement>(".app-shell")?.removeAttribute("inert");
+}
+
 export function Inspector({
   open,
   title,
@@ -22,66 +46,74 @@ export function Inspector({
   triggerRef,
   footer,
 }: InspectorProps) {
-  const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
-  const wasOpenRef = useRef(false);
-
-  useEffect(() => {
-    if (open) {
-      closeRef.current?.focus();
-      wasOpenRef.current = true;
-      return;
-    }
-
-    if (wasOpenRef.current) {
-      triggerRef?.current?.focus();
-      wasOpenRef.current = false;
-    }
-  }, [open, triggerRef]);
+  const nestedLayersRef = useRef<Array<() => void>>([]);
+  const isOverlay = useSyncExternalStore(subscribeToOverlayMode, getOverlayMode, () => false);
+  const registerNestedLayer = useCallback((closeLayer: () => void) => {
+    nestedLayersRef.current.push(closeLayer);
+    return () => {
+      nestedLayersRef.current = nestedLayersRef.current.filter((close) => close !== closeLayer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
 
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onOpenChange(false);
+    const appShell = document.querySelector<HTMLElement>(".app-shell");
+    if (isOverlay) {
+      appShell?.setAttribute("inert", "");
+    } else {
+      appShell?.removeAttribute("inert");
     }
 
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onOpenChange, open]);
+    return clearBackgroundInert;
+  }, [isOverlay, open]);
 
   return (
-    <>
-      <button
-        className="inspector-backdrop"
-        data-open={open}
-        type="button"
-        tabIndex={-1}
-        aria-hidden="true"
-        onClick={() => onOpenChange(false)}
-      />
-      <aside
-        className="inspector"
-        data-open={open}
-        aria-labelledby={titleId}
-        aria-hidden={!open}
-        inert={!open}
-      >
-        <header className="inspector__header">
-          <h2 id={titleId}>{title}</h2>
-          <button
-            ref={closeRef}
-            className="icon-button focus-ring"
-            type="button"
-            aria-label={en.shell.closeDetails}
-            onClick={() => onOpenChange(false)}
-          >
-            <X aria-hidden="true" size={20} />
-          </button>
-        </header>
-        <div className="inspector__body">{children}</div>
-        {footer ? <footer className="inspector__footer">{footer}</footer> : null}
-      </aside>
-    </>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} modal={isOverlay}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="inspector-backdrop" />
+        <DialogPrimitive.Content
+          className="inspector"
+          data-inspector-mode={isOverlay ? "overlay" : "wide"}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            closeRef.current?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            clearBackgroundInert();
+            if (triggerRef?.current) {
+              event.preventDefault();
+              triggerRef.current.focus();
+            }
+          }}
+          onEscapeKeyDown={(event) => {
+            const closeTopLayer = nestedLayersRef.current.at(-1);
+            if (closeTopLayer) {
+              event.preventDefault();
+              closeTopLayer();
+            }
+          }}
+          onInteractOutside={(event) => {
+            if (!isOverlay) event.preventDefault();
+          }}
+        >
+          <LayerContext.Provider value={registerNestedLayer}>
+            <header className="inspector__header">
+              <DialogPrimitive.Title>{title}</DialogPrimitive.Title>
+              <DialogPrimitive.Close
+                ref={closeRef}
+                className="icon-button focus-ring"
+                aria-label={en.shell.closeDetails}
+              >
+                <X aria-hidden="true" size={20} />
+              </DialogPrimitive.Close>
+            </header>
+            <div className="inspector__body">{children}</div>
+            {footer ? <footer className="inspector__footer">{footer}</footer> : null}
+          </LayerContext.Provider>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
