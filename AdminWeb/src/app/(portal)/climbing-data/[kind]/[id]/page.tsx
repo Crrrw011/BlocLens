@@ -8,6 +8,8 @@ import { RouteActions } from "@/features/climbing-data/route-actions";
 import { RouteEditForm } from "@/features/climbing-data/route-edit-form";
 import { getEntityDetail } from "@/features/climbing-data/repository";
 import type { EntityKind } from "@/features/climbing-data/types";
+import { DeleteDialog } from "@/features/destructive/delete-dialog";
+import { getDeletionImpact } from "@/features/destructive/deletion-impact";
 
 const KINDS: EntityKind[] = [
   "gym",
@@ -50,6 +52,14 @@ export default async function ClimbingDataDetailPage({
   }
   const item = result.value;
   const copy = en.climbingData;
+  const isAdmin = access.role === "admin";
+  const deletable =
+    entityKind === "route" ||
+    entityKind === "route_photo" ||
+    entityKind === "beta_link" ||
+    entityKind === "route_comment";
+  const impact =
+    isAdmin && deletable ? await getDeletionImpact(entityKind, id) : null;
 
   return (
     <section className="portal-page" aria-label={item.title}>
@@ -124,6 +134,19 @@ export default async function ClimbingDataDetailPage({
       <p>
         {copy.detail.timestamps}: {item.createdAt} → {item.updatedAt}
       </p>
+
+      {isAdmin && deletable && impact ? (
+        <section aria-labelledby="entity-delete">
+          <h3 id="entity-delete">{copy.deletion.trigger}</h3>
+          <DeleteDialog
+            targetType={entityKind as "route" | "route_photo" | "beta_link" | "route_comment"}
+            targetId={item.id}
+            title={item.title}
+            impact={impact}
+            expectedUpdatedAt={item.updatedAt}
+          />
+        </section>
+      ) : null}
 
       {entityKind === "route" ? (
         <>
