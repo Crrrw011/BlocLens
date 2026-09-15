@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
+  // Outside the watched tree when set, so artifact writes never trigger
+  // the dev server recompile that corrupts the production build under test.
+  outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR ?? "./test-results",
   fullyParallel: true,
   // Local auth fixtures are shared across suites, so session-mutating flows must not race.
   workers: 1,
