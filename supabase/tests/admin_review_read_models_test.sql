@@ -13,7 +13,7 @@ select has_function(
 select has_function(
   'public',
   'admin_review_queue',
-  array['text', 'text', 'text', 'text', 'integer'],
+  array['text', 'text', 'text', 'text', 'integer', 'text', 'text'],
   'review queue RPC exists'
 );
 select has_function(
@@ -292,10 +292,36 @@ select is(
 select ok(
   not has_function_privilege(
     'anon',
-    'public.admin_review_queue(text,text,text,text,integer)'::regprocedure,
+    'public.admin_review_queue(text,text,text,text,integer,text,text)'::regprocedure,
     'EXECUTE'
   ),
   'anonymous clients cannot read the review queue'
+);
+
+-- Kind and severity filters narrow the same stable queue.
+set local role authenticated;
+set local request.jwt.claim.sub to '90000000-0000-4000-8000-000000000007';
+create temp table _severe_queue as
+  select * from public.admin_review_queue('pending', 'all', null, null, 100, 'all', 'severe');
+create temp table _correction_queue as
+  select * from public.admin_review_queue('pending', 'all', null, null, 100, 'route_correction', 'all');
+reset role;
+
+select ok(
+  (select count(*) >= 1 from _severe_queue),
+  'severe filter returns the severe fixture'
+);
+select ok(
+  (select bool_and(severity = 'severe') from _severe_queue),
+  'severe filter returns only severe rows'
+);
+select ok(
+  (select count(*) >= 1 from _correction_queue),
+  'kind filter returns the correction fixture'
+);
+select ok(
+  (select bool_and(kind = 'route_correction') from _correction_queue),
+  'kind filter returns only the requested kind'
 );
 
 select * from finish();
