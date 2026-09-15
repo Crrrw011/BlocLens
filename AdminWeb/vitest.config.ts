@@ -7,6 +7,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "server-only": "next/dist/compiled/server-only/empty.js",
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },

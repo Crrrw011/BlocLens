@@ -1,5 +1,56 @@
 @import "tailwindcss";
 
+.invitation-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.invitation-panel {
+  width: 100%;
+  max-width: 30rem;
+  min-width: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--colour-separator);
+  border-radius: var(--radius-panel);
+  background: var(--colour-surface);
+}
+
+.invitation-panel h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.invitation-description {
+  margin: var(--space-3) 0 var(--space-6);
+  color: var(--colour-text-secondary);
+  line-height: 1.5;
+}
+
+.invitation-form, .invitation-form label {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.invitation-form { gap: var(--space-5); }
+.invitation-form label { font-weight: 500; }
+.invitation-form input:not([type="hidden"]) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-separator);
+  border-radius: var(--radius-control);
+  background: var(--colour-surface-raised);
+  color: var(--colour-text);
+}
+.invitation-form p { margin: 0; line-height: 1.5; }
+.invitation-error { color: var(--colour-danger); }
+
 :root {
   color-scheme: light dark;
   --colour-canvas: #f4f4f8;

@@ -3,6 +3,15 @@ export const en = {
     operationsTitle: "BlocLens Operations",
   },
   auth: {
+    acceptInvite: {
+      title: "Join BlocLens Operations",
+      body: "Choose a password to accept your staff invitation. Use at least 12 characters.",
+      submit: "Accept invitation",
+      preparing: "Checking your invitation session…",
+      unavailable: "This invitation cannot be accepted. Ask your administrator for a new invitation.",
+      invalidInput: "Use the invitation link and a password between 12 and 128 characters.",
+      passwordError: "Your password could not be updated. Try a different password or reopen your invitation link.",
+    },
     accessDenied: {
       title: "Access denied",
       body: "Your account is not an active BlocLens Operations staff account.",
