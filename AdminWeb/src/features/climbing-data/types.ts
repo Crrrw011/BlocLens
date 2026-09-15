@@ -48,3 +48,16 @@ export type DeletionImpact = {
   storagePaths: string[];
   alternative: "archive" | "merge" | "anonymise" | null;
 };
+
+export type MergeConflict = {
+  key: string;
+  table: string;
+  sourceId: string;
+};
+
+export type MergeImpact = {
+  source: { id: string; colour: string | null; gymGrade: number | null; updatedAt: string };
+  canonical: { id: string; colour: string | null; gymGrade: number | null; updatedAt: string };
+  counts: Record<string, number>;
+  conflicts: MergeConflict[];
+};
