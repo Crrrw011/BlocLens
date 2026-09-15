@@ -26,6 +26,8 @@ export type ReviewTargetFilter =
 
 export type ReviewQueueQuery = {
   status: ReviewStatusFilter;
+  kind: ReviewKind | "all";
+  severity: "all" | "severe" | "normal";
   target: ReviewTargetFilter;
   q: string;
   cursor: string | null;

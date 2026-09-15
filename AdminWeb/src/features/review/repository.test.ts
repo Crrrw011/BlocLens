@@ -42,6 +42,8 @@ describe("listReviewQueue", () => {
       search_text: null,
       page_after: null,
       page_size: 20,
+      kind_filter: "all",
+      severity_filter: "all",
     });
   });
 

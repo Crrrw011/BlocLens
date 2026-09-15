@@ -9,6 +9,10 @@ export const reviewKindSchema = z.enum([
 
 export const reviewQueueQuerySchema = z.object({
   status: z.enum(["pending", "resolved", "all"]).default("pending"),
+  kind: z
+    .enum(["all", "content_report", "route_correction", "removal_report", "merge_suggestion"])
+    .default("all"),
+  severity: z.enum(["all", "severe", "normal"]).default("all"),
   target: z
     .enum(["all", "route", "beta_link", "beta_comment", "route_photo"])
     .default("all"),

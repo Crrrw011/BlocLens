@@ -98,6 +98,8 @@ export async function listReviewQueue(
       search_text: input.q === "" ? null : input.q,
       page_after: input.cursor,
       page_size: input.pageSize,
+      kind_filter: input.kind,
+      severity_filter: input.severity,
     });
   } catch {
     return failure("upstream");

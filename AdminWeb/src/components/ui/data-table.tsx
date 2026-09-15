@@ -62,6 +62,7 @@ export function DataTable<TData extends RowData>({
               return (
                 <tr
                   key={row.id}
+                  data-row-id={row.id}
                   className={row.id === selectedRowId ? "data-table__row--selected" : undefined}
                   tabIndex={interactive ? 0 : undefined}
                   onClick={interactive ? () => onRowActivate?.(row.original) : undefined}
