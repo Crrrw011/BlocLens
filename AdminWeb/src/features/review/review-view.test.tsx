@@ -13,6 +13,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/review",
   useSearchParams: () => new URLSearchParams("status=pending&kind=all"),
 }));
+vi.mock("@/lib/supabase/server", () => ({
+  createServerClient: async () => {
+    throw new Error("network clients are unavailable in view tests");
+  },
+}));
 
 function item(overrides: Partial<ReviewQueueItem> = {}): ReviewQueueItem {
   return {
@@ -65,7 +70,7 @@ describe("ReviewTable", () => {
   it("changes only the selection when a row is activated", () => {
     push.mockReset();
     render(
-      <ReviewTable items={[item()]} nextCursor={null} selected={null} canSeeReporter />,
+      <ReviewTable items={[item()]} nextCursor={null} selected={null} canSeeReporter canAccept />,
     );
     fireEvent.click(screen.getByRole("cell", { name: "harassment" }));
     expect(push).toHaveBeenCalledOnce();
@@ -78,7 +83,7 @@ describe("ReviewTable", () => {
   });
 
   it("shows an empty state instead of an empty table", () => {
-    render(<ReviewTable items={[]} nextCursor={null} selected={null} canSeeReporter />);
+    render(<ReviewTable items={[]} nextCursor={null} selected={null} canSeeReporter canAccept />);
     expect(screen.getByText("No matching review items")).toBeInTheDocument();
   });
 
@@ -90,6 +95,7 @@ describe("ReviewTable", () => {
         nextCursor={null}
         selected={detail()}
         canSeeReporter
+        canAccept
       />,
     );
     expect(screen.getByText("Review details")).toBeInTheDocument();
@@ -111,6 +117,7 @@ function InspectorFocusHarness({ canSeeReporter }: Readonly<{ canSeeReporter: bo
         <ReviewInspector
           item={detail()}
           canSeeReporter={canSeeReporter}
+          canAccept
           triggerRef={triggerRef}
           onClose={() => setOpen(false)}
         />
