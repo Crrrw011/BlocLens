@@ -55,6 +55,12 @@ export default async function ClimbingDataDetailPage({
     <section className="portal-page" aria-label={item.title}>
       <nav aria-label={copy.kinds[entityKind]}>
         <Link href={`/climbing-data/${entityKind}`}>{copy.kinds[entityKind]}</Link>
+        {entityKind === "route" && access.role === "admin" ? (
+          <>
+            {" · "}
+            <Link href={`/climbing-data/route/${item.id}/merge`}>{copy.merge.title}</Link>
+          </>
+        ) : null}
       </nav>
       <h2>
         {item.title} <StatusBadge tone="neutral">{item.status}</StatusBadge>
