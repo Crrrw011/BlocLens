@@ -73,10 +73,13 @@ describe("listEntities", () => {
 
 describe("getEntityDetail", () => {
   it("maps detail rows with moderation history", async () => {
+    // Detail projections carry no dependent counts; they default to empty.
+    const { dependent_counts, ...detailFields } = row();
+    expect(dependent_counts).toEqual({ photos: 1, beta_links: 1 });
     rpc.mockReset().mockResolvedValue({
       data: [
         {
-          ...row(),
+          ...detailFields,
           details: { colour: "Teal", gym_grade: 3 },
           related: { photos: ["99000000-0000-4000-8000-000000000005"] },
           moderation_history: [

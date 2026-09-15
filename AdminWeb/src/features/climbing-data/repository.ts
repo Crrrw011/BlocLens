@@ -65,11 +65,13 @@ const historyEntrySchema = z.object({
   created_at: z.string().min(1),
 });
 
-const detailRowSchema = listRowSchema.extend({
-  details: z.record(z.string(), z.unknown()),
-  related: z.record(z.string(), z.unknown()),
-  moderation_history: z.array(historyEntrySchema),
-});
+const detailRowSchema = listRowSchema
+  .omit({ dependent_counts: true, moderation: true })
+  .extend({
+    details: z.record(z.string(), z.unknown()),
+    related: z.record(z.string(), z.unknown()),
+    moderation_history: z.array(historyEntrySchema),
+  });
 
 function failure(
   code: OperationalError["code"],
@@ -175,7 +177,7 @@ export async function getEntityDetail(
   return {
     ok: true,
     value: {
-      ...mapItem(row),
+      ...mapItem({ ...row, dependent_counts: {}, moderation: null }),
       details: row.details,
       related: row.related,
       moderationHistory: row.moderation_history.map((entry) => ({
