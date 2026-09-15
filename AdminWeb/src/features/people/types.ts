@@ -5,6 +5,7 @@ export type PenaltyKind =
 
 export type Restriction = {
   id: string;
+  actionId: string | null;
   kind: PenaltyKind;
   reason: string;
   endsAt: string | null;
@@ -33,4 +34,17 @@ export type PenaltyAction = {
   actionType: string;
   reason: string;
   createdAt: string;
+};
+
+export type PersonRow = {
+  userId: string;
+  username: string;
+  memberSince: string;
+  staffRole: string | null;
+  restrictionKinds: PenaltyKind[];
+};
+
+export type PeoplePage = {
+  items: PersonRow[];
+  nextCursor: string | null;
 };

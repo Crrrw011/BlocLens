@@ -11,6 +11,7 @@ const pageTitles: Record<string, string> = {
   "/overview": en.shell.destinations.overview,
   "/review": en.shell.destinations.review,
   "/climbing-data": en.shell.destinations.climbingData,
+  "/staff": en.people.staff.title,
   "/people": en.shell.destinations.peopleAccess,
   "/audit": en.shell.destinations.audit,
   "/configuration": en.shell.destinations.configuration,
