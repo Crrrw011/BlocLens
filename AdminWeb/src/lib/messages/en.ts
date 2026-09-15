@@ -124,4 +124,50 @@ export const en = {
       retry: "Try again",
     },
   },
+  overview: {
+    title: "Operations overview",
+    rangeLabel: "Time range",
+    ranges: {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days",
+    },
+    metrics: {
+      pendingReports: "Pending reports",
+      severeReports: "Severe reports",
+      pendingCorrections: "Pending corrections",
+      duplicateRoutes: "Possible duplicates",
+      pendingClaims: "Pending gym claims",
+      hiddenContent: "Hidden routes",
+      viewQueue: "Open review queue",
+    },
+    trend: {
+      title: "Review activity",
+      opened: "Opened",
+      resolved: "Resolved",
+      total: "total",
+    },
+    distribution: {
+      title: "Queue by kind and status",
+    },
+    priority: {
+      title: "Needs attention first",
+      body: "Severe reports first, then the oldest pending items.",
+      columns: {
+        item: "Item",
+        detail: "Detail",
+        waiting: "Waiting",
+      },
+    },
+    recentActions: {
+      title: "Recent staff actions",
+    },
+    handling: {
+      label: "Median handling time",
+    },
+    empty: {
+      title: "Queues are clear",
+      body: "No pending reports, corrections, duplicates, or claims right now.",
+    },
+  },
 } as const;
