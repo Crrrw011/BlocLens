@@ -66,6 +66,7 @@ export default async function ReviewPage({
         nextCursor={queueResult.value.nextCursor}
         selected={itemResult?.ok === true ? itemResult.value : selected ? "unavailable" : null}
         canSeeReporter={access.role === "admin"}
+        canAccept={access.role === "admin"}
       />
     </section>
   );

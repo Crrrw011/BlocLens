@@ -41,11 +41,13 @@ export function ReviewTable({
   nextCursor,
   selected,
   canSeeReporter,
+  canAccept,
 }: Readonly<{
   items: ReviewQueueItem[];
   nextCursor: string | null;
   selected: InspectorItem | "unavailable" | null;
   canSeeReporter: boolean;
+  canAccept: boolean;
 }>) {
   const router = useRouter();
   const pathname = usePathname();
@@ -162,6 +164,7 @@ export function ReviewTable({
       <ReviewInspector
         item={selected}
         canSeeReporter={canSeeReporter}
+        canAccept={canAccept}
         triggerRef={{ current: trigger }}
         onClose={closeInspector}
       />

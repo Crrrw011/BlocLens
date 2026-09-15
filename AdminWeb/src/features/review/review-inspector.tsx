@@ -5,9 +5,26 @@ import { useEffect, useState } from "react";
 import { Inspector } from "@/components/shell/inspector";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { en } from "@/lib/messages/en";
-import type { ReviewItemDetail } from "./types";
+import { ActionDialog } from "./action-dialog";
+import type { ReviewDecision, ReviewItemDetail, ReviewKind } from "./types";
 
 const copy = en.review.inspector;
+const decisionCopy = en.review.decisions;
+
+function allowedDecisions(kind: ReviewKind, canAccept: boolean): ReviewDecision[] {
+  switch (kind) {
+    case "content_report":
+      return ["dismiss", "escalate", "hide", "restore"];
+    case "route_correction":
+      return canAccept
+        ? ["escalate", "accept_correction", "reject_correction"]
+        : ["escalate", "reject_correction"];
+    case "removal_report":
+      return ["dismiss", "escalate"];
+    case "merge_suggestion":
+      return canAccept ? ["accept_correction", "reject_correction"] : ["reject_correction"];
+  }
+}
 
 export type InspectorItem = ReviewItemDetail;
 
@@ -23,15 +40,18 @@ function DetailRow({ label, value }: Readonly<{ label: string; value: string }>)
 export function ReviewInspector({
   item,
   canSeeReporter,
+  canAccept,
   triggerRef,
   onClose,
 }: Readonly<{
   item: InspectorItem | "unavailable" | null;
   canSeeReporter: boolean;
+  canAccept: boolean;
   triggerRef?: React.RefObject<HTMLElement | null>;
   onClose: () => void;
 }>) {
   const [open, setOpen] = useState(item !== null);
+  const [decision, setDecision] = useState<ReviewDecision | null>(null);
 
   useEffect(() => {
     setOpen(item !== null);
@@ -67,6 +87,11 @@ export function ReviewInspector({
       onOpenChange={(next) => {
         if (!next) close();
       }}
+      footer={allowedDecisions(item.kind, canAccept).map((action) => (
+        <button key={action} type="button" onClick={() => setDecision(action)}>
+          {decisionCopy.actions[action]}
+        </button>
+      ))}
     >
       <p>
         <StatusBadge tone={item.severity === "severe" ? "danger" : "neutral"}>
@@ -100,6 +125,19 @@ export function ReviewInspector({
           </ul>
         )}
       </section>
+      {decision ? (
+        <ActionDialog
+          kind={item.kind}
+          id={item.id}
+          title={item.title}
+          decision={decision}
+          expectedUpdatedAt={item.updatedAt}
+          open={decision !== null}
+          onOpenChange={(next) => {
+            if (!next) setDecision(null);
+          }}
+        />
+      ) : null}
     </Inspector>
   );
 }
