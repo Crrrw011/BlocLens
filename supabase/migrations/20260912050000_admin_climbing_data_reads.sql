@@ -364,8 +364,9 @@ begin
         'is_verified', gyms.is_verified, 'data_source', gyms.data_source::text,
         'website', gyms.website, 'deleted_at', gyms.deleted_at
       ),
-      (select coalesce(jsonb_agg(zones.id order by zones.display_order), '[]'::jsonb)
-       from public.wall_zones as zones where zones.gym_id = gyms.id),
+      jsonb_build_object('wall_zones',
+        (select coalesce(jsonb_agg(zones.id order by zones.display_order), '[]'::jsonb)
+         from public.wall_zones as zones where zones.gym_id = gyms.id)),
       '[]'::jsonb, gyms.updated_at, gyms.created_at
     from public.gyms as gyms
     where gyms.id = admin_entity_detail.entity_id;
@@ -382,8 +383,9 @@ begin
         'wall_kind', zones.wall_kind::text, 'display_order', zones.display_order,
         'last_reset_date', zones.last_reset_date, 'archived_at', zones.archived_at
       ),
-      (select coalesce(jsonb_agg(routes.id order by routes.created_at), '[]'::jsonb)
-       from public.routes as routes where routes.wall_zone_id = zones.id),
+      jsonb_build_object('routes',
+        (select coalesce(jsonb_agg(routes.id order by routes.created_at), '[]'::jsonb)
+         from public.routes as routes where routes.wall_zone_id = zones.id)),
       '[]'::jsonb, zones.updated_at, zones.created_at
     from public.wall_zones as zones
     join public.gyms as gyms on gyms.id = zones.gym_id
@@ -449,10 +451,11 @@ begin
         'is_estimated', resets.is_estimated, 'is_official', resets.is_official,
         'created_by', resets.created_by, 'deleted_at', resets.deleted_at
       ),
-      (select coalesce(jsonb_agg(confirmations.user_id), '[]'::jsonb)
-       from public.reset_confirmations as confirmations
-       where confirmations.reset_event_id = resets.id
-         and confirmations.revoked_at is null),
+      jsonb_build_object('confirmed_by',
+        (select coalesce(jsonb_agg(confirmations.user_id), '[]'::jsonb)
+         from public.reset_confirmations as confirmations
+         where confirmations.reset_event_id = resets.id
+           and confirmations.revoked_at is null)),
       '[]'::jsonb, resets.updated_at, resets.created_at
     from public.reset_events as resets
     join public.gyms as gyms on gyms.id = resets.gym_id
@@ -518,8 +521,9 @@ begin
         'submitted_by', links.submitted_by,
         'hidden_at', links.hidden_at, 'deleted_at', links.deleted_at
       ),
-      (select coalesce(jsonb_agg(comments.id), '[]'::jsonb)
-       from public.beta_comments as comments where comments.beta_link_id = links.id),
+      jsonb_build_object('comments',
+        (select coalesce(jsonb_agg(comments.id), '[]'::jsonb)
+         from public.beta_comments as comments where comments.beta_link_id = links.id)),
       (select coalesce(jsonb_agg(row_to_json(a) order by a.created_at desc), '[]'::jsonb)
        from (
          select actions.id, actions.action_type::text as action_type,

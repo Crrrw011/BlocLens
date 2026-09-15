@@ -24,6 +24,7 @@ const KINDS: EntityKind[] = [
 const RELATED_LINKS: Record<string, EntityKind> = {
   photos: "route_photo",
   beta_links: "beta_link",
+  comments: "route_comment",
   zones: "wall_zone",
   wall_zones: "wall_zone",
   routes: "route",
