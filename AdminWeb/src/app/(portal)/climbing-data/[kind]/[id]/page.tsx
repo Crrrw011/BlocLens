@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireStaff } from "@/lib/auth/access";
 import { en } from "@/lib/messages/en";
+import { RouteActions } from "@/features/climbing-data/route-actions";
+import { RouteEditForm } from "@/features/climbing-data/route-edit-form";
 import { getEntityDetail } from "@/features/climbing-data/repository";
 import type { EntityKind } from "@/features/climbing-data/types";
 
@@ -35,7 +37,7 @@ function formatValue(value: unknown): string {
 export default async function ClimbingDataDetailPage({
   params,
 }: Readonly<{ params: Promise<{ kind: string; id: string }> }>) {
-  await requireStaff();
+  const access = await requireStaff();
   const { kind, id } = await params;
   if (!KINDS.includes(kind as EntityKind) || !/^[0-9a-f-]{36}$/i.test(id)) {
     notFound();
@@ -116,6 +118,40 @@ export default async function ClimbingDataDetailPage({
       <p>
         {copy.detail.timestamps}: {item.createdAt} → {item.updatedAt}
       </p>
+
+      {entityKind === "route" ? (
+        <>
+          <section aria-labelledby="entity-edit">
+            <h3 id="entity-edit">{copy.edit.title}</h3>
+            <RouteEditForm
+              id={item.id}
+              colour={typeof item.details.colour === "string" ? item.details.colour : null}
+              gymGrade={typeof item.details.gym_grade === "number" ? item.details.gym_grade : null}
+              terrain={typeof item.details.terrain === "string" ? item.details.terrain : null}
+              subjectiveGrade={
+                typeof item.details.subjective_grade === "number"
+                  ? item.details.subjective_grade
+                  : null
+              }
+              expectedUpdatedAt={item.updatedAt}
+            />
+          </section>
+          <section aria-labelledby="entity-lifecycle">
+            <h3 id="entity-lifecycle">{copy.detail.lifecycle}</h3>
+            <RouteActions
+              routeId={item.id}
+              lifecycle={typeof item.details.lifecycle === "string" ? item.details.lifecycle : ""}
+              moderation={
+                typeof item.details.moderation_status === "string"
+                  ? item.details.moderation_status
+                  : ""
+              }
+              expectedUpdatedAt={item.updatedAt}
+              isAdmin={access.role === "admin"}
+            />
+          </section>
+        </>
+      ) : null}
     </section>
   );
 }
