@@ -326,6 +326,33 @@ export const en = {
     searchPlaceholder: "Username",
     searchSubmit: "Search",
     staffLink: "Staff access",
+    claimsLink: "Gym claims",
+    claims: {
+      title: "Gym claims",
+      columns: {
+        gym: "Gym",
+        applicant: "Applicant",
+        method: "Verification",
+        status: "Status",
+        created: "Submitted",
+      },
+      methods: {
+        domain_email: "Domain email",
+        manual_review: "Manual review",
+      },
+      approve: "Approve",
+      reject: "Reject",
+      noteLabel: "Review note",
+      notePlaceholder: "What did you verify? Kept in the audit record.",
+      confirm: "Confirm decision",
+      cancel: "Cancel",
+      emptyTitle: "No gym claims",
+      emptyBody: "New gym claims will appear here.",
+      invalidInput: "Choose a decision and write a review note.",
+      unavailable: "This claim decision could not be recorded. Try again.",
+      conflictTitle: "Changed while you were reviewing",
+      conflictBody: "Someone else decided this claim. Reload and review fresh data.",
+    },
     table: {
       columns: {
         user: "User",

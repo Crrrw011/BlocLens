@@ -29,7 +29,8 @@ export default async function PeoplePage({
     <section className="portal-page" aria-label={en.people.title}>
       {access.role === "admin" ? (
         <nav aria-label={en.people.staffLink}>
-          <Link href="/staff">{en.people.staffLink}</Link>
+          <Link href="/staff">{en.people.staffLink}</Link> ·{" "}
+          <Link href="/people/claims">{en.people.claimsLink}</Link>
         </nav>
       ) : null}
       <form className="review-filters__search" method="get" action="/people" role="search">
