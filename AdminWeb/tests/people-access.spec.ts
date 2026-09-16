@@ -123,8 +123,11 @@ test("invites and revokes a staff invitation from the staff page", async ({ page
   await expect(page.getByText("Invitation accepted for processing.")).toBeVisible({
     timeout: 10000,
   });
-  await page.getByRole("button", { name: "Revoke" }).click();
-  await page.getByLabel("Reason", { exact: false }).fill(`Gate revocation ${runToken}`);
-  await page.getByRole("button", { name: "Revoke", exact: true }).last().click();
-  await expect(page.getByText("Revoked", { exact: true })).toBeVisible({ timeout: 10000 });
+  // Scope to our own row: earlier suites may leave pending invitations behind.
+  const row = page.getByRole("listitem").filter({ hasText: email });
+  await row.getByRole("button", { name: "Revoke" }).click();
+  const dialog = page.getByRole("dialog", { name: "Revoke" });
+  await dialog.getByLabel("Reason", { exact: false }).fill(`Gate revocation ${runToken}`);
+  await dialog.getByRole("button", { name: "Revoke", exact: true }).click();
+  await expect(row.getByText("Revoked", { exact: true })).toBeVisible({ timeout: 10000 });
 });

@@ -26,15 +26,25 @@ for (const { width, height } of [
     await signIn(page);
     await page.goto("/audit");
     await expect(page.getByLabel("Actor")).toBeVisible();
+    // Wait for settled content (rows or empty state), then compare against
+    // clientWidth: innerWidth shrinks under a vertical scrollbar and would
+    // false-positive on tall tables.
+    await expect(
+      page.getByRole("table").or(page.getByText("No matching audit events")),
+    ).toBeVisible();
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ),
     ).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`audit-${width}.png`), fullPage: true });
 
     await page.goto("/configuration");
     await expect(page.getByRole("heading", { name: "Review queue" })).toBeVisible();
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ),
     ).toBe(true);
     await page.screenshot({
       path: test.info().outputPath(`configuration-${width}.png`),
