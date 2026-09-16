@@ -3,7 +3,7 @@ drop function if exists public.get_my_profile();
 create function public.get_my_profile()
 returns table (
   id uuid,
-  username citext,
+  username extensions.citext,
   avatar_path text,
   height_cm numeric,
   arm_span_cm numeric,
