@@ -428,6 +428,43 @@ export const en = {
       },
     },
   },
+  audit: {
+    title: "Audit",
+    filters: {
+      actorLabel: "Actor",
+      actorPlaceholder: "User UUID",
+      actionLabel: "Action",
+      targetLabel: "Target type",
+      outcomeLabel: "Outcome",
+      fromLabel: "From",
+      toLabel: "To",
+      searchSubmit: "Search",
+      anyOutcome: "Any outcome",
+    },
+    table: {
+      columns: {
+        time: "Time",
+        actor: "Actor",
+        action: "Action",
+        target: "Target",
+        outcome: "Outcome",
+      },
+      nextPage: "Next page",
+      emptyTitle: "No matching audit events",
+      emptyBody: "Try widening the current filters or range.",
+    },
+    inspector: {
+      title: "Audit event",
+      before: "Before",
+      after: "After",
+      reason: "Reason",
+    },
+    export: {
+      action: "Export CSV",
+      unavailable: "Export is unavailable right now. Try again.",
+      tooWide: "Narrow the range to 90 days or fewer before exporting.",
+    },
+  },
   overview: {
     title: "Operations overview",
     rangeLabel: "Time range",
