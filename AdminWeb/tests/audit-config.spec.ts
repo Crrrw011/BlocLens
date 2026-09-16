@@ -26,12 +26,13 @@ for (const { width, height } of [
     await signIn(page);
     await page.goto("/audit");
     await expect(page.getByLabel("Actor")).toBeVisible();
-    // Wait for settled content (rows or empty state), then compare against
-    // clientWidth: innerWidth shrinks under a vertical scrollbar and would
-    // false-positive on tall tables.
+    // Wait for settled content (rows or empty state), webfont swap, then
+    // compare against clientWidth: innerWidth shrinks under a vertical
+    // scrollbar and would false-positive on tall tables.
     await expect(
       page.getByRole("table").or(page.getByText("No matching audit events")),
     ).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => true));
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
@@ -41,6 +42,7 @@ for (const { width, height } of [
 
     await page.goto("/configuration");
     await expect(page.getByRole("heading", { name: "Review queue" })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready.then(() => true));
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
