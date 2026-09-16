@@ -80,9 +80,13 @@ rest of the suite, not `AdminWeb/e2e/` (`people-access.spec.ts`,
 
 ## Blocked (needs human action)
 
-- Dependency audit: no npm/pnpm registry CLI exists in this
-  environment (only the vendored node runtime), so `npm audit` could
-  not run. Run it where registry access exists before release.
+- Dependency audit (`npm audit --omit=dev`, run 2026-09-16): 2 findings,
+  both in transitive `postcss <=8.5.22` via `next@15.5.25`
+  (GHSA-qx2v-qp2m-jg93, GHSA-6g55-p6wh-862q, GHSA-fxqj-rqcc-2cmp,
+  GHSA-r28c-9q8g-f849). Fix requires `next@16` (breaking change).
+  ACCEPTED RISK: these are build-time CSS toolchain issues requiring
+  attacker-controlled CSS input; the portal processes only repository
+  stylesheets. Revisit on the Next 16 migration, not a release blocker.
 - Vercel Preview against Staging (`atmtqesdhxpgnrjedwsu`) and the
   smoke/role/destructive re-verification there: no Vercel access from
   this environment. The runbook (`docs/environment-runbook.md`) lists
