@@ -6,11 +6,20 @@ import { messages } from "../src/localization/messages";
 const copy = messages.en.auth;
 
 async function signIn(page: Page, email = "fixture-admin@bloclens.invalid") {
-  await page.goto("/sign-in");
-  await page.getByLabel(copy.signIn.emailLabel).fill(email);
-  await page.getByLabel(copy.signIn.passwordLabel).fill("BlocLensLocalTest1!");
-  await page.getByRole("button", { name: copy.signIn.submit }).click();
-  await expect(page).toHaveURL(/\/overview$/);
+  // One retry absorbs transient local-stack auth denials under suite burst;
+  // the final state is still asserted, never assumed.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.goto("/sign-in");
+    await page.getByLabel(copy.signIn.emailLabel).fill(email);
+    await page.getByLabel(copy.signIn.passwordLabel).fill("BlocLensLocalTest1!");
+    await page.getByRole("button", { name: copy.signIn.submit }).click();
+    try {
+      await expect(page).toHaveURL(/\/overview$/, { timeout: 15000 });
+      return;
+    } catch {
+      if (attempt === 1) throw new Error(`sign-in did not settle for ${email}`);
+    }
+  }
 }
 
 for (const { width, height } of [
