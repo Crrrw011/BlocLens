@@ -13,8 +13,28 @@ function hasSessionCookie(request: NextRequest) {
     .some(({ name }) => name.startsWith("sb-") && name.includes("-auth-token"));
 }
 
+const NO_STORE_PATHS = [
+  "/overview",
+  "/review",
+  "/climbing-data",
+  "/people",
+  "/staff",
+  "/audit",
+  "/configuration",
+  "/sign-in",
+  "/forgot-password",
+  "/update-password",
+  "/accept-invite",
+  "/access-denied",
+];
+
 export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
+
+  // Authenticated views and credential flows are never cached anywhere.
+  if (NO_STORE_PATHS.some((path) => request.nextUrl.pathname.startsWith(path))) {
+    response.headers.set("Cache-Control", "no-store");
+  }
 
   if (!isPortalPath(request.nextUrl.pathname) || hasSessionCookie(request)) {
     return response;
