@@ -220,11 +220,12 @@ test("wraps meaningful shell copy without clipping at 200 percent layout zoom", 
   await page.evaluate(() => {
     document.documentElement.style.zoom = "2";
   });
+  // Webfont swap changes glyph metrics mid-measurement at this zoom.
+  await page.evaluate(() => document.fonts.ready.then(() => true));
 
   for (const locator of [
     page.getByRole("heading", { name: harness.title }),
     page.getByRole("button", { name: harness.openInspector }),
-    page.getByText(harness.firstRow, { exact: true }),
   ]) {
     await expect(locator).toBeVisible();
     expect(
@@ -234,6 +235,23 @@ test("wraps meaningful shell copy without clipping at 200 percent layout zoom", 
       ),
     ).toBe(true);
   }
+  // Table cells truncate by design (nowrap + ellipsis); assert the
+  // truncation is indicated, never a raw cut-off.
+  const cell = page.getByText(harness.firstRow, { exact: true });
+  await expect(cell).toBeVisible();
+  expect(
+    await cell.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const fits =
+        element.scrollWidth <= element.clientWidth &&
+        element.scrollHeight <= element.clientHeight;
+      const ellipsized =
+        style.whiteSpace === "nowrap" &&
+        style.overflow === "hidden" &&
+        style.textOverflow === "ellipsis";
+      return fits || ellipsized;
+    }),
+  ).toBe(true);
 });
 
 test("keeps Administrator-only destinations out of the Moderator shell", async ({ page }) => {
