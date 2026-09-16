@@ -87,10 +87,13 @@ rest of the suite, not `AdminWeb/e2e/` (`people-access.spec.ts`,
   ACCEPTED RISK: these are build-time CSS toolchain issues requiring
   attacker-controlled CSS input; the portal processes only repository
   stylesheets. Revisit on the Next 16 migration, not a release blocker.
-- Vercel Preview against Staging (`atmtqesdhxpgnrjedwsu`) and the
-  smoke/role/destructive re-verification there: no Vercel access from
-  this environment. The runbook (`docs/environment-runbook.md`) lists
-  exact variables, redirects, migration promotion, and the owner
-  bootstrap sequence.
+- Vercel Preview against Staging: DEPLOYED and smoke-verified
+  2026-09-16 (`https://bloc-lens.vercel.app`, branch `codex/admin-web`).
+  Owner bootstrap completed on Staging; sign-in, overview, review,
+  climbing-data search, people, staff invitation, audit, and
+  configuration all render. Destructive flows were NOT re-run on
+  Staging (shared iOS test data); they are covered by the local gate
+  (merge + double-delete e2e) over the identical migration sequence
+  now applied to Staging.
 - Production deployment: explicitly STOPPED per plan until the user
   authorises it.
