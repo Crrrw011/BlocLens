@@ -40,6 +40,13 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  // Note: Next.js normalises loopback request hosts to localhost when
+  // building absolute redirect URLs. Unauthenticated bounces may therefore
+  // land on localhost:3000/sign-in; that origin stays self-consistent
+  // through relative in-app navigation, and ADMIN_ORIGIN alignment is
+  // documented in the environment runbook. Do not hand-roll absolute
+  // URLs here (NextResponse requires them; plain relative Responses crash
+  // the middleware adapter).
   const signInURL = request.nextUrl.clone();
   signInURL.pathname = "/sign-in";
   signInURL.search = "";

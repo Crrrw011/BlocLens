@@ -219,6 +219,22 @@ select ok(
   ),
   'browser roles cannot run IP redaction'
 );
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.run_audit_ip_retention()'::regprocedure,
+    'EXECUTE'
+  ),
+  'service role runs the cron retention entry point'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.run_audit_ip_retention()'::regprocedure,
+    'EXECUTE'
+  ),
+  'browser roles cannot run the cron retention entry point'
+);
 
 select * from finish();
 rollback;

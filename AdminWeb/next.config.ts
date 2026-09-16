@@ -5,7 +5,9 @@ const securityHeaders = [
   // 'unsafe-inline'. Value remains in frame-ancestors, base-uri,
   // form-action, and connect-src confinement. Nonce plumbing would
   // remove 'unsafe-inline'; see production-readiness.md.
-  { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" },
+  // connect-src must admit the Supabase backends: the browser client
+  // (invitation acceptance, session refresh) calls them directly.
+  { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' http://127.0.0.1:54321 http://localhost:54321 https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "no-referrer" },
@@ -16,6 +18,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Production verification builds use NEXT_DIST_DIR=.next-prod so the
+  // :3001 dev watcher (which owns .next) can never corrupt them.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   async headers() {
     return [
       {

@@ -61,7 +61,7 @@ const invitations: StaffInvitation[] = [
 
 describe("StaffTables", () => {
   it("renders roster states, invitation badges, and owner-gated controls", () => {
-    render(<StaffTables staff={staff} invitations={invitations} canManageAdministrators />);
+    render(<StaffTables staff={staff} invitations={invitations} canManageAdministrators onChanged={async () => {}} />);
     expect(screen.getByText("Fixture Administrator")).toBeInTheDocument();
     expect(screen.getByText("Pending", { exact: true })).toBeInTheDocument();
     expect(screen.getByText("Revoked", { exact: true })).toBeInTheDocument();
@@ -71,13 +71,13 @@ describe("StaffTables", () => {
   });
 
   it("withholds administrator deactivation without the owner capability", () => {
-    render(<StaffTables staff={staff} invitations={[]} canManageAdministrators={false} />);
+    render(<StaffTables staff={staff} invitations={[]} canManageAdministrators={false} onChanged={async () => {}} />);
     // Only the moderator row offers deactivation now.
     expect(screen.getAllByRole("button", { name: "Deactivate" })).toHaveLength(1);
   });
 
   it("asks for a reason before revoking", () => {
-    render(<StaffTables staff={staff} invitations={invitations} canManageAdministrators />);
+    render(<StaffTables staff={staff} invitations={invitations} canManageAdministrators onChanged={async () => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
     expect(screen.getByRole("dialog", { name: "Revoke" })).toBeVisible();
     expect(screen.getByLabelText("Reason", { exact: false })).toBeInTheDocument();

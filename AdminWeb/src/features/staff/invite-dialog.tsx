@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { en } from "@/lib/messages/en";
+import { revalidateStaff } from "./staff-actions";
 
 const copy = en.people.staff;
 
@@ -13,7 +15,11 @@ type InviteResult =
   | { status: "ok" }
   | { status: "error"; message: string };
 
-export function InviteDialog({ canInviteAdmin }: Readonly<{ canInviteAdmin: boolean }>) {
+export function InviteDialog({
+  canInviteAdmin,
+  onChanged,
+}: Readonly<{ canInviteAdmin: boolean; onChanged: () => Promise<void> }>) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<InviteResult>({ status: "idle" });
   const [pending, setPending] = useState(false);
@@ -36,6 +42,13 @@ export function InviteDialog({ canInviteAdmin }: Readonly<{ canInviteAdmin: bool
       const payload = (await response.json().catch(() => null)) as { status?: string } | null;
       if (response.ok && payload?.status === "accepted") {
         setResult({ status: "ok" });
+        // Purge the roster fetch cache, reload state explicitly, then sync
+        // the router cache. Closing first lifts modal inertness so the
+        // refreshed roster is interactive right away.
+        await revalidateStaff();
+        await onChanged();
+        router.refresh();
+        setOpen(false);
       } else {
         setResult({ status: "error", message: copy.unavailable });
       }

@@ -6,8 +6,29 @@ import { z } from "zod";
 import type { ActionState } from "@/lib/auth/access";
 import { createServerClient } from "@/lib/supabase/server";
 import { messages } from "@/localization/messages";
+import { getStaffRoster, type StaffRoster } from "./repository";
 
 const copy = messages.en.people.staff;
+
+/**
+ * Fresh roster fetch that bypasses every cache layer: Server Actions run
+ * outside render memoisation, so unlike router.refresh() this cannot serve
+ * a stale fetch-cache entry after a mutation.
+ */
+export async function refreshStaffRoster(): Promise<StaffRoster | null> {
+  revalidatePath("/staff");
+  const roster = await getStaffRoster();
+  return roster.ok ? roster.value : null;
+}
+
+/**
+ * Purges the staff roster fetch cache after fetch-based mutations
+ * (invitations go through the API route, not a Server Action).
+ * router.refresh() alone only busts the client router cache.
+ */
+export async function revalidateStaff(): Promise<void> {
+  revalidatePath("/staff");
+}
 
 export type StaffActionState =
   | ActionState

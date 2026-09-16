@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -30,10 +30,12 @@ export function StaffTables({
   staff,
   invitations,
   canManageAdministrators,
+  onChanged,
 }: Readonly<{
   staff: StaffMember[];
   invitations: StaffInvitation[];
   canManageAdministrators: boolean;
+  onChanged: () => Promise<void>;
 }>) {
   const [revoking, setRevoking] = useState<string | null>(null);
   const [toggling, setToggling] = useState<{ id: string; active: boolean } | null>(null);
@@ -98,6 +100,7 @@ export function StaffTables({
           setRevoking(null);
           setToggling(null);
         }}
+        onChanged={onChanged}
       />
     </div>
   );
@@ -107,10 +110,12 @@ function AccessDialog({
   revoking,
   toggling,
   onClose,
+  onChanged,
 }: Readonly<{
   revoking: string | null;
   toggling: { id: string; active: boolean } | null;
   onClose: () => void;
+  onChanged: () => Promise<void>;
 }>) {
   const open = revoking !== null || toggling !== null;
   // One key per dialog opening: safe retries reuse it.
@@ -121,6 +126,14 @@ function AccessDialog({
   const [accessState, accessAction, accessPending] = useActionState(setStaffActive, {
     status: "idle",
   });
+  const succeeded =
+    revokeState.status === "success" || accessState.status === "success";
+
+  useEffect(() => {
+    if (succeeded) {
+      void onChanged().finally(() => onClose());
+    }
+  }, [succeeded, onChanged, onClose]);
   const state = revoking ? revokeState : accessState;
 
   return (

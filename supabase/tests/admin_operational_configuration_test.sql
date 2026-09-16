@@ -133,10 +133,18 @@ select is(
   'replay returns the original audit event'
 );
 
--- Browser roles cannot read or write configuration directly.
+-- Browser roles cannot write configuration directly; anonymous clients cannot read it.
 select ok(
-  not has_table_privilege('authenticated', 'public.operational_configuration', 'SELECT'),
-  'browser roles cannot read configuration directly'
+  not has_table_privilege('authenticated', 'public.operational_configuration', 'UPDATE'),
+  'browser roles cannot update configuration directly'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.operational_configuration', 'DELETE'),
+  'browser roles cannot delete configuration directly'
+);
+select ok(
+  not has_table_privilege('anon', 'public.operational_configuration', 'SELECT'),
+  'anonymous clients cannot read configuration'
 );
 select ok(
   (

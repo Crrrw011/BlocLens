@@ -63,6 +63,29 @@ grant execute on function private.redact_expired_admin_audit_ips(timestamptz)
 comment on function private.redact_expired_admin_audit_ips(timestamptz) is
   'Replaces raw audit source IPs older than the cutoff with keyed digests. Cron-only.';
 
+-- Thin service-role entry point for the Vercel Cron route. PostgREST cannot
+-- address private-schema routines, so the cutoff lives here, not in the caller.
+create or replace function public.run_audit_ip_retention()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  return private.redact_expired_admin_audit_ips(
+    statement_timestamp() - interval '90 days'
+  );
+end;
+$$;
+
+revoke all on function public.run_audit_ip_retention()
+  from public, anon, authenticated, service_role;
+grant execute on function public.run_audit_ip_retention()
+  to service_role;
+
+comment on function public.run_audit_ip_retention() is
+  'Cron-only 90-day audit IP retention. No caller-controlled parameters.';
+
 create or replace function public.admin_list_audit(
   actor_filter uuid,
   action_filter text,

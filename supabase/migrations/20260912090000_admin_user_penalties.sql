@@ -362,7 +362,7 @@ begin
      limit 1),
     (select coalesce(jsonb_agg(row_to_json(r) order by r.created_at desc), '[]'::jsonb)
      from (
-       select restrictions.id, restrictions.kind::text as kind,
+       select restrictions.id, restrictions.action_id, restrictions.kind::text as kind,
          restrictions.reason, restrictions.ends_at, restrictions.created_at
        from public.user_restrictions as restrictions
        where restrictions.user_id = profiles.id
