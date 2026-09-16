@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { en } from "@/lib/messages/en";
@@ -37,13 +37,16 @@ export function ConfigForm({ entry }: Readonly<{ entry: ConfigEntry }>) {
   const [state, formAction, pending] = useActionState(updateConfiguration, { status: "idle" });
   const conflicted = state.status === "error" && "conflict" in state;
 
+  // A confirmed submission retires its key at once: the next submit is a
+  // new attempt and must pass the version guard instead of replaying.
+  useEffect(() => {
+    if (state.status === "success") setIdempotencyKey(crypto.randomUUID());
+  }, [state]);
+
   return (
     <form
       action={formAction}
       aria-label={entry.key}
-      onSubmit={() => {
-        if (state.status === "success") setIdempotencyKey(crypto.randomUUID());
-      }}
     >
       <input type="hidden" name="key" value={entry.key} />
       <input type="hidden" name="expectedVersion" value={entry.version} />

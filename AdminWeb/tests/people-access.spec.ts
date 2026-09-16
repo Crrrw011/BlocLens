@@ -105,9 +105,11 @@ test("reverses a timed suspension from the user detail page", async ({ page }) =
 
   await signIn(page);
   await userDetail(page);
-  await expect(page.getByText("timed_suspension")).toBeVisible();
+  await expect(page.getByText("timed_suspension", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Reverse", exact: true }).click();
-  await expect(page.getByText("timed_suspension")).toBeHidden({ timeout: 10000 });
+  // The reversal itself keeps the kind in history; the restrictions
+  // section must report no ACTIVE restriction instead.
+  await expect(page.getByText("No active restrictions.")).toBeVisible({ timeout: 10000 });
 });
 
 test("invites and revokes a staff invitation from the staff page", async ({ page }) => {

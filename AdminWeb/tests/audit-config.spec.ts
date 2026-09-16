@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
 import { messages } from "../src/localization/messages";
@@ -24,7 +25,7 @@ for (const { width, height } of [
     await page.emulateMedia({ reducedMotion: "reduce" });
     await signIn(page);
     await page.goto("/audit");
-    await expect(page.getByRole("search")).toBeVisible();
+    await expect(page.getByLabel("Actor")).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
@@ -71,14 +72,30 @@ test("audit lookup finds a filter-matching event and exports CSV", async ({ page
 test("configuration conflict surfaces instead of overwriting", async ({ page }) => {
   await signIn(page);
   await page.goto("/configuration");
-  // Submit a second change against the same rendered version: the first
-  // save bumps the version, so the stale form conflicts.
-  await page.getByLabel("Default queue order").selectOption("oldest_first");
-  await page.getByLabel("Reason").first().fill("Gate conflict probe one");
-  await page.getByRole("button", { name: "Save changes" }).first().click();
-  await expect(page.getByText("Saved")).toBeVisible({ timeout: 10000 });
-
-  await page.getByLabel("Reason").first().fill("Gate conflict probe two");
+  // A concurrent change bumps the version after this form rendered,
+  // so submitting it must conflict instead of overwriting.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) throw new Error("Local Supabase test credentials are required");
+  const admin = createClient(url, key, { auth: { persistSession: false } });
+  await admin.auth.signInWithPassword({
+    email: "fixture-admin@bloclens.invalid",
+    password: "BlocLensLocalTest1!",
+  });
+  const current = await admin
+    .from("operational_configuration")
+    .select("version")
+    .eq("key", "review.queue.order")
+    .single();
+  await admin.rpc("admin_update_configuration", {
+    config_key: "review.queue.order",
+    config_value: "oldest_first",
+    reason: "Gate concurrent bump",
+    expected_version: (current.data as { version: number }).version,
+    idempotency_key: crypto.randomUUID(),
+  });
+  await page.getByLabel("Default queue order").selectOption("severity_first");
+  await page.getByLabel("Reason").first().fill("Gate conflict probe");
   await page.getByRole("button", { name: "Save changes" }).first().click();
   await expect(page.getByText(/Someone else updated configuration/)).toBeVisible({
     timeout: 10000,
