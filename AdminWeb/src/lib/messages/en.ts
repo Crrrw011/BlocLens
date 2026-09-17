@@ -52,6 +52,16 @@ export const en = {
   },
   shell: {
     brandLabel: "BlocLens Operations",
+    brandTitle: "BlocLens Admin",
+    consoleSubtitle: "MODERATION CONSOLE",
+    navigate: "Navigate…",
+    toggleSidebar: "Toggle sidebar",
+    staffMember: "Staff",
+    groups: {
+      operate: "Operate",
+      manage: "Manage",
+      system: "System",
+    },
     primaryNavigation: "Primary navigation",
     destinations: {
       overview: "Overview",
@@ -125,7 +135,8 @@ export const en = {
     },
   },
   review: {
-    title: "Review queue",
+    title: "Review",
+    subtitle: "triage reports, corrections, removals and merges",
     filters: {
       statusLabel: "Status",
       kindLabel: "Kind",
@@ -197,7 +208,8 @@ export const en = {
     },
   },
   climbingData: {
-    title: "Climbing data",
+    title: "Climbing Data",
+    subtitle: "gyms, setting and community content",
     kinds: {
       gym: "Gyms",
       wall_zone: "Wall zones",
@@ -210,6 +222,11 @@ export const en = {
     filters: {
       statusLabel: "Status",
       kindLabel: "Record type",
+      kindGroups: {
+        places: "Places",
+        setting: "Setting",
+        community: "Community",
+      },
       gymLabel: "Gym",
       allGyms: "All gyms",
       searchLabel: "Search",
@@ -268,6 +285,22 @@ export const en = {
       unavailable: "This change could not be recorded. Try again.",
       conflictBody: "Someone else updated this route. Reload it and try again on fresh data.",
     },
+    visibility: {
+      title: "Change visibility",
+      reasonLabel: "Reason",
+      reasonPlaceholder: "Why is this change needed? Kept in the audit record.",
+      confirm: "Confirm",
+      cancel: "Cancel",
+      actions: {
+        archive: "Archive",
+        unarchive: "Restore",
+        hide: "Hide",
+        unhide: "Restore",
+      },
+      invalidInput: "Choose an action and give a reason between 1 and 2000 characters.",
+      unavailable: "This change could not be recorded. Try again.",
+      conflictBody: "Someone else updated this record. Reload it and try again on fresh data.",
+    },
     merge: {
       title: "Merge routes",
       pickCanonical: "Merge into",
@@ -322,6 +355,12 @@ export const en = {
   },
   people: {
     title: "People and Access",
+    subtitle: "members, staff roles and gym claims",
+    tabs: {
+      members: "All members",
+      staff: "Staff & roles",
+      claims: "Gym claims",
+    },
     searchLabel: "Search people",
     searchPlaceholder: "Username",
     searchSubmit: "Search",
@@ -395,6 +434,21 @@ export const en = {
       unavailable: "This penalty could not be recorded. Try again.",
       alreadyActive: "This restriction is already active for the user.",
     },
+    deletion: {
+      title: "Delete account",
+      warningTitle: "Permanently delete this account?",
+      warningBody:
+        "The profile is scrubbed, roles are revoked, and a permanent ban locks the account. The auth record is kept so history stays intact. This cannot be undone.",
+      usernameLabel: "Type the username to confirm",
+      reasonLabel: "Reason",
+      reasonPlaceholder: "Why is this account being removed? Kept in the audit record.",
+      confirm: "Delete account",
+      cancel: "Cancel",
+      invalidInput: "Give a reason and type the username exactly.",
+      unavailable: "This account could not be deleted. Try again.",
+      selfDelete: "You cannot delete your own account.",
+      staffProtected: "Revoke the staff role before deleting this account.",
+    },
     staff: {
       title: "Staff access",
       rosterTitle: "Current staff",
@@ -430,6 +484,7 @@ export const en = {
   },
   audit: {
     title: "Audit",
+    subtitle: "who changed what, and what happened",
     filters: {
       actorLabel: "Actor",
       actorPlaceholder: "User UUID",
@@ -467,6 +522,7 @@ export const en = {
   },
   configuration: {
     title: "Configuration",
+    subtitle: "review queue, ranges, flags and templates",
     groups: {
       reviewQueue: "Review queue",
       overview: "Overview",
@@ -501,7 +557,8 @@ export const en = {
     conflictBody: "Someone else updated configuration. Reload and try again on fresh data.",
   },
   overview: {
-    title: "Operations overview",
+    title: "Overview",
+    subtitle: "operational health at a glance",
     rangeLabel: "Time range",
     ranges: {
       "7d": "Last 7 days",

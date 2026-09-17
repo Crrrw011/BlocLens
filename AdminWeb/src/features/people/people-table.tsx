@@ -64,7 +64,9 @@ export function PeopleTable({
       {nextCursor ? (
         <Link
           href={`/people?${new URLSearchParams(
-            search === "" ? { cursor: nextCursor } : { q: search, cursor: nextCursor },
+            search === ""
+              ? { tab: "members", cursor: nextCursor }
+              : { tab: "members", q: search, cursor: nextCursor },
           ).toString()}`}
         >
           {copy.nextPage}

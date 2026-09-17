@@ -29,7 +29,7 @@ function formatHandling(seconds: number | null): string | null {
 export default async function OverviewPage({
   searchParams,
 }: Readonly<{ searchParams?: Promise<Record<string, string | string[] | undefined>> }>) {
-  await requireStaff();
+  const access = await requireStaff();
   const params = (await searchParams) ?? {};
   const raw = Array.isArray(params.range) ? params.range[0] : params.range;
   const range = parseRange(raw);
@@ -53,6 +53,14 @@ export default async function OverviewPage({
 
   return (
     <section className="portal-page" aria-label={en.shell.overviewWorkspace}>
+      <div className="row-head">
+        <div>
+          <h1>{en.overview.title}</h1>
+          <div className="sub">
+            {en.shell.roles[access.role]} · {en.overview.subtitle}
+          </div>
+        </div>
+      </div>
       <nav className="overview-range" aria-label={en.overview.rangeLabel}>
         {RANGES.map((option) => (
           <Link

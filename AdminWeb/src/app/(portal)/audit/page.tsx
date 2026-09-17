@@ -18,7 +18,7 @@ function defaultRange(): { from: string; to: string } {
 export default async function AuditPage({
   searchParams,
 }: Readonly<{ searchParams?: Promise<Record<string, string | string[] | undefined>> }>) {
-  await requireStaff();
+  const access = await requireStaff();
   const params = (await searchParams) ?? {};
   const defaults = defaultRange();
   const filters = {
@@ -52,6 +52,14 @@ export default async function AuditPage({
 
   return (
     <section className="portal-page" aria-label={en.audit.title}>
+      <div className="row-head">
+        <div>
+          <h1>{en.audit.title}</h1>
+          <div className="sub">
+            {en.shell.roles[access.role]} · {en.audit.subtitle}
+          </div>
+        </div>
+      </div>
       <AuditFilters
         defaults={{
           actorId: filters.actorId ?? "",

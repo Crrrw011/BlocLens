@@ -60,7 +60,17 @@ export default async function ReviewPage({
 
   return (
     <section className="portal-page" aria-label={en.review.title}>
-      <ReviewFilters current={query} />
+      <div className="row-head">
+        <div>
+          <h1>{en.review.title}</h1>
+          <div className="sub">
+            {en.shell.roles[access.role]} · {en.review.subtitle}
+          </div>
+        </div>
+      </div>
+      <div className="panel panel--flush">
+        <ReviewFilters current={query} />
+      </div>
       <ReviewTable
         items={queueResult.value.items}
         nextCursor={queueResult.value.nextCursor}

@@ -20,11 +20,13 @@ function formatValue(value: unknown): string {
 export function EntityInspector({
   kind,
   item,
+  isAdmin,
   triggerRef,
   onClose,
 }: Readonly<{
   kind: EntityKind;
   item: EntityDetail | "unavailable" | null;
+  isAdmin: boolean;
   triggerRef?: React.RefObject<HTMLElement | null>;
   onClose: () => void;
 }>) {
@@ -65,7 +67,22 @@ export function EntityInspector({
         if (!next) close();
       }}
       footer={
-        <Link href={`/climbing-data/${kind}/${item.id}`}>{copy.openFull}</Link>
+        <>
+          <Link href={`/climbing-data/${kind}/${item.id}`}>{copy.openFull}</Link>
+          {isAdmin &&
+          (kind === "route" ||
+            kind === "route_photo" ||
+            kind === "beta_link" ||
+            kind === "route_comment") &&
+          item.status !== "active" ? (
+            <>
+              {" · "}
+              <Link href={`/climbing-data/${kind}/${item.id}#entity-delete`}>
+                {en.climbingData.deletion.trigger}
+              </Link>
+            </>
+          ) : null}
+        </>
       }
     >
       <p>

@@ -38,7 +38,7 @@ describe("AppShell", () => {
   it("keeps notifications and account controls at the bottom of the rail", () => {
     render(<AppShell access={administrator}>Workspace</AppShell>);
 
-    const bottomControls = screen.getByTestId("rail-bottom-controls");
+    const bottomControls = screen.getByTestId("sidebar-footer");
     expect(bottomControls).toContainElement(
       screen.getByRole("button", { name: "Notifications" }),
     );

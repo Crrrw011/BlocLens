@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireStaff } from "@/lib/auth/access";
 import { en } from "@/lib/messages/en";
+import { ArchiveButtons } from "@/features/climbing-data/archive-buttons";
 import { RouteActions } from "@/features/climbing-data/route-actions";
 import { RouteEditForm } from "@/features/climbing-data/route-edit-form";
 import { getEntityDetail } from "@/features/climbing-data/repository";
@@ -137,7 +138,7 @@ export default async function ClimbingDataDetailPage({
       </p>
 
       {isAdmin && deletable && impact ? (
-        <section aria-labelledby="entity-delete">
+        <section aria-labelledby="entity-delete" id="entity-delete">
           <h3 id="entity-delete">{copy.deletion.trigger}</h3>
           <DeleteDialog
             targetType={entityKind as "route" | "route_photo" | "beta_link" | "route_comment"}
@@ -145,6 +146,22 @@ export default async function ClimbingDataDetailPage({
             title={item.title}
             impact={impact}
             expectedUpdatedAt={item.updatedAt}
+          />
+        </section>
+      ) : null}
+
+      {entityKind === "wall_zone" ||
+      entityKind === "route_photo" ||
+      entityKind === "beta_link" ||
+      entityKind === "route_comment" ? (
+        <section aria-labelledby="entity-visibility">
+          <h3 id="entity-visibility">{copy.visibility.title}</h3>
+          <ArchiveButtons
+            kind={entityKind}
+            id={item.id}
+            status={item.status}
+            expectedUpdatedAt={item.updatedAt}
+            isAdmin={access.role === "admin"}
           />
         </section>
       ) : null}

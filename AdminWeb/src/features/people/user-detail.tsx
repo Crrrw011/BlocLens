@@ -1,5 +1,6 @@
 import { StatusBadge } from "@/components/ui/status-badge";
 import { en } from "@/lib/messages/en";
+import { DeleteUserDialog } from "./delete-user-dialog";
 import { PenaltyDialog, ReversePenaltyButton } from "./penalty-dialog";
 import type { UserSummary } from "./types";
 
@@ -8,7 +9,8 @@ const copy = en.people.detail;
 export function UserDetail({
   summary,
   canPenalise,
-}: Readonly<{ summary: UserSummary; canPenalise: boolean }>) {
+  canDelete,
+}: Readonly<{ summary: UserSummary; canPenalise: boolean; canDelete: boolean }>) {
   return (
     <div>
       <section aria-labelledby="user-identifiers">
@@ -57,8 +59,7 @@ export function UserDetail({
       </section>
 
       <section aria-labelledby="user-history">
-        <h3 id="user-history">{copy.history}</h3>
-        {summary.recentActions.length === 0 ? (
+        <h3 id="user-history">{copy.history}</h3>        {summary.recentActions.length === 0 ? (
           <p>{copy.noHistory}</p>
         ) : (
           <ul>
@@ -70,6 +71,13 @@ export function UserDetail({
           </ul>
         )}
       </section>
+
+      {canDelete ? (
+        <section aria-labelledby="user-deletion">
+          <h3 id="user-deletion">{en.people.deletion.title}</h3>
+          <DeleteUserDialog userId={summary.userId} username={summary.username} />
+        </section>
+      ) : null}
     </div>
   );
 }

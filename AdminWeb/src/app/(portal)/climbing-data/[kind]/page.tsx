@@ -28,7 +28,7 @@ export default async function ClimbingDataKindPage({
   params: Promise<{ kind: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }>) {
-  await requireStaff();
+  const access = await requireStaff();
   const { kind } = await params;
   if (!KINDS.includes(kind as EntityKind)) {
     notFound();
@@ -64,12 +64,21 @@ export default async function ClimbingDataKindPage({
 
   return (
     <section className="portal-page" aria-label={en.climbingData.kinds[entityKind]}>
+      <div className="row-head">
+        <div>
+          <h1>{en.climbingData.title}</h1>
+          <div className="sub">
+            {en.shell.roles[access.role]} · {en.climbingData.subtitle}
+          </div>
+        </div>
+      </div>
       <EntityFilters current={filters} gyms={gyms} />
       <EntityTable
         kind={entityKind}
         items={listResult.value.items}
         nextCursor={listResult.value.nextCursor}
         selected={itemResult?.ok === true ? itemResult.value : selectedId ? "unavailable" : null}
+        isAdmin={access.role === "admin"}
       />
     </section>
   );

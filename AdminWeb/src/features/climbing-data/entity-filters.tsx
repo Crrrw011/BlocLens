@@ -6,14 +6,10 @@ import type { EntityKind, EntityListItem } from "./types";
 const copy = en.climbingData.filters;
 const kindCopy = en.climbingData.kinds;
 
-const KINDS: EntityKind[] = [
-  "gym",
-  "wall_zone",
-  "route",
-  "reset",
-  "route_photo",
-  "beta_link",
-  "route_comment",
+const KIND_GROUPS: Array<{ label: string; kinds: EntityKind[] }> = [
+  { label: copy.kindGroups.places, kinds: ["gym", "wall_zone"] },
+  { label: copy.kindGroups.setting, kinds: ["route", "reset"] },
+  { label: copy.kindGroups.community, kinds: ["route_photo", "beta_link", "route_comment"] },
 ];
 
 const STATUSES: Record<EntityKind, string[]> = {
@@ -49,15 +45,25 @@ export function EntityFilters({
   const rest = { status: current.status, gym: current.gym, q: current.q };
   return (
     <div className="review-filters">
-      <div className="review-filters__group" role="group" aria-label={copy.kindLabel}>
-        {KINDS.map((kind) => (
-          <Link
-            key={kind}
-            href={href(kind, { status: "all", gym: "", q: "" })}
-            aria-current={kind === current.kind ? "page" : undefined}
+      <div className="cat-bar" role="group" aria-label={copy.kindLabel}>
+        {KIND_GROUPS.map((group) => (
+          <div
+            key={group.label}
+            className={`cat${group.kinds.includes(current.kind) ? " on" : ""}`}
           >
-            {kindCopy[kind]}
-          </Link>
+            <div className="cl">{group.label}</div>
+            <div className="review-filters__group">
+              {group.kinds.map((kind) => (
+                <Link
+                  key={kind}
+                  href={href(kind, { status: "all", gym: "", q: "" })}
+                  aria-current={kind === current.kind ? "page" : undefined}
+                >
+                  {kindCopy[kind]}
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
       <div className="review-filters__group" role="group" aria-label={copy.statusLabel}>

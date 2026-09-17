@@ -18,11 +18,13 @@ export function EntityTable({
   items,
   nextCursor,
   selected,
+  isAdmin,
 }: Readonly<{
   kind: EntityKind;
   items: EntityListItem[];
   nextCursor: string | null;
   selected: EntityDetail | "unavailable" | null;
+  isAdmin: boolean;
 }>) {
   const router = useRouter();
   const pathname = usePathname();
@@ -76,6 +78,7 @@ export function EntityTable({
       <EntityInspector
         kind={kind}
         item={selected}
+        isAdmin={isAdmin}
         triggerRef={{ current: trigger }}
         onClose={() => select(null)}
       />

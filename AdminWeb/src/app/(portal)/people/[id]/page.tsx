@@ -21,7 +21,15 @@ export default async function UserDetailPage({
 
   return (
     <section className="portal-page" aria-label={result.value.username}>
-      <UserDetail summary={result.value} canPenalise={access.role === "admin"} />
+      <UserDetail
+        summary={result.value}
+        canPenalise={access.role === "admin"}
+        canDelete={
+          access.role === "admin" &&
+          access.userId !== id &&
+          result.value.staffRole === null
+        }
+      />
     </section>
   );
 }

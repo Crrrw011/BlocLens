@@ -41,25 +41,37 @@ export default async function ConfigurationPage() {
 
   return (
     <section className="portal-page" aria-label={en.configuration.title}>
-      {KEYS.map((key) => {
-        const row = entries.get(key) as { value: unknown; version: number };
-        return (
-          <section key={key} aria-labelledby={`config-group-${key}`}>
-            <h3 id={`config-group-${key}`}>{GROUP_TITLES[key]}</h3>
-            <ConfigForm
-              entry={{ key, value: row.value, version: row.version }}
-            />
-          </section>
-        );
-      })}
-      <section aria-labelledby="config-frozen">
-        <h3 id="config-frozen">{en.configuration.groups.frozen}</h3>
-        <ul>
-          {en.configuration.frozen.map((rule) => (
-            <li key={rule}>{rule}</li>
-          ))}
-        </ul>
-      </section>
+      <div className="row-head">
+        <div>
+          <h1>{en.configuration.title}</h1>
+          <div className="sub">
+            {en.shell.roles[access.role]} · {en.configuration.subtitle}
+          </div>
+        </div>
+      </div>
+      <div className="panel" style={{ marginTop: 0 }}>
+        {KEYS.map((key) => {
+          const row = entries.get(key) as { value: unknown; version: number };
+          return (
+            <section key={key} className="cfg" aria-labelledby={`config-group-${key}`}>
+              <h3 id={`config-group-${key}`}>{GROUP_TITLES[key]}</h3>
+              <ConfigForm
+                entry={{ key, value: row.value, version: row.version }}
+              />
+            </section>
+          );
+        })}
+      </div>
+      <div className="panel">
+        <section className="cfg" aria-labelledby="config-frozen">
+          <h3 id="config-frozen">{en.configuration.groups.frozen}</h3>
+          <ul>
+            {en.configuration.frozen.map((rule) => (
+              <li key={rule}>{rule}</li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </section>
   );
 }

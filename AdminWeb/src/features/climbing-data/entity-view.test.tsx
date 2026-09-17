@@ -67,7 +67,7 @@ describe("EntityFilters", () => {
 describe("EntityTable", () => {
   it("renders kind columns and selects a row into the inspector", () => {
     push.mockReset();
-    render(<EntityTable kind="route" items={[item()]} nextCursor={null} selected={detail()} />);
+    render(<EntityTable kind="route" items={[item()]} nextCursor={null} selected={detail()} isAdmin={false} />);
     expect(screen.getByRole("columnheader", { name: "Moderation" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Record details" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "Blue" })).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("EntityTable", () => {
 
   it("navigates selection without losing the active filters", () => {
     push.mockReset();
-    render(<EntityTable kind="route" items={[item()]} nextCursor="cursor" selected={null} />);
+    render(<EntityTable kind="route" items={[item()]} nextCursor="cursor" selected={null} isAdmin={true} />);
     fireEvent.click(screen.getByRole("cell", { name: "Blue" }));
     expect(push).toHaveBeenCalledOnce();
     const href = push.mock.calls[0]?.[0] as string;
@@ -84,7 +84,23 @@ describe("EntityTable", () => {
   });
 
   it("shows an empty state instead of an empty table", () => {
-    render(<EntityTable kind="gym" items={[]} nextCursor={null} selected={null} />);
+    render(<EntityTable kind="gym" items={[]} nextCursor={null} selected={null} isAdmin={false} />);
     expect(screen.getByText("No matching records")).toBeInTheDocument();
+  });
+
+  it("links archived records to permanent deletion for admins only", () => {
+    const archived = { ...detail(), status: "archived" };
+    const { unmount } = render(
+      <EntityTable kind="route" items={[item()]} nextCursor={null} selected={archived} isAdmin={true} />,
+    );
+    expect(screen.getByRole("link", { name: "Delete…" })).toHaveAttribute(
+      "href",
+      `/climbing-data/route/${archived.id}#entity-delete`,
+    );
+    unmount();
+    render(
+      <EntityTable kind="route" items={[item()]} nextCursor={null} selected={archived} isAdmin={false} />,
+    );
+    expect(screen.queryByRole("link", { name: "Delete…" })).not.toBeInTheDocument();
   });
 });
